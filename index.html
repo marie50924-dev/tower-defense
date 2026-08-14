@@ -514,7 +514,7 @@ function update(dt){
     const p = posAt(s.target.d);
     const dx = p.x-s.x, dy = p.y-s.y, L = Math.hypot(dx,dy) || 1;
     const sp = (s.k==='star' ? 15 : 11) * CELL;
-    s.trail.push({x:s.x,y:s.y}); if (s.trail.length > 6) s.trail.shift();
+    s.trail.push({x:s.x,y:s.y}); if (s.trail.length > 3 + s.lv*3) s.trail.shift();
     if (L <= sp*dt){ hitTarget(s, p); shots.splice(i,1); continue; }
     s.x += dx/L*sp*dt; s.y += dy/L*sp*dt;
   }
@@ -557,12 +557,14 @@ function hitTarget(s, p){
       const q = posAt(e.d);
       if (Math.hypot(q.x-p.x, q.y-p.y) <= R){ e.hp -= s.dmg; if (e.hp <= 0) dead.push(e); }
     }
-    for (let i=0;i<16;i++) puff(p.x, p.y, '#f0c08a');
+    for (let i=0;i<10+5*s.lv;i++) puff(p.x, p.y, '#f0c08a');
+    if (s.lv >= 3) for (let i=0;i<6;i++) puff(p.x, p.y, '#ffffff');
   } else {
     s.target.hp -= s.dmg;
     if (T.slow){ s.target.slow = T.slowT; s.target.slowAmt = T.slow; }
     if (s.target.hp <= 0) dead.push(s.target);
-    for (let i=0;i<6;i++) puff(p.x, p.y, T.color);
+    for (let i=0;i<3+3*s.lv;i++) puff(p.x, p.y, T.color);
+    if (s.lv >= 3) for (let i=0;i<4;i++) puff(p.x, p.y, '#ffffff');
   }
   for (const e of dead){
     const idx = enemies.indexOf(e);
@@ -752,7 +754,7 @@ function drawTower(t){
   const x = cx(t.c), y = cy(t.r);
   const bob = Math.sin(time*2.4 + t.ph) * CELL*0.035;
   const pop = 1 + t.pulse*0.16;
-  const R = CELL*0.31;
+  const R = CELL*(0.31 + (t.lv-1)*0.022);
 
   // 選択中は射程を表示
   if (selTower === t){
@@ -767,16 +769,17 @@ function drawTower(t){
 
   ctx.save(); ctx.translate(x, y + bob); ctx.scale(pop, pop);
 
-  // ようせいのはね（ぱたぱた）
+  // ようせいのはね（ぱたぱた・レベルで大きく）
   const flap = Math.sin(time*7 + t.ph);
+  const wk = 1 + (t.lv-1)*0.18;
   for (const s of [-1,1]){
     ctx.save();
     ctx.translate(s*R*0.6, -R*0.1);
     ctx.rotate(s*(0.35 + flap*0.22));
     ctx.fillStyle = 'rgba(255,255,255,.82)';
-    ctx.beginPath(); ctx.ellipse(s*R*0.42, -R*0.18, R*0.46, R*0.24, s*0.5, 0, 6.3); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s*R*0.42*wk, -R*0.18*wk, R*0.46*wk, R*0.24*wk, s*0.5, 0, 6.3); ctx.fill();
     ctx.fillStyle = 'rgba(255,255,255,.65)';
-    ctx.beginPath(); ctx.ellipse(s*R*0.34, R*0.16, R*0.3, R*0.17, s*0.85, 0, 6.3); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(s*R*0.34*wk, R*0.16*wk, R*0.3*wk, R*0.17*wk, s*0.85, 0, 6.3); ctx.fill();
     ctx.restore();
   }
 
@@ -788,12 +791,25 @@ function drawTower(t){
   ctx.strokeStyle = 'rgba(160,120,160,.3)'; ctx.lineWidth = 1.5;
   roundRect(-R*0.95, R*0.4, R*1.9, R*0.55, R*0.28); ctx.stroke();
 
+  // 強化オーラ（Lv2でしろく、Lv3できんいろに）
+  if (t.lv >= 2){
+    const pu = 0.75 + Math.sin(time*3.2 + t.ph)*0.25;
+    const col = t.lv >= 3 ? '255,214,110' : '255,255,255';
+    const ag = ctx.createRadialGradient(0,0,R*0.6, 0,0,R*1.8);
+    ag.addColorStop(0, 'rgba('+col+',0)');
+    ag.addColorStop(0.62, 'rgba('+col+','+(0.34*pu)+')');
+    ag.addColorStop(1, 'rgba('+col+',0)');
+    ctx.fillStyle = ag;
+    ctx.beginPath(); ctx.arc(0,0,R*1.8,0,6.3); ctx.fill();
+  }
+
   // 体と顔
   glossyBall(R, T.color, T.dark);
   drawFace(R, t.ph, 'smile');
 
-  // 頭のかざり
+  // 頭のかざり（レベルで大きくなる）
   ctx.save(); ctx.translate(0, -R*1.05);
+  ctx.scale(1 + (t.lv-1)*0.22, 1 + (t.lv-1)*0.22);
   if (t.k === 'candy'){
     ctx.fillStyle = '#fff';
     ctx.fillRect(-R*0.045, -R*0.12, R*0.09, R*0.4);
@@ -856,8 +872,16 @@ function drawTower(t){
   }
   ctx.restore();
 
-  // むねのリボン
-  drawBow(-R*0.6, -R*0.74, R*0.3, T.dark);
+  // むねのリボン（Lv3できんいろ）
+  drawBow(-R*0.6, -R*0.74, R*(0.3 + (t.lv-1)*0.05), t.lv >= 3 ? '#e8b12e' : T.dark);
+
+  // Lv3はまわりを星がくるくるまわる
+  if (t.lv >= 3){
+    for (let i=0;i<3;i++){
+      const a = time*2.4 + t.ph + i*2.094;
+      sparkle(Math.cos(a)*R*1.5, Math.sin(a)*R*0.95 - R*0.1, R*0.12, a*2, '#ffe27a');
+    }
+  }
 
   ctx.restore();
 
@@ -982,19 +1006,39 @@ function drawEnemy(e){
 
 function drawShot(s){
   const T = TOWERS[s.k];
-  ctx.strokeStyle = T.color; ctx.lineWidth = CELL*0.07; ctx.lineCap='round';
-  ctx.globalAlpha = .45;
+  const k = s.lv;
+  const rad = CELL*(0.08 + (k-1)*0.03);
+
+  // 軌跡（レベルで長く・太く）
+  ctx.strokeStyle = T.color; ctx.lineWidth = CELL*(0.055 + k*0.02); ctx.lineCap='round';
+  ctx.globalAlpha = .4;
   ctx.beginPath();
   s.trail.forEach((p,i) => i ? ctx.lineTo(p.x,p.y) : ctx.moveTo(p.x,p.y));
   ctx.lineTo(s.x,s.y); ctx.stroke();
   ctx.globalAlpha = 1;
 
-  if (s.k === 'star'){ sparkle(s.x, s.y, CELL*0.15, time*7, '#fff2a8'); }
-  else {
+  // Lv2からまわりが光る
+  if (k >= 2){
+    const glow = ctx.createRadialGradient(s.x,s.y,0, s.x,s.y,rad*3);
+    glow.addColorStop(0, 'rgba(255,255,255,.6)');
+    glow.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.arc(s.x,s.y,rad*3,0,6.3); ctx.fill();
+  }
+
+  if (s.k === 'star'){
+    sparkle(s.x, s.y, rad*2.1, time*7, k >= 3 ? '#ffffff' : '#fff2a8');
+    if (k >= 2) sparkle(s.x, s.y, rad*1.2, -time*9, '#ffd76e');
+  } else {
     ctx.fillStyle = T.color;
-    ctx.beginPath(); ctx.arc(s.x, s.y, CELL*0.085, 0, 6.3); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,.9)';
-    ctx.beginPath(); ctx.arc(s.x-CELL*0.025, s.y-CELL*0.025, CELL*0.035, 0, 6.3); ctx.fill();
+    ctx.beginPath(); ctx.arc(s.x, s.y, rad, 0, 6.3); ctx.fill();
+    ctx.globalAlpha = .6; ctx.strokeStyle = T.dark; ctx.lineWidth = rad*0.32;
+    ctx.beginPath(); ctx.arc(s.x, s.y, rad, 0, 6.3); ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.fillStyle = 'rgba(255,255,255,.95)';
+    ctx.beginPath(); ctx.arc(s.x-rad*0.3, s.y-rad*0.32, rad*0.4, 0, 6.3); ctx.fill();
+    // Lv3はキラキラをまとって飛ぶ
+    if (k >= 3)
+      sparkle(s.x + Math.cos(time*11)*rad*1.7, s.y + Math.sin(time*11)*rad*1.7, rad*0.55, time*6, '#ffffff');
   }
 }
 
