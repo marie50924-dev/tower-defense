@@ -204,7 +204,7 @@ const ov = $('ov'), ovT = $('ovT'), ovB = $('ovB'), ovBtn = $('ovBtn');
    状態
    ========================================================== */
 let CELL = 40;
-let towers = [], enemies = [], shots = [], parts = [], floats = [], sparks = [];
+let towers = [], enemies = [], shots = [], parts = [], floats = [], sparks = [], rings = [];
 let hearts, stars, wave, selTool, selTower, running, spawnQ, spawnT, over;
 let speed = 1, time = 0, flash = 0;
 
@@ -292,7 +292,7 @@ function beep(f, dur, type='sine', vol=0.05, slide=1.4){
    ゲーム開始
    ========================================================== */
 function reset(){
-  towers = []; enemies = []; shots = []; parts = []; floats = [];
+  towers = []; enemies = []; shots = []; parts = []; floats = []; rings = [];
   hearts = 20; stars = 250; wave = 0;
   selTool = null; selTower = null; running = false; over = false;
   spawnQ = []; spawnT = 0; speed = 1; flash = 0;
@@ -373,8 +373,16 @@ btnUp.onclick = () => {
   const c = Math.round(TOWERS[t.k].cost * UP_MUL[t.lv]);
   if (stars < c) return;
   stars -= c; t.lv++; t.pulse = 1;
-  beep(760,.2,'triangle',.06);
-  for (let i=0;i<16;i++) puff(cx(t.c), cy(t.r), '#fff2a8');
+  const px = cx(t.c), py = cy(t.r);
+  ring(px, py, '#ffffff', CELL*1.5);
+  ring(px, py, t.lv >= 3 ? '#ffd76e' : TOWERS[t.k].color, CELL*2.1);
+  for (let i=0;i<18;i++) puff(px, py, '#fff2a8');
+  for (let i=0;i<10;i++) puff(px, py, '#ffffff');
+  for (let i=0;i<8;i++) mote(px, py - CELL*0.2, '#ffe27a');
+  floatTx(px, py - CELL*0.65, t.lv >= 3 ? 'さいきょう！' : 'レベルアップ！', '#ffb43f');
+  beep(620,.12,'triangle',.06);
+  setTimeout(()=>beep(830,.12,'triangle',.06),110);
+  setTimeout(()=>beep(1050,.22,'triangle',.07),220);
   syncHUD(); openInfo(t);
 };
 btnSell.onclick = () => {
@@ -450,6 +458,12 @@ function puff(x,y,color){
                r:1.5+Math.random()*3.5, color, rot:Math.random()*6.3 });
 }
 function floatTx(x,y,text,color){ floats.push({ x, y, text, color, age:0, life:.75 }); }
+function ring(x,y,color,max){ rings.push({ x, y, r:4, max:max||CELL*1.4, age:0, life:.5, color }); }
+function mote(x,y,color){
+  parts.push({ x: x+(Math.random()-0.5)*CELL*0.55, y, vx:(Math.random()-0.5)*9,
+               vy:-(14+Math.random()*24), g:0, life:.8+Math.random()*.5, age:0,
+               r:1.2+Math.random()*2.4, color, rot:Math.random()*6.3 });
+}
 
 /* ==========================================================
    更新
@@ -488,6 +502,8 @@ function update(dt){
 
   // タワーの攻撃
   for (const t of towers){
+    if (t.lv >= 2 && Math.random() < dt*(t.lv-1)*1.7)
+      mote(cx(t.c), cy(t.r) - CELL*0.08, t.lv >= 3 ? '#ffe27a' : '#ffffff');
     if (t.pulse > 0) t.pulse = Math.max(0, t.pulse - dt*2.6);
     t.cd -= dt;
     const R = rangeOf(t)*CELL, ox = cx(t.c), oy = cy(t.r);
@@ -523,7 +539,13 @@ function update(dt){
   for (let i=parts.length-1;i>=0;i--){
     const p = parts[i]; p.age += dt;
     if (p.age >= p.life){ parts.splice(i,1); continue; }
-    p.vy += 130*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.rot += dt*4;
+    p.vy += (p.g === 0 ? 0 : 130)*dt; p.x += p.vx*dt; p.y += p.vy*dt; p.rot += dt*4;
+  }
+  for (let i=rings.length-1;i>=0;i--){
+    const rg = rings[i]; rg.age += dt;
+    if (rg.age >= rg.life){ rings.splice(i,1); continue; }
+    const k = rg.age/rg.life;
+    rg.r = rg.max * (1 - (1-k)*(1-k));
   }
   for (let i=floats.length-1;i>=0;i--){
     const f = floats[i]; f.age += dt; f.y -= dt*34;
@@ -558,13 +580,13 @@ function hitTarget(s, p){
       if (Math.hypot(q.x-p.x, q.y-p.y) <= R){ e.hp -= s.dmg; if (e.hp <= 0) dead.push(e); }
     }
     for (let i=0;i<10+5*s.lv;i++) puff(p.x, p.y, '#f0c08a');
-    if (s.lv >= 3) for (let i=0;i<6;i++) puff(p.x, p.y, '#ffffff');
+    if (s.lv >= 3){ for (let i=0;i<6;i++) puff(p.x, p.y, '#ffffff'); ring(p.x, p.y, '#f0c08a', CELL*1.7); }
   } else {
     s.target.hp -= s.dmg;
     if (T.slow){ s.target.slow = T.slowT; s.target.slowAmt = T.slow; }
     if (s.target.hp <= 0) dead.push(s.target);
     for (let i=0;i<3+3*s.lv;i++) puff(p.x, p.y, T.color);
-    if (s.lv >= 3) for (let i=0;i<4;i++) puff(p.x, p.y, '#ffffff');
+    if (s.lv >= 3){ for (let i=0;i<4;i++) puff(p.x, p.y, '#ffffff'); ring(p.x, p.y, T.color, CELL*1.1); }
   }
   for (const e of dead){
     const idx = enemies.indexOf(e);
@@ -877,9 +899,11 @@ function drawTower(t){
 
   // Lv3はまわりを星がくるくるまわる
   if (t.lv >= 3){
-    for (let i=0;i<3;i++){
-      const a = time*2.4 + t.ph + i*2.094;
-      sparkle(Math.cos(a)*R*1.5, Math.sin(a)*R*0.95 - R*0.1, R*0.12, a*2, '#ffe27a');
+    for (let i=0;i<5;i++){
+      const a = time*2.4 + t.ph + i*1.2566;
+      const rr = R*(1.45 + 0.12*Math.sin(time*3 + i*1.7));
+      sparkle(Math.cos(a)*rr, Math.sin(a)*rr*0.62 - R*0.1,
+              R*(i%2 ? 0.09 : 0.14), a*2, i%2 ? '#ffffff' : '#ffe27a');
     }
   }
 
@@ -1057,6 +1081,14 @@ function render(){
     const k = 1 - p.age/p.life;
     ctx.globalAlpha = k;
     sparkle(p.x, p.y, p.r*k*1.6, p.rot, p.color);
+  }
+  ctx.globalAlpha = 1;
+  for (const rg of rings){
+    const k = rg.age/rg.life;
+    ctx.globalAlpha = (1-k)*0.85;
+    ctx.strokeStyle = rg.color;
+    ctx.lineWidth = Math.max(1.5, CELL*0.1*(1-k));
+    ctx.beginPath(); ctx.arc(rg.x, rg.y, rg.r, 0, 6.3); ctx.stroke();
   }
   ctx.globalAlpha = 1;
 
