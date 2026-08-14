@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, user-scalable=no">
 <meta name="theme-color" content="#ffd9ec">
 <title>まほうのおかしの国をまもって</title>
 <style>
@@ -16,7 +16,7 @@
     --card:rgba(255,255,255,.72);
     --line:rgba(255,255,255,.9);
   }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   html,body{height:100%}
   body{
     margin:0;
@@ -142,6 +142,11 @@
 <script>
 (() => {
 "use strict";
+
+/* iOSでピンチやダブルタップで画面が拡大したまま戻らなくなるのを防ぐ */
+for (const ev of ['gesturestart','gesturechange','gestureend'])
+  document.addEventListener(ev, e => e.preventDefault());
+document.addEventListener('dblclick', e => e.preventDefault());
 
 /* ==========================================================
    マップ
