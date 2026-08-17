@@ -76,6 +76,18 @@
   .mini.gray{background:linear-gradient(180deg,#cfc4dd,#a898bd);box-shadow:0 3px 0 #857399}
   .mini:disabled{opacity:.4}
 
+  /* ---------- なかまワザ ---------- */
+  #skillBar{display:flex;gap:5px;padding:5px}
+  .sk{flex:1;position:relative;border:none;border-radius:12px;padding:3px 2px 4px;font:inherit;
+    background:rgba(255,255,255,.6);cursor:pointer;text-align:center;line-height:1.1;color:var(--ink)}
+  .sk:active{transform:scale(.95)}
+  .sk:disabled{opacity:.45}
+  .sk canvas{display:block;margin:0 auto}
+  .skN{font-size:9.5px}
+  .skC{font-size:9.5px;color:var(--pink-d)}
+  .skCd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:rgba(255,255,255,.66);border-radius:12px;font-size:17px;color:var(--pink-d)}
+
   /* ---------- controls ---------- */
   #ctrl{display:flex;gap:6px}
   .btn{
@@ -154,6 +166,8 @@
       <div id="colTotal"></div>
     </div>
   </div>
+
+  <div class="card" id="skillBar"></div>
 
   <div class="card" id="panel">
     <div id="shop"></div>
@@ -243,7 +257,8 @@ function waveList(n){
 // 30ウェーブをこえたあたりから指数的にきつくする（エンドレスの緊張感）
 const hpScale = n => (1 + (n-1)*0.28) * Math.pow(1.05, Math.max(0, n-30));
 // 後半はもらえるおほしさまも少しずつ増やして、強化が追いつくようにする
-const goldOf = k => Math.round(ENEMIES[k].gold * (1 + Math.max(0, wave-30)*0.04));
+// （ベリーおうじが なかまだと さらに +10%）
+const goldOf = k => Math.round(ENEMIES[k].gold * (1 + Math.max(0, wave-30)*0.04) * (hasCh('prince') ? 1.1 : 1));
 
 /* ==========================================================
    ステージ（30ウェーブクリアごとに景色が変わる）
@@ -268,17 +283,17 @@ const themeOf = w => THEMES[Math.max(0, Math.ceil(w/STAGE_WAVES)-1) % THEMES.len
    なかまキャラ（30ウェーブクリアごとに1人ずつ集まる）
    ========================================================== */
 const CHARS = [
-  { id:'purin',  name:'プリン',         title:'プリンのきし' },
-  { id:'choco',  name:'チョコ',         title:'ゆうかんなトリュフ' },
-  { id:'gumgum', name:'グミグミ',       title:'ぷるぷるグミ' },
-  { id:'donut',  name:'ドーナツ',       title:'いやしのパンやさん' },
-  { id:'taffy',  name:'タフィー',       title:'ふえふきキャンディ' },
-  { id:'cake',   name:'ケーキちゃん',   title:'ちいさなケーキ' },
-  { id:'fairy',  name:'ベリーようせい', title:'マカロンのようせい' },
-  { id:'prince', name:'ベリーおうじ',   title:'マカロンのおうじ' },
-  { id:'apple',  name:'アップルひめ',   title:'あまいひめさま' },
-  { id:'queen',  name:'おうひさま',     title:'おうさまのおきさき' },
-  { id:'king',   name:'おうさま',       title:'ケーキのおうさま' },
+  { id:'purin',  name:'プリン',         title:'プリンのきし',       fx:'ワザ「まもりのたて」がつかえる' },
+  { id:'choco',  name:'チョコ',         title:'ゆうかんなトリュフ', fx:'ワザ「チョコばくだん」がつかえる' },
+  { id:'gumgum', name:'グミグミ',       title:'ぷるぷるグミ',       fx:'ワザ「ぷるぷるスロー」がつかえる' },
+  { id:'donut',  name:'ドーナツ',       title:'いやしのパンやさん', fx:'ワザ「ハートかいふく」がつかえる' },
+  { id:'taffy',  name:'タフィー',       title:'ふえふきキャンディ', fx:'おうえん：こうげきそくどUP' },
+  { id:'cake',   name:'ケーキちゃん',   title:'ちいさなケーキ',     fx:'おうえん：ウェーブボーナス+20%' },
+  { id:'fairy',  name:'ベリーようせい', title:'マカロンのようせい', fx:'おうえん：タワーのはんい+5%' },
+  { id:'prince', name:'ベリーおうじ',   title:'マカロンのおうじ',   fx:'おうえん：おほしさま+10%' },
+  { id:'apple',  name:'アップルひめ',   title:'あまいひめさま',     fx:'おうえん：クリアのかいふく+3' },
+  { id:'queen',  name:'おうひさま',     title:'おうさまのおきさき', fx:'おうえん：ワザのねだん-20%' },
+  { id:'king',   name:'おうさま',       title:'ケーキのおうさま',   fx:'おうえん：タワーのこうげき+10%' },
 ];
 
 /* ずかん用のよみもの。おかし（タワー）は置くと、てきはたおすと登録される */
@@ -300,6 +315,7 @@ const btnUp = $('btnUp'), btnSell = $('btnSell'), btnWave = $('btnWave'), btnSpd
 const ov = $('ov'), ovT = $('ovT'), ovB = $('ovB'), ovBtn = $('ovBtn');
 const colOv = $('colOv'), colGrid = $('colGrid'), colCount = $('colCount'), colDone = $('colDone');
 const btnCol = $('btnCol'), colClose = $('colClose'), colTabsEl = $('colTabs'), colTotal = $('colTotal');
+const skillBar = $('skillBar');
 
 /* ==========================================================
    状態
@@ -399,6 +415,8 @@ function reset(){
   spawnQ = []; spawnT = 0; speed = 1; flash = 0;
   btnSpd.textContent = '1x';
   buildPath(); measurePath(); makeSparks();
+  for (const k in skCd) skCd[k] = 0;
+  buildSkillBar();
   syncHUD(); buildShop(); closeInfo();
   ov.classList.remove('on');
   colOv.classList.remove('on');
@@ -461,9 +479,10 @@ function closeInfo(){
   selTower = null;
 }
 
-const dmgOf   = t => TOWERS[t.k].dmg   * Math.pow(1.6, t.lv-1);
-const rangeOf = t => TOWERS[t.k].range * Math.pow(1.12, t.lv-1);
-const rateOf  = t => TOWERS[t.k].rate  * Math.pow(0.9, t.lv-1);
+// なかまの「おうえん」ボーナスは、集めたらずっと効く
+const dmgOf   = t => TOWERS[t.k].dmg   * Math.pow(1.6, t.lv-1)  * (hasCh('king')  ? 1.1  : 1);
+const rangeOf = t => TOWERS[t.k].range * Math.pow(1.12, t.lv-1) * (hasCh('fairy') ? 1.05 : 1);
+const rateOf  = t => TOWERS[t.k].rate  * Math.pow(0.9, t.lv-1)  * (hasCh('taffy') ? 0.93 : 1);
 const sellOf  = t => {
   let paid = TOWERS[t.k].cost;
   for (let i=1;i<t.lv;i++) paid += Math.round(TOWERS[t.k].cost*UP_MUL[i]);
@@ -508,6 +527,7 @@ function syncHUD(){
   vWv.textContent = wave;
   hpBox.classList.toggle('low', hearts <= 5);
   syncShop();
+  syncSkills();
 }
 
 /* ==========================================================
@@ -584,6 +604,11 @@ function update(dt){
   time += dt;
   if (flash > 0) flash = Math.max(0, flash - dt*2.2);
 
+  // なかまワザのクールダウン（表示は1秒きざみで十分）
+  let cdMoved = false;
+  for (const k in skCd) if (skCd[k] > 0){ skCd[k] = Math.max(0, skCd[k] - dt); cdMoved = true; }
+  if (cdMoved && (time*2|0) !== skTick){ skTick = time*2|0; syncSkills(); }
+
   // 敵の出現
   if (running && spawnQ.length){
     spawnT -= dt;
@@ -600,7 +625,8 @@ function update(dt){
   for (let i=enemies.length-1;i>=0;i--){
     const e = enemies[i], E = ENEMIES[e.k];
     if (e.slow > 0) e.slow -= dt;
-    const mul = e.slow > 0 ? (1 - e.slowAmt) : 1;
+    if (e.stun > 0) e.stun -= dt;                    // まもりのたての足止め
+    const mul = e.stun > 0 ? 0 : (e.slow > 0 ? (1 - e.slowAmt) : 1);
     e.d += E.spd * CELL * mul * dt;
     e.wob += dt*9;
     if (e.d >= pathLen){
@@ -671,7 +697,7 @@ function update(dt){
   // ウェーブ終了
   if (running && !spawnQ.length && !enemies.length){
     running = false;
-    const bonus = 20 + wave*4;
+    const bonus = Math.round((20 + wave*4) * (hasCh('cake') ? 1.2 : 1));
     stars += bonus;
     floatTx(COLS*CELL/2, ROWS*CELL/2, '+⭐'+bonus, '#ffb43f');
     beep(700,.15,'triangle',.06); setTimeout(()=>beep(940,.22,'triangle',.06),130);
@@ -703,19 +729,22 @@ function hitTarget(s, p){
     for (let i=0;i<3+3*s.lv;i++) puff(p.x, p.y, T.color);
     if (s.lv >= 3){ for (let i=0;i<4;i++) puff(p.x, p.y, '#ffffff'); ring(p.x, p.y, T.color, CELL*1.1); }
   }
-  for (const e of dead){
-    const idx = enemies.indexOf(e);
-    if (idx < 0) continue;
-    enemies.splice(idx,1);
-    if (unlock('en_' + e.k))
-      floatTx(p.x, p.y - CELL*0.7, 'ずかんに とうろく！', '#b98ae0');
-    const g = goldOf(e.k);
-    stars += g;
-    floatTx(p.x, p.y, '+'+g, '#ffb43f');
-    for (let i=0;i<14;i++) puff(p.x, p.y, ENEMIES[e.k].color);
-    beep(520,.1,'sine',.035);
-    syncHUD();
-  }
+  for (const e of dead) killEnemy(e, p.x, p.y);
+}
+
+/* 敵をたおしたときの共通処理（ごほうび・エフェクト・ずかん） */
+function killEnemy(e, px, py){
+  const idx = enemies.indexOf(e);
+  if (idx < 0) return;
+  enemies.splice(idx,1);
+  if (unlock('en_' + e.k))
+    floatTx(px, py - CELL*0.7, 'ずかんに とうろく！', '#b98ae0');
+  const g = goldOf(e.k);
+  stars += g;
+  floatTx(px, py, '+'+g, '#ffb43f');
+  for (let i=0;i<14;i++) puff(px, py, ENEMIES[e.k].color);
+  beep(520,.1,'sine',.035);
+  syncHUD();
 }
 
 function gameOver(){
@@ -755,7 +784,7 @@ function unlock(id){
 /* 30ウェーブごとのごほうび。なかまを1人むかえて、次のステージへ */
 function stageClear(){
   const stageNo = wave / STAGE_WAVES;
-  hearts = Math.min(20, hearts + 5);          // ごほうびにハートを少し回復
+  hearts = Math.min(20, hearts + 5 + (hasCh('apple') ? 3 : 0));   // ごほうびにハートを回復
   const ch = CHARS.find(c => !dex['ch_'+c.id]);
   if (ch) unlock('ch_' + ch.id);
   const got = CHARS.filter(c => dex['ch_'+c.id]).length;
@@ -769,10 +798,11 @@ function stageClear(){
   }
   const d = document.createElement('div');
   d.innerHTML = ch
-    ? '<b>' + ch.name + '</b>（' + ch.title + '）が なかまになった！<br>なかま ' + got + ' / ' + CHARS.length +
+    ? '<b>' + ch.name + '</b>（' + ch.title + '）が なかまになった！<br>✨ ' + ch.fx + ' ✨<br>なかま ' + got + ' / ' + CHARS.length +
       (done ? '<br>ぜんいん あつまったよ！ あなたは でんせつのえいゆう ✨' : '')
     : 'ハートが かいふくしたよ 💗<br>つぎのステージも がんばろう！';
   ovB.append(d);
+  buildSkillBar();   // 新しいなかまのワザをすぐ使えるように
   ovBtn.textContent = 'つぎのステージへ ▶';
   ovBtn.onclick = () => ov.classList.remove('on');
   ov.classList.add('on');
@@ -799,7 +829,7 @@ function dexList(){
   return [
     ...DEX_TOWERS.map(o => ({ ...o, cat:'tw', pid:o.id, hint:'おいてみると とうろくされるよ' })),
     ...DEX_ENEMIES.map(o => ({ ...o, cat:'en', pid:o.id, hint:'たおすと とうろくされるよ' })),
-    ...CHARS.map((c,i) => ({ id:'ch_'+c.id, pid:c.id, name:c.name, title:c.title, cat:'ch',
+    ...CHARS.map((c,i) => ({ id:'ch_'+c.id, pid:c.id, name:c.name, title:c.title, cat:'ch', fx:c.fx,
                              hint:'ステージ' + (i+1) + 'クリアで なかまに' })),
   ];
 }
@@ -818,6 +848,7 @@ function buildColGrid(){
       let html = '<div class="cNm">' + o.name + '</div>';
       if (o.cat === 'tw' && rec.lv) html += '<div class="cLv">' + '★'.repeat(rec.lv) + '</div>';
       html += '<div class="cTt">' + o.title + '</div>';
+      if (o.fx) html += '<div class="cTt" style="color:#b98ae0">✨' + o.fx + '</div>';
       if (rec.d) html += '<div class="cGet">' + (rec.w ? 'ウェーブ' + rec.w + '・' : '') + rec.d + '</div>';
       d.insertAdjacentHTML('beforeend', html);
     } else {
@@ -828,6 +859,97 @@ function buildColGrid(){
   }
   const gotAll = all.filter(o => dex[o.id]).length;
   colTotal.textContent = 'ぜんぶで ' + gotAll + ' / ' + all.length + ' とうろく';
+}
+
+/* ==========================================================
+   なかまワザ（あつめたなかまが戦いを手伝ってくれる）
+   スターの使い道でもある。ねだんはウェーブとともに上がる
+   ========================================================== */
+const SKILLS = [
+  { ch:'purin',  name:'まもり',   base:70,  cd:25, needEnemy:true  },
+  { ch:'choco',  name:'ばくだん', base:110, cd:30, needEnemy:true  },
+  { ch:'gumgum', name:'スロー',   base:60,  cd:20, needEnemy:true  },
+  { ch:'donut',  name:'かいふく', base:120, cd:45, needEnemy:false },
+];
+let skCd = { purin:0, choco:0, gumgum:0, donut:0 };
+let skTick = -1;
+function hasCh(id){ return !!dex['ch_' + id]; }
+const skillCost = s => Math.round(s.base * (1 + wave*0.03) * (hasCh('queen') ? 0.8 : 1));
+
+function useSkill(s){
+  if (over || !hasCh(s.ch) || skCd[s.ch] > 0) return;
+  if (s.needEnemy && !enemies.length){ beep(160,.09,'square',.03,.7); return; }
+  const cost = skillCost(s);
+  if (stars < cost){ beep(160,.09,'square',.03,.7); return; }
+  stars -= cost;
+  skCd[s.ch] = s.cd;
+  const W = COLS*CELL, H = ROWS*CELL;
+  if (s.ch === 'purin'){
+    for (const e of enemies) e.stun = 3.5;
+    ring(W/2, H/2, '#ffd98a', H*0.7);
+    ring(W/2, H/2, '#ffffff', H*0.5);
+    floatTx(W/2, H*0.4, 'まもりのたて！', '#e0a52e');
+    beep(500,.2,'triangle',.06);
+    setTimeout(()=>beep(660,.18,'triangle',.05),120);
+  } else if (s.ch === 'choco'){
+    for (const e of [...enemies]){
+      const p = posAt(e.d);
+      e.hp -= e.max*0.28 + 25;      // わりあいダメージなので後半でも役に立つ
+      for (let i=0;i<6;i++) puff(p.x, p.y, '#a5713f');
+      if (e.hp <= 0) killEnemy(e, p.x, p.y);
+    }
+    ring(W/2, H/2, '#a5713f', H*0.8);
+    ring(W/2, H/2, '#ffffff', H*0.55);
+    floatTx(W/2, H*0.4, 'チョコばくだん！', '#a5713f');
+    beep(180,.35,'sawtooth',.07,.5);
+  } else if (s.ch === 'gumgum'){
+    for (const e of enemies){ e.slow = 6; e.slowAmt = 0.55; }
+    ring(W/2, H/2, '#9be89b', H*0.7);
+    floatTx(W/2, H*0.4, 'ぷるぷるスロー！', '#4faf5f');
+    beep(420,.25,'sine',.05,.7);
+  } else {
+    hearts = Math.min(20, hearts + 4);
+    floatTx(W/2, H*0.4, 'ハートかいふく💗', '#ff6f9c');
+    for (let i=0;i<16;i++) mote(W/2 + (Math.random()-0.5)*W*0.5, H*0.55, '#ffb0cf');
+    beep(700,.15,'triangle',.06);
+    setTimeout(()=>beep(930,.2,'triangle',.06),140);
+  }
+  syncHUD(); syncSkills();
+}
+
+function buildSkillBar(){
+  skillBar.innerHTML = '';
+  for (const s of SKILLS){
+    const c = CHARS.find(x => x.id === s.ch);
+    const b = document.createElement('button');
+    b.className = 'sk';
+    b.dataset.ch = s.ch;
+    if (hasCh(s.ch)){
+      b.append(charThumb({ pid:s.ch }, 30));
+      b.insertAdjacentHTML('beforeend',
+        '<div class="skN">' + s.name + '</div><div class="skC">⭐<span></span></div>' +
+        '<div class="skCd" style="display:none"></div>');
+      b.onclick = () => useSkill(s);
+    } else {
+      b.disabled = true;
+      b.insertAdjacentHTML('beforeend',
+        '<div style="font-size:16px;line-height:30px">？</div>' +
+        '<div class="skN">' + c.name + '</div><div class="skC">ステージ' + (CHARS.indexOf(c)+1) + 'で</div>');
+    }
+    skillBar.append(b);
+  }
+  syncSkills();
+}
+function syncSkills(){
+  for (const b of skillBar.children){
+    const s = SKILLS.find(x => x.ch === b.dataset.ch);
+    if (!hasCh(s.ch)) continue;
+    b.querySelector('.skC span').textContent = skillCost(s);
+    const cd = skCd[s.ch], cdEl = b.querySelector('.skCd');
+    cdEl.style.display = cd > 0 ? '' : 'none';
+    if (cd > 0) cdEl.textContent = Math.ceil(cd);
+    b.disabled = over || cd > 0 || stars < skillCost(s);
+  }
 }
 
 /* ---------- なかまの似顔絵（Canvasに直接描く） ---------- */
@@ -1708,6 +1830,14 @@ function drawEnemy(e){
   }
   ctx.restore();
 
+  // 足止め中は頭のうえで星がくるくる
+  if (e.stun > 0){
+    for (let i=0;i<3;i++){
+      const a = time*4 + i*2.1;
+      sparkle(p.x + Math.cos(a)*R*0.9, p.y - R*1.35 + Math.sin(a)*R*0.25, R*0.18, a, '#ffd76e');
+    }
+  }
+
   // HPバー
   const w = R*1.9, h = Math.max(3, CELL*0.075), yy = p.y - R - h*2.4;
   ctx.fillStyle = 'rgba(255,255,255,.85)';
@@ -1806,7 +1936,7 @@ function render(){
    ========================================================== */
 function resize(){
   const w = Math.min(document.getElementById('app').clientWidth - 20, 460);
-  const h = window.innerHeight - 250;
+  const h = window.innerHeight - 306;   // なかまワザのバーのぶんも確保する
   CELL = Math.max(24, Math.floor(Math.min(w/COLS, h/ROWS)));
   const W = COLS*CELL, H = ROWS*CELL;
   const dpr = Math.min(window.devicePixelRatio||1, 2.5);
