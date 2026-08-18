@@ -559,9 +559,12 @@ function syncShop(){
     const T = TOWERS[el.dataset.k];
     el.classList.toggle('sel', selTool === el.dataset.k);
     el.classList.toggle('poor', stars < T.cost);
-    // ねだんのよこに、いま盤面においている数（置く・売るでかわる）
+    // ねだんのよこに、いま盤面においている数（置く・売るでかわる）。
+    // 0個のときは薄くして、持っているものだけ目に入るように
     const n = towers.filter(t => t.k === el.dataset.k).length;
-    el.querySelector('.twC').textContent = '・×' + n;
+    const tc = el.querySelector('.twC');
+    tc.textContent = '・×' + n;
+    tc.style.opacity = n > 0 ? '' : '.35';
   }
 }
 
