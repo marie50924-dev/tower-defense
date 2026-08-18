@@ -59,8 +59,7 @@
     background:rgba(255,255,255,.6);cursor:pointer;text-align:center;line-height:1.15;
     transition:transform .1s, border-color .1s;
   }
-  .twN{position:absolute;top:-6px;right:-4px;background:linear-gradient(180deg,#ffb3dc,var(--pink));
-    color:#fff;font-size:9.5px;border-radius:9px;padding:1px 5px;box-shadow:0 1px 0 var(--pink-d)}
+  .twC{color:#b98ae0}
   .tw:active{transform:scale(.94)}
   .tw.sel{border-color:var(--pink);background:#fff;box-shadow:0 0 0 3px rgba(255,143,196,.28)}
   .tw.poor{opacity:.42}
@@ -545,7 +544,7 @@ function buildShop(){
     d.className = 'tw';
     d.dataset.k = k;
     d.innerHTML = `<div class="ic">${T.ic}</div><div class="nm">${T.name}</div>` +
-      `<div class="cs">ねだん ⭐${T.cost}</div><div class="twN" style="display:none"></div>`;
+      `<div class="cs">⭐${T.cost}<span class="twC"></span></div>`;
     d.onclick = () => {
       selTower = null; closeInfo();
       selTool = (selTool === k) ? null : k;
@@ -560,11 +559,9 @@ function syncShop(){
     const T = TOWERS[el.dataset.k];
     el.classList.toggle('sel', selTool === el.dataset.k);
     el.classList.toggle('poor', stars < T.cost);
-    // いま盤面においている数（置く・売るでかわる）
+    // ねだんのよこに、いま盤面においている数（置く・売るでかわる）
     const n = towers.filter(t => t.k === el.dataset.k).length;
-    const bd = el.querySelector('.twN');
-    bd.style.display = n > 0 ? '' : 'none';
-    bd.textContent = '×' + n;
+    el.querySelector('.twC').textContent = '・×' + n;
   }
 }
 
