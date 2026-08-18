@@ -141,6 +141,13 @@
   #colHint{text-align:center;font-size:10px;color:#b98ae0;background:rgba(255,255,255,.55);
     border-radius:10px;padding:5px 4px}
 
+  /* ---------- おかしの国のパノラマ ---------- */
+  #kingOv{position:absolute;inset:0;display:none;flex-direction:column;gap:8px;border-radius:20px;
+    background:rgba(255,244,251,.97);backdrop-filter:blur(6px);padding:12px;overflow-y:auto;z-index:4}
+  #kingOv.on{display:flex;animation:pop .3s cubic-bezier(.2,1.4,.5,1)}
+  #kingCv{width:100%;border-radius:14px;box-shadow:0 6px 18px rgba(180,130,175,.35)}
+  #kingCap{text-align:center;font-size:11px;opacity:.7;line-height:1.5}
+
   /* ---------- たたかいかたガイド ---------- */
   #helpOv{position:absolute;inset:0;display:none;flex-direction:column;gap:8px;border-radius:20px;
     background:rgba(255,244,251,.97);backdrop-filter:blur(6px);padding:12px;overflow-y:auto;z-index:3}
@@ -188,6 +195,15 @@
       <button class="btn" id="ovBtn" style="flex:0 0 auto;padding:12px 30px"></button>
       <button class="mini" id="ovShare" style="display:none">きろくをシェア 📤</button>
     </div>
+    <div id="kingOv">
+      <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pink-d)">
+        <div style="flex:1">🏰 わたしの おかしの国</div>
+        <button class="mini" id="kingShare">📤</button>
+        <button class="mini gray" id="kingClose">とじる</button>
+      </div>
+      <canvas id="kingCv"></canvas>
+      <div id="kingCap"></div>
+    </div>
     <div id="helpOv">
       <div id="colHeadH" style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pink-d)">
         <div style="flex:1">❓ たたかいかたガイド</div>
@@ -198,7 +214,8 @@
     <div id="colOv">
       <div id="colHead">
         <div>👑 おかしの国 これくしょん <span id="colCount"></span></div>
-        <button class="mini" id="colShare">シェア 📤</button>
+        <button class="mini" id="colKing">🏰</button>
+        <button class="mini" id="colShare">📤</button>
         <button class="mini gray" id="colClose">とじる</button>
       </div>
       <div id="colTabs">
@@ -499,6 +516,7 @@ function reset(){
   ov.classList.remove('on');
   colOv.classList.remove('on');
   helpOv.classList.remove('on');
+  kingOv.classList.remove('on');
   ovShare.style.display = 'none';
   btnWave.disabled = false;
   btnWave.textContent = 'つぎのウェーブ ▶';
@@ -823,7 +841,7 @@ function update(dt){
   // はやよびすると のこり秒数ぶんボーナス⭐がもらえる）
   if (!running && !over && wave > 0 && nextT > 0 &&
       !ov.classList.contains('on') && !colOv.classList.contains('on') &&
-      !helpOv.classList.contains('on')){
+      !helpOv.classList.contains('on') && !kingOv.classList.contains('on')){
     nextT -= dt;
     if (nextT <= 0){
       nextT = 0;
@@ -1691,6 +1709,350 @@ function buildHelp(){
 }
 btnHelp.onclick = () => { buildHelp(); helpOv.classList.add('on'); beep(700,.08,'triangle',.04); };
 helpClose.onclick = () => helpOv.classList.remove('on');
+
+/* ==========================================================
+   おかしの国のパノラマ（あつめたなかまが住みつく一枚絵）
+   ========================================================== */
+const kingOv = $('kingOv'), kingCv = $('kingCv'), kingCap = $('kingCap');
+
+function drawKingdom(g, W, H){
+  const TAU = 6.2832;
+  const ell = (x,y,rx,ry,col) => { g.fillStyle = col; g.beginPath(); g.ellipse(x,y,rx,ry,0,0,TAU); g.fill(); };
+  const rr2 = (x,y,w,h,r) => {
+    const k = Math.min(r, w/2, h/2);
+    g.beginPath();
+    g.moveTo(x+k,y);
+    g.arcTo(x+w,y,x+w,y+h,k); g.arcTo(x+w,y+h,x,y+h,k);
+    g.arcTo(x,y+h,x,y,k);     g.arcTo(x,y,x+w,y,k);
+    g.closePath();
+  };
+  const star4 = (x,y,r,col,a) => {
+    g.save(); g.translate(x,y); g.rotate(a||0); g.fillStyle = col;
+    g.beginPath();
+    for (let i=0;i<4;i++){
+      const t = i*Math.PI/2;
+      g.lineTo(Math.cos(t)*r, Math.sin(t)*r);
+      g.quadraticCurveTo(0,0, Math.cos(t+Math.PI/4)*r*0.22, Math.sin(t+Math.PI/4)*r*0.22);
+    }
+    g.closePath(); g.fill(); g.restore();
+  };
+  // きまった見た目になるよう、種つきの乱数
+  let seed = 7;
+  const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+
+  /* --- そら --- */
+  const sky = g.createLinearGradient(0,0,0,H*0.62);
+  sky.addColorStop(0,'#a8d4f2'); sky.addColorStop(0.5,'#ffd9ec'); sky.addColorStop(1,'#fff0d6');
+  g.fillStyle = sky; g.fillRect(0,0,W,H*0.62);
+  const sun = g.createRadialGradient(W*0.78,H*0.28,0, W*0.78,H*0.28,W*0.32);
+  sun.addColorStop(0,'rgba(255,246,205,.95)'); sun.addColorStop(0.25,'rgba(255,232,170,.45)'); sun.addColorStop(1,'rgba(255,232,170,0)');
+  g.fillStyle = sun; g.fillRect(0,0,W,H*0.62);
+  ell(W*0.78,H*0.28,W*0.042,W*0.042,'#fff8dd');
+  // くも（やわらかいブロッブの重なり）
+  const cloud = (x,y,s,a) => {
+    g.globalAlpha = a;
+    for (const [dx,dy,r] of [[-1,0,0.55],[0,-0.32,0.7],[1,0.02,0.5],[0.1,0.18,0.85]])
+      ell(x+dx*s, y+dy*s*0.6, s*r*1.5, s*r*0.75, '#ffffff');
+    g.globalAlpha = 1;
+  };
+  cloud(W*0.16,H*0.13,W*0.05,.9); cloud(W*0.5,H*0.08,W*0.04,.7); cloud(W*0.9,H*0.18,W*0.045,.8);
+
+  /* --- とおくのアイスのやま（かすみで遠近感） --- */
+  const scoop = (x,y,r,c1,c2,haze) => {
+    const gr = g.createLinearGradient(0,y-r,0,y);
+    gr.addColorStop(0,c1); gr.addColorStop(1,c2);
+    g.fillStyle = gr;
+    g.beginPath(); g.arc(x,y,r,Math.PI,0); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.93)';
+    g.beginPath(); g.arc(x,y-r*0.02,r,Math.PI,Math.PI*1.35);
+    g.quadraticCurveTo(x-r*0.3,y-r*0.55,x-r*0.15,y-r*0.75);
+    g.quadraticCurveTo(x+r*0.15,y-r*0.95,x+r*0.4,y-r*0.72);
+    g.quadraticCurveTo(x+r*0.75,y-r*0.5,x+r*0.7,y-r*0.28);
+    g.arc(x,y-r*0.02,r,Math.PI*1.9,0);
+    g.lineTo(x+r*0.6,y-r*0.1);
+    g.quadraticCurveTo(x+r*0.5,y-r*0.35,x+r*0.2,y-r*0.2);
+    g.quadraticCurveTo(x-r*0.2,y-r*0.05,x-r*0.5,y-r*0.3);
+    g.closePath(); g.fill();
+    if (haze){
+      g.fillStyle = 'rgba(255,236,246,' + haze + ')';
+      g.beginPath(); g.arc(x,y,r*1.02,Math.PI,0); g.closePath(); g.fill();
+    }
+  };
+  scoop(W*0.1, H*0.47, W*0.17, '#f6a8c8','#e989b2', 0.4);
+  scoop(W*0.33,H*0.48, W*0.12, '#c3aaea','#a98fd8', 0.5);
+  scoop(W*0.92,H*0.47, W*0.15, '#a8dfc0','#86c9a4', 0.4);
+
+  /* --- じめん（ミントの丘） --- */
+  const gnd = g.createLinearGradient(0,H*0.45,0,H);
+  gnd.addColorStop(0,'#d9f4e2'); gnd.addColorStop(0.5,'#c3edd3'); gnd.addColorStop(1,'#a9e0bd');
+  g.fillStyle = gnd;
+  g.beginPath(); g.moveTo(0,H*0.52);
+  g.quadraticCurveTo(W*0.25,H*0.455,W*0.5,H*0.5);
+  g.quadraticCurveTo(W*0.75,H*0.545,W,H*0.5);
+  g.lineTo(W,H); g.lineTo(0,H); g.closePath(); g.fill();
+
+  /* --- チョコのかわ とワッフルばし --- */
+  const rivGr = g.createLinearGradient(W*0.6,0,W*0.95,0);
+  rivGr.addColorStop(0,'#7a4c28'); rivGr.addColorStop(0.5,'#9c6638'); rivGr.addColorStop(1,'#7a4c28');
+  g.fillStyle = rivGr;
+  g.beginPath();
+  g.moveTo(W*0.66,H*0.52);
+  g.quadraticCurveTo(W*0.78,H*0.62,W*0.68,H*0.72);
+  g.quadraticCurveTo(W*0.56,H*0.82,W*0.72,H);
+  g.lineTo(W*0.95,H);
+  g.quadraticCurveTo(W*0.8,H*0.8,W*0.9,H*0.68);
+  g.quadraticCurveTo(W*0.98,H*0.58,W*0.8,H*0.52);
+  g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(255,236,205,.35)'; g.lineWidth = W*0.007; g.lineCap = 'round';
+  for (const t of [0.58,0.66,0.76,0.87]){
+    g.beginPath(); g.moveTo(W*0.68,H*t); g.quadraticCurveTo(W*0.76,H*(t+0.03),W*0.84,H*(t-0.01)); g.stroke();
+  }
+  // ワッフルばし
+  g.fillStyle = '#d9a05e';
+  g.beginPath(); g.moveTo(W*0.62,H*0.66);
+  g.quadraticCurveTo(W*0.74,H*0.585,W*0.88,H*0.64);
+  g.lineTo(W*0.88,H*0.68); g.quadraticCurveTo(W*0.74,H*0.625,W*0.62,H*0.7);
+  g.closePath(); g.fill();
+  g.strokeStyle = 'rgba(120,70,30,.4)'; g.lineWidth = W*0.004;
+  for (let i=1;i<6;i++){
+    g.beginPath(); g.moveTo(W*(0.62+i*0.043),H*0.7); g.lineTo(W*(0.62+i*0.043),H*0.645); g.stroke();
+  }
+
+  /* --- クッキーのみち（お城の門へ） --- */
+  const path = g.createLinearGradient(0,H*0.56,0,H);
+  path.addColorStop(0,'#e2b384'); path.addColorStop(1,'#f0c99b');
+  g.fillStyle = path;
+  g.beginPath();
+  g.moveTo(W*0.36,H);
+  g.quadraticCurveTo(W*0.44,H*0.72,W*0.49,H*0.565);
+  g.lineTo(W*0.575,H*0.565);
+  g.quadraticCurveTo(W*0.6,H*0.72,W*0.68,H);
+  g.closePath(); g.fill();
+  for (let i=0;i<40;i++){
+    const t = rnd(), u = rnd();
+    const y2 = H*(0.58 + t*0.4);
+    const half = W*(0.045 + (y2/H-0.56)*0.28);
+    const x2 = W*0.53 + (u-0.5)*2*half;
+    g.save(); g.translate(x2,y2); g.rotate(rnd()*TAU);
+    g.fillStyle = ['#ff9ec9','#9ed8ff','#b6f0c4','#ffe08a'][ (rnd()*4)|0 ];
+    g.fillRect(-W*0.006,-W*0.002,W*0.012,W*0.004);
+    g.restore();
+  }
+
+  /* --- おしろ --- */
+  const cxK = W*0.53, byK = H*0.575;
+  const towerK = (x,yb,w,h,roofCol) => {
+    const tg = g.createLinearGradient(x-w/2,0,x+w/2,0);
+    tg.addColorStop(0,'#e8bd93'); tg.addColorStop(0.4,'#ffe7c6'); tg.addColorStop(1,'#d9a878');
+    g.fillStyle = tg;
+    rr2(x-w/2, yb-h, w, h, w*0.12); g.fill();
+    // かべのアイシング
+    g.fillStyle = 'rgba(255,255,255,.9)';
+    g.beginPath(); g.moveTo(x-w/2, yb-h+w*0.16);
+    for (let i=0;i<4;i++) g.arc(x-w/2+w*(i+0.5)/4, yb-h+w*0.16, w/8, Math.PI, 0, true);
+    g.lineTo(x+w/2, yb-h); g.lineTo(x-w/2, yb-h); g.closePath(); g.fill();
+    // まど（あたたかい光）
+    const wg = g.createRadialGradient(x,yb-h*0.5,0, x,yb-h*0.5,w*0.34);
+    wg.addColorStop(0,'rgba(255,220,140,.9)'); wg.addColorStop(1,'rgba(255,220,140,0)');
+    g.fillStyle = wg; ell(x,yb-h*0.5,w*0.34,w*0.4,wg);
+    g.fillStyle = '#ffd98a';
+    rr2(x-w*0.11, yb-h*0.5-w*0.16, w*0.22, w*0.3, w*0.11); g.fill();
+    g.strokeStyle = 'rgba(160,100,50,.5)'; g.lineWidth = 1;
+    rr2(x-w*0.11, yb-h*0.5-w*0.16, w*0.22, w*0.3, w*0.11); g.stroke();
+    // クリームのやね（ソフトクリームのうずまき）
+    for (let i=0;i<3;i++){
+      const rrr = w*(0.62 - i*0.16), yy = yb-h - w*0.12 - i*w*0.3;
+      const rg = g.createLinearGradient(0,yy-rrr*0.5,0,yy+rrr*0.5);
+      rg.addColorStop(0,'#ffffff'); rg.addColorStop(1,roofCol);
+      g.fillStyle = rg;
+      g.beginPath(); g.ellipse(x,yy,rrr,rrr*0.55,0,0,TAU); g.fill();
+    }
+    ell(x, yb-h-w*1.06, w*0.11, w*0.11, '#ff6f9c');
+  };
+  towerK(cxK-W*0.085, byK, W*0.075, H*0.17, '#ffb9d4');
+  towerK(cxK+W*0.085, byK, W*0.075, H*0.17, '#c3aaea');
+  towerK(cxK,          byK, W*0.1,   H*0.23, '#ffb9d4');
+  // もん（アーチとキャンディけーンのはしら）
+  g.fillStyle = '#7a4c28';
+  g.beginPath(); g.arc(cxK, byK, W*0.026, Math.PI, 0); g.lineTo(cxK+W*0.026,byK); g.lineTo(cxK-W*0.026,byK); g.closePath(); g.fill();
+  for (const s of [-1,1]){
+    const px2 = cxK + s*W*0.037;
+    g.save();
+    rr2(px2-W*0.007, byK-H*0.055, W*0.014, H*0.055, W*0.007); g.clip();
+    g.fillStyle = '#fff';
+    g.fillRect(px2-W*0.007, byK-H*0.055, W*0.014, H*0.055);
+    g.fillStyle = '#ff6f8f';
+    for (let i=0;i<6;i++){
+      g.save(); g.translate(px2, byK-H*0.055+i*H*0.012); g.rotate(-0.6);
+      g.fillRect(-W*0.02,-H*0.003,W*0.04,H*0.006); g.restore();
+    }
+    g.restore();
+  }
+  // はた
+  g.strokeStyle = '#b98a5e'; g.lineWidth = W*0.003;
+  g.beginPath(); g.moveTo(cxK, byK-H*0.23-W*0.11); g.lineTo(cxK, byK-H*0.23-W*0.16); g.stroke();
+  g.fillStyle = '#ff8fc4';
+  g.beginPath(); g.moveTo(cxK, byK-H*0.23-W*0.16);
+  g.lineTo(cxK+W*0.032, byK-H*0.23-W*0.145); g.lineTo(cxK, byK-H*0.23-W*0.13);
+  g.closePath(); g.fill();
+
+  /* --- ジンジャーブレッドのおうち --- */
+  const house = (x,yb,s) => {
+    const hg = g.createLinearGradient(x-s,0,x+s,0);
+    hg.addColorStop(0,'#8a5a34'); hg.addColorStop(0.45,'#b07d4e'); hg.addColorStop(1,'#7a4c28');
+    g.fillStyle = hg;
+    rr2(x-s, yb-s*1.1, s*2, s*1.1, s*0.12); g.fill();
+    // やねとアイシングのふち
+    g.fillStyle = '#96613a';
+    g.beginPath(); g.moveTo(x-s*1.15,yb-s*1.05); g.lineTo(x,yb-s*1.8); g.lineTo(x+s*1.15,yb-s*1.05); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.95)';
+    g.beginPath(); g.moveTo(x-s*1.15,yb-s*1.05);
+    for (let i=0;i<5;i++) g.arc(x-s*1.15+s*2.3*(i+0.5)/5, yb-s*1.05, s*0.23, Math.PI, 0, true);
+    g.lineTo(x+s*1.15,yb-s*0.95); g.lineTo(x-s*1.15,yb-s*0.95); g.closePath(); g.fill();
+    // ドアとまど
+    g.fillStyle = '#5f3a20';
+    rr2(x-s*0.22, yb-s*0.55, s*0.44, s*0.55, s*0.22); g.fill();
+    g.fillStyle = '#ffd98a';
+    ell(x-s*0.6, yb-s*0.7, s*0.16, s*0.16, '#ffd98a');
+    ell(x+s*0.6, yb-s*0.7, s*0.16, s*0.16, '#ffd98a');
+    // ガムドロップ
+    for (let i=0;i<4;i++)
+      ell(x-s*0.8+i*s*0.53, yb-s*1.35-(i%2?s*0.12:0), s*0.09, s*0.11, ['#ff8fc4','#8fe3c4','#ffd76e','#9ed8ff'][i]);
+  };
+  house(W*0.15, H*0.66, W*0.055);
+  house(W*0.87, H*0.62, W*0.042);
+
+  /* --- わたあめの木 と ロリポップ --- */
+  const tree = (x,yb,s,col1,col2) => {
+    g.fillStyle = '#8a5a34';
+    rr2(x-s*0.08, yb-s*0.8, s*0.16, s*0.8, s*0.08); g.fill();
+    for (const [dx,dy,r] of [[-0.45,-0.95,0.5],[0.45,-0.95,0.5],[0,-1.3,0.62],[0,-0.85,0.55]]){
+      const cg = g.createRadialGradient(x+dx*s-s*0.15, yb+dy*s-s*0.15, s*0.05, x+dx*s, yb+dy*s, s*r*1.25);
+      cg.addColorStop(0,'#ffffff'); cg.addColorStop(0.5,col1); cg.addColorStop(1,col2);
+      g.fillStyle = cg;
+      g.beginPath(); g.arc(x+dx*s, yb+dy*s, s*r, 0, TAU); g.fill();
+    }
+  };
+  tree(W*0.06,H*0.85,W*0.05,'#ffc2da','#f39ec0');
+  tree(W*0.3, H*0.66,W*0.035,'#c9ecd8','#a3d9ba');
+  tree(W*0.95,H*0.9, W*0.055,'#d8c6f2','#b9a0e2');
+  const lolli = (x,yb,s,col) => {
+    g.strokeStyle = '#fff'; g.lineWidth = s*0.16; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(x,yb); g.lineTo(x,yb-s*1.1); g.stroke();
+    const lg2 = g.createRadialGradient(x-s*0.2,yb-s*1.1-s*0.5*0.4,0, x,yb-s*1.1-s*0.35,s*0.62);
+    lg2.addColorStop(0,'#ffffff'); lg2.addColorStop(1,col);
+    g.fillStyle = lg2;
+    g.beginPath(); g.arc(x,yb-s*1.1-s*0.3,s*0.55,0,TAU); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.85)'; g.lineWidth = s*0.12;
+    g.beginPath();
+    for (let i=0;i<18;i++){
+      const a2 = i*0.5, r2 = i*s*0.028;
+      g.lineTo(x+Math.cos(a2)*r2, yb-s*1.1-s*0.3+Math.sin(a2)*r2);
+    }
+    g.stroke();
+  };
+  lolli(W*0.23,H*0.95,W*0.035,'#ff8fc4');
+  lolli(W*0.78,H*0.97,W*0.04,'#8fd8ff');
+  lolli(W*0.09,H*0.73,W*0.022,'#ffd76e');
+
+  /* --- まえのマカロンいし と おはな --- */
+  for (const [x,y,s,c1,c2] of [[0.33,0.97,0.02,'#ffd0df','#e8a5be'],[0.62,0.93,0.016,'#c9ecd8','#9cd0ae']]){
+    ell(W*x,H*y,W*s,W*s*0.6,c2); ell(W*x,H*(y-0.008),W*s,W*s*0.55,c1);
+  }
+  for (let i=0;i<14;i++){
+    const x2 = W*rnd(), y2 = H*(0.6+rnd()*0.38);
+    if (x2 > W*0.36 && x2 < W*0.7) continue;   // みちとかわは avoid ざっくり
+    g.fillStyle = ['#ff9ec9','#fff','#ffe08a'][(rnd()*3)|0];
+    for (let p2=0;p2<5;p2++){
+      const a2 = p2*TAU/5;
+      ell(x2+Math.cos(a2)*W*0.005, y2+Math.sin(a2)*W*0.005, W*0.004, W*0.004, g.fillStyle);
+    }
+    ell(x2,y2,W*0.003,W*0.003,'#ffb43f');
+  }
+
+  /* --- ひかりのすじ と キラキラ --- */
+  g.save(); g.translate(W*0.78,H*0.28);
+  g.fillStyle = 'rgba(255,246,210,.10)';
+  for (let i=0;i<5;i++){
+    g.rotate(0.5);
+    g.beginPath(); g.moveTo(0,0); g.arc(0,0,W*0.9,-0.05,0.05); g.closePath(); g.fill();
+  }
+  g.restore();
+  for (let i=0;i<26;i++)
+    star4(W*rnd(), H*rnd(), W*(0.004+rnd()*0.007), 'rgba(255,255,255,' + (0.5+rnd()*0.5) + ')', rnd()*3);
+
+  /* --- あつめたなかまが住みつく --- */
+  const put = (pid, x, y, s) => {
+    ell(W*x, H*y + s*0.42, s*0.42, s*0.13, 'rgba(120,90,120,.2)');
+    g.drawImage(charThumb({ pid }, s), W*x - s/2, H*y - s/2, s, s);
+  };
+  const S1 = W/420;   // 420px基準の大きさ調整
+  const spots = [
+    ['purin',0.3,0.84,56],['choco',0.5,0.9,58],['gumgum',0.66,0.85,54],
+    ['donut',0.13,0.77,52],['taffy',0.84,0.78,50],['cake',0.41,0.76,48],
+    ['fairy',0.35,0.53,44],['prince',0.6,0.6,44],['apple',0.46,0.62,44],
+    ['queen',0.585,0.545,40],['king',0.53,0.63,46],['rpurin',0.2,0.62,44],
+  ];
+  let got = 0;
+  for (const [pid,x,y,s] of spots){
+    const key = pid === 'rpurin' ? 'sp_rpurin' : 'ch_' + pid;
+    if (dex[key]){ put(pid, x, y, s*S1); got++; }
+  }
+  let lgGot = 0;
+  for (const [pid,x,y,s] of [['whale',0.18,0.16,84],['phoenix',0.6,0.1,66],['chronos',0.9,0.33,56]]){
+    if (dex['lg_' + pid]){
+      put(pid, x, y, s*S1); lgGot++;
+      star4(W*x + s*S1*0.55, H*y - s*S1*0.4, W*0.008, '#fff', 1);
+    }
+  }
+
+  /* --- しあげ：ふちのビネットとタイトル --- */
+  const vg = g.createRadialGradient(W/2,H*0.55,H*0.3, W/2,H*0.55,H*0.95);
+  vg.addColorStop(0,'rgba(120,80,120,0)'); vg.addColorStop(1,'rgba(120,80,120,.16)');
+  g.fillStyle = vg; g.fillRect(0,0,W,H);
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.font = "800 " + (W*0.055) + "px 'Hiragino Maru Gothic ProN',sans-serif";
+  g.lineWidth = W*0.014; g.strokeStyle = 'rgba(255,255,255,.9)';
+  g.strokeText('まほうのおかしの国', W/2, H*0.058);
+  g.fillStyle = '#e05f9e';
+  g.fillText('まほうのおかしの国', W/2, H*0.058);
+  return { got, lgGot };
+}
+
+function buildKingdom(){
+  const w = kingOv.clientWidth - 24 || 380;
+  const h = Math.round(w * 0.78);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  kingCv.width = w*dpr; kingCv.height = h*dpr;
+  kingCv.style.height = h + 'px';
+  const g = kingCv.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0);
+  const r = drawKingdom(g, w, h);
+  kingCap.textContent = r.got >= 12 && r.lgGot >= 3
+    ? '🏰 おかしの国は だいにぎわい！ みんな あつまったよ 🎉'
+    : 'なかま ' + r.got + '/12・でんせつ ' + r.lgGot + '/3 が くらしているよ。あつめるほど にぎやかに✨';
+}
+$('colKing').onclick = () => { kingOv.classList.add('on'); buildKingdom(); beep(700,.08,'triangle',.04); };
+$('kingClose').onclick = () => kingOv.classList.remove('on');
+$('kingShare').onclick = async () => {
+  // おかしの国の一枚絵をそのままシェア
+  const W2 = 1200, H2 = Math.round(1200*0.78);
+  const c = document.createElement('canvas');
+  c.width = W2; c.height = H2;
+  const r = drawKingdom(c.getContext('2d'), W2, H2);
+  const text = 'わたしの まほうのおかしの国 🏰 なかま' + r.got + '/12 ✨ #おかしの国TD';
+  const url = 'https://marie50924-dev.github.io/tower-defense/';
+  try{
+    const blob = await new Promise(res => c.toBlob(res, 'image/png'));
+    const file = new File([blob], 'sweet-kingdom.png', { type:'image/png' });
+    if (navigator.canShare && navigator.canShare({ files:[file] })){
+      await navigator.share({ files:[file], text: text + ' ' + url });
+      return;
+    }
+  }catch(e){ if (e && e.name === 'AbortError') return; }
+  window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text) +
+              '&url=' + encodeURIComponent(url), '_blank');
+};
 
 /* ---------- なかまの似顔絵（Canvasに直接描く） ---------- */
 function charThumb(ch, size){
