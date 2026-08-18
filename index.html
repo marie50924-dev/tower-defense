@@ -87,6 +87,8 @@
   .skC{font-size:9.5px;color:var(--pink-d)}
   .skCd{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
     background:rgba(255,255,255,.66);border-radius:12px;font-size:17px;color:var(--pink-d)}
+  .skStock{position:absolute;top:-4px;right:-3px;background:linear-gradient(180deg,#ffb3dc,var(--pink));
+    color:#fff;font-size:9px;border-radius:9px;padding:1px 4px;box-shadow:0 1px 0 var(--pink-d)}
 
   /* ---------- controls ---------- */
   #ctrl{display:flex;gap:6px}
@@ -416,6 +418,7 @@ function reset(){
   btnSpd.textContent = '1x';
   buildPath(); measurePath(); makeSparks();
   for (const k in skCd) skCd[k] = 0;
+  gifts = [];
   buildSkillBar();
   syncHUD(); buildShop(); closeInfo();
   ov.classList.remove('on');
@@ -694,6 +697,23 @@ function update(dt){
     if (s.y < -8){ s.y = ROWS*CELL+8; s.x = Math.random()*COLS*CELL; }
   }
 
+  // プレゼントキャンディがワザバーへ飛んでいく（山なりの軌道）
+  for (let i=gifts.length-1;i>=0;i--){
+    const gf = gifts[i]; gf.t += dt;
+    const k = Math.min(1, gf.t/gf.life), e2 = k*k*(3-2*k);
+    gf.x = gf.sx + (gf.tx-gf.sx)*e2;
+    gf.y = gf.sy + (gf.ty-gf.sy)*e2 - Math.sin(k*Math.PI)*CELL*1.6;
+    gf.rot += dt*6;
+    if (k >= 1){
+      gifts.splice(i,1);
+      items[gf.ch] = Math.min(9, items[gf.ch]+1);
+      saveItems();
+      floatTx(gf.tx, ROWS*CELL - CELL*0.6, '+1 ' + SKILLS.find(s=>s.ch===gf.ch).name, '#b98ae0');
+      beep(880,.08,'triangle',.04);
+      syncSkills();
+    }
+  }
+
   // ウェーブ終了
   if (running && !spawnQ.length && !enemies.length){
     running = false;
@@ -742,6 +762,7 @@ function killEnemy(e, px, py){
   const g = goldOf(e.k);
   stars += g;
   floatTx(px, py, '+'+g, '#ffb43f');
+  if (Math.random() < dropRate(e.k)) spawnGift(px, py);   // ときどきワザのプレゼントを落とす
   for (let i=0;i<14;i++) puff(px, py, ENEMIES[e.k].color);
   beep(520,.1,'sine',.035);
   syncHUD();
@@ -786,7 +807,14 @@ function stageClear(){
   const stageNo = wave / STAGE_WAVES;
   hearts = Math.min(20, hearts + 5 + (hasCh('apple') ? 3 : 0));   // ごほうびにハートを回復
   const ch = CHARS.find(c => !dex['ch_'+c.id]);
-  if (ch) unlock('ch_' + ch.id);
+  if (ch){
+    unlock('ch_' + ch.id);
+    // ワザもちのなかまなら、おためし用にストックを1つプレゼント
+    if (SKILLS.some(s => s.ch === ch.id)){
+      items[ch.id] = Math.min(9, items[ch.id] + 1);
+      saveItems();
+    }
+  }
   const got = CHARS.filter(c => dex['ch_'+c.id]).length;
   const done = got >= CHARS.length;
   ovT.textContent = (done && ch) ? 'おかしの国 かんせい！🏰' : 'ステージ ' + stageNo + ' クリア！🎉';
@@ -866,22 +894,51 @@ function buildColGrid(){
    スターの使い道でもある。ねだんはウェーブとともに上がる
    ========================================================== */
 const SKILLS = [
-  { ch:'purin',  name:'まもり',   base:70,  cd:25, needEnemy:true  },
-  { ch:'choco',  name:'ばくだん', base:110, cd:30, needEnemy:true  },
-  { ch:'gumgum', name:'スロー',   base:60,  cd:20, needEnemy:true  },
-  { ch:'donut',  name:'かいふく', base:120, cd:45, needEnemy:false },
+  { ch:'purin',  name:'まもり',   base:70,  cd:12, needEnemy:true,  color:'#ffd98a' },
+  { ch:'choco',  name:'ばくだん', base:110, cd:15, needEnemy:true,  color:'#a5713f' },
+  { ch:'gumgum', name:'スロー',   base:60,  cd:10, needEnemy:true,  color:'#9be89b' },
+  { ch:'donut',  name:'かいふく', base:120, cd:20, needEnemy:false, color:'#ff9ec9' },
 ];
 let skCd = { purin:0, choco:0, gumgum:0, donut:0 };
 let skTick = -1;
 function hasCh(id){ return !!dex['ch_' + id]; }
 const skillCost = s => Math.round(s.base * (1 + wave*0.03) * (hasCh('queen') ? 0.8 : 1));
 
+/* ---------- ワザのストック（ドロップでたまり、ブラウザに残る） ---------- */
+let items = { purin:0, choco:0, gumgum:0, donut:0 };
+try{
+  const it = JSON.parse(localStorage.getItem('sweetTD.items') || '{}');
+  for (const k in items) if (typeof it[k] === 'number') items[k] = Math.max(0, Math.min(9, it[k]|0));
+}catch(e){}
+function saveItems(){ try{ localStorage.setItem('sweetTD.items', JSON.stringify(items)); }catch(e){} }
+
+/* たおした敵がプレゼントを落とす確率。大物ほど落としやすい */
+const DROP_RATE = { golem:0.35, boss:0.6 };
+const dropRate = k => DROP_RATE[k] || 0.07;
+
+/* プレゼントキャンディがワザバーへ飛んでいく演出 */
+let gifts = [];
+function spawnGift(x, y){
+  const opts = SKILLS.filter(s => hasCh(s.ch) && items[s.ch] < 9);   // 9こでカンスト
+  if (!opts.length) return;
+  const s = opts[(Math.random()*opts.length)|0];
+  const i = SKILLS.indexOf(s);
+  gifts.push({ sx:x, sy:y, x, y,
+               tx:(i+0.5)*COLS*CELL/SKILLS.length, ty:ROWS*CELL - CELL*0.15,
+               t:0, life:0.8, ch:s.ch, rot:Math.random()*6.3 });
+}
+
 function useSkill(s){
   if (over || !hasCh(s.ch) || skCd[s.ch] > 0) return;
   if (s.needEnemy && !enemies.length){ beep(160,.09,'square',.03,.7); return; }
-  const cost = skillCost(s);
-  if (stars < cost){ beep(160,.09,'square',.03,.7); return; }
-  stars -= cost;
+  // ストックがあれば無料。なければおほしさまで使える
+  if (items[s.ch] > 0){
+    items[s.ch]--; saveItems();
+  } else {
+    const cost = skillCost(s);
+    if (stars < cost){ beep(160,.09,'square',.03,.7); return; }
+    stars -= cost;
+  }
   skCd[s.ch] = s.cd;
   const W = COLS*CELL, H = ROWS*CELL;
   if (s.ch === 'purin'){
@@ -927,7 +984,8 @@ function buildSkillBar(){
     if (hasCh(s.ch)){
       b.append(charThumb({ pid:s.ch }, 30));
       b.insertAdjacentHTML('beforeend',
-        '<div class="skN">' + s.name + '</div><div class="skC">⭐<span></span></div>' +
+        '<div class="skN">' + s.name + '</div><div class="skC"></div>' +
+        '<div class="skStock" style="display:none"></div>' +
         '<div class="skCd" style="display:none"></div>');
       b.onclick = () => useSkill(s);
     } else {
@@ -944,11 +1002,16 @@ function syncSkills(){
   for (const b of skillBar.children){
     const s = SKILLS.find(x => x.ch === b.dataset.ch);
     if (!hasCh(s.ch)) continue;
-    b.querySelector('.skC span').textContent = skillCost(s);
+    const st = items[s.ch];
+    // ストックがあれば無料表示、なければおほしさまのねだん
+    b.querySelector('.skC').textContent = st > 0 ? 'つかえる！' : '⭐' + skillCost(s);
+    const bd = b.querySelector('.skStock');
+    bd.style.display = st > 0 ? '' : 'none';
+    bd.textContent = '×' + st;
     const cd = skCd[s.ch], cdEl = b.querySelector('.skCd');
     cdEl.style.display = cd > 0 ? '' : 'none';
     if (cd > 0) cdEl.textContent = Math.ceil(cd);
-    b.disabled = over || cd > 0 || stars < skillCost(s);
+    b.disabled = over || cd > 0 || (st === 0 && stars < skillCost(s));
   }
 }
 
@@ -1897,6 +1960,26 @@ function render(){
   for (const t of towers) drawTower(t);
   for (const e of enemies) drawEnemy(e);
   for (const s of shots) drawShot(s);
+
+  // 飛んでいくプレゼントキャンディ（行き先のワザの色でつつむ）
+  for (const gf of gifts){
+    const col = SKILLS.find(s => s.ch === gf.ch).color;
+    const cr = CELL*0.16;
+    ctx.save(); ctx.translate(gf.x, gf.y); ctx.rotate(gf.rot);
+    ctx.fillStyle = col;
+    for (const s2 of [-1,1]){
+      ctx.beginPath();
+      ctx.moveTo(s2*cr*0.8, 0);
+      ctx.lineTo(s2*cr*1.5, -cr*0.6);
+      ctx.lineTo(s2*cr*1.5,  cr*0.6);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.beginPath(); ctx.ellipse(0, 0, cr, cr*0.78, 0, 0, 6.3); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.65)';
+    ctx.beginPath(); ctx.ellipse(-cr*0.3, -cr*0.28, cr*0.34, cr*0.18, -0.5, 0, 6.3); ctx.fill();
+    ctx.restore();
+    sparkle(gf.x + CELL*0.16, gf.y - CELL*0.16, CELL*0.055, gf.rot*2, '#ffffff');
+  }
 
   for (const p of parts){
     const k = 1 - p.age/p.life;
