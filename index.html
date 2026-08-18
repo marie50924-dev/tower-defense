@@ -731,7 +731,7 @@ function update(dt){
     gf.rot += dt*6;
     if (k >= 1){
       gifts.splice(i,1);
-      items[gf.ch] = Math.min(9, items[gf.ch]+1);
+      items[gf.ch] = Math.min(ITEM_MAX, items[gf.ch]+1);
       saveItems();
       floatTx(gf.tx, ROWS*CELL - CELL*0.6, '+1 ' + SKILLS.find(s=>s.ch===gf.ch).name, '#b98ae0');
       beep(880,.08,'triangle',.04);
@@ -854,7 +854,7 @@ function stageClear(){
     unlock('ch_' + ch.id);
     // おためし用にストックを1つプレゼントし、あきがあればタスクバーにも自動ではる
     if (SKILLS.some(s => s.ch === ch.id)){
-      items[ch.id] = Math.min(9, items[ch.id] + 1);
+      items[ch.id] = Math.min(ITEM_MAX, items[ch.id] + 1);
       saveItems();
       if (pins.length < PIN_MAX && !pins.includes(ch.id)){ pins.push(ch.id); savePins(); }
     }
@@ -887,6 +887,7 @@ function stageClear(){
 
 /* ---------- 図鑑モーダル ---------- */
 let colTab = 'all';
+let buyWait = null;   // ×0のなかまを2回タップで買うときの1回目おぼえ
 btnCol.onclick = () => { buildColGrid(); colOv.classList.add('on'); beep(700,.08,'triangle',.04); };
 colClose.onclick = () => colOv.classList.remove('on');
 for (const b of colTabsEl.children){
@@ -917,7 +918,7 @@ function buildColGrid(){
     '<div class="cst"><div class="ck">たおしたかず</div><div class="cn">' + rec.kills + '</div></div>' +
     '<div class="cst"><div class="ck">ランキング(めやす)</div><div class="cn">' + (rec.bw > 0 ? 'じょうい' + rankPct() + '%' : '—') + '</div></div>';
   colHint.style.display = (colTab === 'ch' || colTab === 'all') ? '' : 'none';
-  colHint.textContent = '📌 あつめたなかまをタップすると ワザバーに はったり はがしたり できるよ（' + pins.length + '/' + PIN_MAX + '）';
+  colHint.textContent = '📌 なかまをタップでバーに はる／はがす（' + pins.length + '/' + PIN_MAX + '）　つかう・はがすと1こへるよ';
   colDone.style.display = CHARS.every(c => dex['ch_'+c.id]) ? '' : 'none';
   colGrid.innerHTML = '';
   for (const o of list){
@@ -928,15 +929,40 @@ function buildColGrid(){
       d.append(charThumb(o, 64));
       let html = '<div class="cNm">' + o.name + '</div>';
       if (o.cat === 'tw' && rec.lv) html += '<div class="cLv">' + '★'.repeat(rec.lv) + '</div>';
+      const isSk = o.cat === 'ch' && SKILLS.some(s => s.ch === o.pid);
+      if (isSk) html += '<div class="cLv" style="color:var(--pink-d)">×' + (items[o.pid] || 0) + ' もってる</div>';
       html += '<div class="cTt">' + o.title + '</div>';
       if (o.fx) html += '<div class="cTt" style="color:#b98ae0">✨' + o.fx + '</div>';
       if (rec.d) html += '<div class="cGet">' + (rec.w ? 'ウェーブ' + rec.w + '・' : '') + rec.d + '</div>';
       d.insertAdjacentHTML('beforeend', html);
-      // なかまはタップでワザバーに はる／はがす
-      if (o.cat === 'ch' && SKILLS.some(s => s.ch === o.pid)){
+      // なかまはタップでワザバーに はる／はがす。0こなら おほしさまで買い足せる
+      if (isSk){
         if (pins.includes(o.pid)) d.insertAdjacentHTML('beforeend', '<div class="cPin">📌</div>');
         d.style.cursor = 'pointer';
         d.onclick = () => {
+          const sDef = SKILLS.find(s => s.ch === o.pid);
+          if (!pins.includes(o.pid) && (items[o.pid] || 0) < 1){
+            // 2回タップで1こ購入（スターの使い道）
+            const cost = skillCost(sDef);
+            if (buyWait === o.pid){
+              buyWait = null;
+              if (stars < cost){
+                colHint.textContent = 'おほしさまが たりない…（⭐' + cost + '）';
+                beep(160,.09,'square',.03,.7);
+              } else {
+                stars -= cost;
+                items[o.pid] = Math.min(ITEM_MAX, (items[o.pid]||0) + 1); saveItems();
+                beep(760,.1,'triangle',.05); syncHUD(); buildColGrid();
+                colHint.textContent = o.name + 'を 1こ かった！もういちどタップではろう';
+              }
+            } else {
+              buyWait = o.pid;
+              colHint.textContent = '⭐' + cost + 'で ' + o.name + 'を 1こかう？（もういちどタップ）';
+              beep(600,.06,'triangle',.04);
+            }
+            return;
+          }
+          buyWait = null;
           const r2 = togglePin(o.pid);
           if (r2 === 'full'){
             colHint.textContent = '📌 ワザバーは ' + PIN_MAX + 'こまで！ どれかを はがしてね';
@@ -945,6 +971,7 @@ function buildColGrid(){
           }
           beep(r2 === 'on' ? 760 : 480, .08, 'triangle', .04);
           buildColGrid();
+          if (r2 === 'off') colHint.textContent = o.name + 'を はがした（1こへったよ）のこり ×' + items[o.pid];
         };
       }
     } else {
@@ -982,14 +1009,23 @@ let buffs = { spd:0, dmg:0, rng:0, gold:0 };
 function hasCh(id){ return id === 'rpurin' ? !!dex['sp_rpurin'] : !!dex['ch_' + id]; }
 const skillCost = s => Math.round(s.base * (1 + wave*0.03) * (hasCh('queen') ? 0.8 : 1));
 
-/* ---------- ワザのストック（ドロップでたまり、ブラウザに残る） ---------- */
+/* ---------- なかまの所持数（つかうと1こへる。ドロップでふえて、ブラウザに残る） ---------- */
+const ITEM_MAX = 99;
 let items = {};
 for (const s of SKILLS) items[s.ch] = 0;
 try{
   const it = JSON.parse(localStorage.getItem('sweetTD.items') || '{}');
-  for (const k in items) if (typeof it[k] === 'number') items[k] = Math.max(0, Math.min(9, it[k]|0));
+  for (const k in items) if (typeof it[k] === 'number') items[k] = Math.max(0, Math.min(ITEM_MAX, it[k]|0));
 }catch(e){}
 function saveItems(){ try{ localStorage.setItem('sweetTD.items', JSON.stringify(items)); }catch(e){} }
+// 消耗式に変わる前のセーブへの引っこし：もっているなかまに1こずつ保証する（1回だけ）
+try{
+  if (!localStorage.getItem('sweetTD.itemsV2')){
+    for (const s of SKILLS) if (hasCh(s.ch) && items[s.ch] < 1) items[s.ch] = 1;
+    localStorage.setItem('sweetTD.itemsV2', '1');
+    saveItems();
+  }
+}catch(e){}
 
 /* ---------- タスクバーのピン（はったなかま。7こまで・ブラウザに残る） ---------- */
 const PIN_MAX = 7;
@@ -1002,10 +1038,17 @@ if (Array.isArray(pins)){
   pins = ['purin','choco','gumgum','donut'].filter(ch => hasCh(ch));
 }
 function savePins(){ try{ localStorage.setItem('sweetTD.pins', JSON.stringify(pins)); }catch(e){} }
-/* はる／はがすの切り替え。'on'／'off'／'full' を返す */
+/* はる／はがすの切り替え。'on'／'off'／'full'／'none' を返す。
+   シールのイメージ：はがすと1こへる。0こだと はれない */
 function togglePin(ch){
   const i = pins.indexOf(ch);
-  if (i >= 0){ pins.splice(i, 1); savePins(); buildSkillBar(); return 'off'; }
+  if (i >= 0){
+    pins.splice(i, 1); savePins();
+    items[ch] = Math.max(0, items[ch] - 1); saveItems();
+    buildSkillBar();
+    return 'off';
+  }
+  if (items[ch] < 1) return 'none';
   if (pins.length >= PIN_MAX) return 'full';
   pins.push(ch); savePins(); buildSkillBar();
   return 'on';
@@ -1019,7 +1062,7 @@ const dropRate = k => (DROP_RATE[k] || 0.07) * (dex['sp_rpurin'] ? 1.5 : 1);
 /* プレゼントキャンディがワザバーへ飛んでいく演出 */
 let gifts = [];
 function spawnGift(x, y){
-  const opts = SKILLS.filter(s => hasCh(s.ch) && items[s.ch] < 9);   // 9こでカンスト
+  const opts = SKILLS.filter(s => hasCh(s.ch) && items[s.ch] < ITEM_MAX);   // 99こでカンスト
   if (!opts.length) return;
   const s = opts[(Math.random()*opts.length)|0];
   // はってあるスロットの位置へ飛ばす（はっていないワザは中央へ）
@@ -1033,14 +1076,8 @@ function spawnGift(x, y){
 function useSkill(s){
   if (over || !hasCh(s.ch) || skCd[s.ch] > 0) return;
   if (s.needEnemy && !enemies.length){ beep(160,.09,'square',.03,.7); return; }
-  // ストックがあれば無料。なければおほしさまで使える
-  if (items[s.ch] > 0){
-    items[s.ch]--; saveItems();
-  } else {
-    const cost = skillCost(s);
-    if (stars < cost){ beep(160,.09,'square',.03,.7); return; }
-    stars -= cost;
-  }
+  if (items[s.ch] < 1){ beep(160,.09,'square',.03,.7); return; }
+  items[s.ch]--; saveItems();          // 1回つかうと1こへる
   skCd[s.ch] = s.cd;
   const W = COLS*CELL, H = ROWS*CELL;
   if (s.ch === 'purin'){
@@ -1120,22 +1157,30 @@ function useSkill(s){
     floatTx(W/2, H*0.3, 'にじのおくりもの🎁', '#b98ae0');
     beep(880,.1,'triangle',.05); setTimeout(()=>beep(1100,.14,'triangle',.05),110);
   }
+  // つかいきったら バーから自動ではがれる
+  if (items[s.ch] <= 0){
+    const i = pins.indexOf(s.ch);
+    if (i >= 0){ pins.splice(i, 1); savePins(); }
+    floatTx(COLS*CELL/2, ROWS*CELL - CELL*1.1, s.name + 'を つかいきった！', '#b98ae0');
+    buildSkillBar();
+  }
   syncHUD(); syncSkills();
 }
 
 function buildSkillBar(){
+  // つかいきったなかまはバーからはずれる（この整理では1こへらさない）
+  const alive = pins.filter(ch => SKILLS.some(s => s.ch === ch) && hasCh(ch) && items[ch] > 0);
+  if (alive.length !== pins.length){ pins = alive; savePins(); }
   skillBar.innerHTML = '';
   // はってあるなかまのワザボタン（さいだい7こ・横スクロール）
   for (const ch of pins){
     const s = SKILLS.find(x => x.ch === ch);
-    if (!s || !hasCh(ch)) continue;
     const b = document.createElement('button');
     b.className = 'sk';
     b.dataset.ch = ch;
     b.append(charThumb({ pid:ch }, 30));
     b.insertAdjacentHTML('beforeend',
       '<div class="skN">' + s.name + '</div><div class="skC"></div>' +
-      '<div class="skStock" style="display:none"></div>' +
       '<div class="skCd" style="display:none"></div>');
     b.onclick = () => useSkill(s);
     skillBar.append(b);
@@ -1156,15 +1201,11 @@ function syncSkills(){
     const s = SKILLS.find(x => x.ch === b.dataset.ch);
     if (!hasCh(s.ch)) continue;
     const st = items[s.ch];
-    // ストックがあれば無料表示、なければおほしさまのねだん
-    b.querySelector('.skC').textContent = st > 0 ? 'つかえる！' : '⭐' + skillCost(s);
-    const bd = b.querySelector('.skStock');
-    bd.style.display = st > 0 ? '' : 'none';
-    bd.textContent = '×' + st;
+    b.querySelector('.skC').textContent = 'のこり ×' + st;
     const cd = skCd[s.ch], cdEl = b.querySelector('.skCd');
     cdEl.style.display = cd > 0 ? '' : 'none';
     if (cd > 0) cdEl.textContent = Math.ceil(cd);
-    b.disabled = over || cd > 0 || (st === 0 && stars < skillCost(s));
+    b.disabled = over || cd > 0 || st < 1;
   }
 }
 
@@ -1203,7 +1244,7 @@ function applyLoginReward(day){
     const names = [];
     for (let i=0;i<n;i++){
       const s = owned[(Math.random()*owned.length)|0];
-      items[s.ch] = Math.min(9, items[s.ch] + 1);
+      items[s.ch] = Math.min(ITEM_MAX, items[s.ch] + 1);
       names.push(s.name);
     }
     saveItems();
@@ -1217,7 +1258,7 @@ function applyLoginReward(day){
     case 5: return addStart(300);
     case 6:
       if (!owned.length) return addStart(300);
-      for (const s of owned) items[s.ch] = Math.min(9, items[s.ch] + 1);
+      for (const s of owned) items[s.ch] = Math.min(ITEM_MAX, items[s.ch] + 1);
       saveItems();
       return 'もっているワザの ストック <b>ぜんぶ+1</b>！';
     default:
