@@ -1309,7 +1309,7 @@ function buildColGrid(){
     '<div class="cst"><div class="ck">たおしたかず</div><div class="cn">' + rec.kills + '</div></div>' +
     '<div class="cst"><div class="ck">ランキング(めやす)</div><div class="cn">' + (rec.bw > 0 ? 'じょうい' + rankPct() + '%' : '—') + '</div></div>';
   colHint.style.display = (colTab === 'ch' || colTab === 'all') ? '' : 'none';
-  colHint.textContent = '📌 なかまをタップでバーに はる／はがす（' + pins.length + '/' + PIN_MAX + '）　つかう・はがすと1こへるよ';
+  colHint.textContent = '📌 なかまをタップでバーに はる／はがす（' + pins.length + '/' + PIN_MAX + '）　いっぱいのときは いちばん左と こうたい';
   colDone.style.display = CHARS.every(c => dex['ch_'+c.id]) ? '' : 'none';
   colGrid.innerHTML = '';
   for (const o of list){
@@ -1355,14 +1355,14 @@ function buildColGrid(){
           }
           buyWait = null;
           const r2 = togglePin(o.pid);
-          if (r2 === 'full'){
-            colHint.textContent = '📌 ワザバーは ' + PIN_MAX + 'こまで！ どれかを はがしてね';
-            beep(160,.09,'square',.03,.7);
-            return;
-          }
-          beep(r2 === 'on' ? 760 : 480, .08, 'triangle', .04);
+          beep(r2 === 'off' ? 480 : 760, .08, 'triangle', .04);
           buildColGrid();
-          if (r2 === 'off') colHint.textContent = o.name + 'を はがした（1こへったよ）のこり ×' + items[o.pid];
+          if (r2 === 'off'){
+            colHint.textContent = o.name + 'を ずかんに もどしたよ';
+          } else if (r2 && r2.swap){
+            const sw = r2.swap === 'rpurin' ? 'にじいろプリン' : (CHARS.find(c => c.id === r2.swap) || {}).name;
+            colHint.textContent = o.name + 'を はった！（' + sw + 'は ずかんにもどったよ）';
+          }
         };
       }
     } else if (o.legend){
@@ -1434,20 +1434,17 @@ if (Array.isArray(pins)){
   pins = ['purin','choco','gumgum','donut'].filter(ch => hasCh(ch));
 }
 function savePins(){ try{ localStorage.setItem('sweetTD.pins', JSON.stringify(pins)); }catch(e){} }
-/* はる／はがすの切り替え。'on'／'off'／'full'／'none' を返す。
-   シールのイメージ：はがすと1こへる。0こだと はれない */
+/* はる／はがすの切り替え。'on'／'off'／'none'／{swap:もどったなかま} を返す。
+   はがしても数はへらない（ずかんにもどるだけ）。へるのはワザを使ったときだけ。
+   バーがいっぱいのときは、いちばん左のなかまが ずかんにもどって こうたい */
 function togglePin(ch){
   const i = pins.indexOf(ch);
-  if (i >= 0){
-    pins.splice(i, 1); savePins();
-    items[ch] = Math.max(0, items[ch] - 1); saveItems();
-    buildSkillBar();
-    return 'off';
-  }
+  if (i >= 0){ pins.splice(i, 1); savePins(); buildSkillBar(); return 'off'; }
   if (items[ch] < 1) return 'none';
-  if (pins.length >= PIN_MAX) return 'full';
+  let swapped = null;
+  if (pins.length >= PIN_MAX) swapped = pins.shift();
   pins.push(ch); savePins(); buildSkillBar();
-  return 'on';
+  return swapped ? { swap: swapped } : 'on';
 }
 
 /* たおした敵がプレゼントを落とす確率。大物ほど落としやすい。
@@ -1794,7 +1791,8 @@ function buildHelp(){
     '<li>👑 <b>ボス</b>：スライムを<b>しょうかん</b>してくる！ワザでいっきにたおそう</li></ul></div>';
   h += '<div class="hSec"><h3>✨ なかまワザのつかいかた</h3>' +
     '<p>👑ずかんで なかまをタップ → ワザバーに<b>はる</b>（7こまで）。バーをタップで発動、<b>1こへる</b>よ。' +
-    'はがしても1こへるので注意！ 敵のプレゼント🎁・ログインボーナス・⭐で買い足して補充してね。</p><ul style="margin-top:5px">' +
+    'バーがいっぱいのときは、いちばん左のなかまが ずかんにもどって<b>こうたい</b>。' +
+    '敵のプレゼント🎁・ログインボーナス・⭐で買い足して補充してね。</p><ul style="margin-top:5px">' +
     SKILLS.map(s => {
       const c = CHARS.find(x => x.id === s.ch);
       const nm = c ? c.name : 'にじいろプリン';
