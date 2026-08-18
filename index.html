@@ -362,8 +362,32 @@ const THEMES = [
   { name:'にじのてんくう',       g1:'#eadcf8', g2:'#f6d9ee', p1:'#d9a54e', p2:'#ffe9b0',
     spr:['#ff9ec9','#ffd76e','#8fe3c4','#9ed8ff'] },
 ];
+/* あいことばで解放される限定テーマ（見た目とBGMのきせかえ。難易度は変わらない） */
+const SP_THEMES = {
+  sakura: {
+    th: { name:'さくらのくに', g1:'#ffe9f1', g2:'#ffdeeb', p1:'#d98ca8', p2:'#ffd6e2',
+          spr:['#ffffff','#ffb3cd','#ffe6ef','#d8f0d8'] },
+    bgm: { bpm: 90, wv:'triangle', vol:.030,
+           mel:[69,72,74,76, 74,72,69,64, 67,69,72,74, 72,69,67,64],
+           bass:[45,50,52,45] },
+  },
+};
+const CODES = {
+  'さくらまんかい': { theme:'sakura', msg:'🌸 限定テーマ「さくらのくに」が とどいた！' },
+};
+let redeemed = [], themeSel = '', themeOverride = null;
+try{ redeemed = JSON.parse(localStorage.getItem('sweetTD.codes') || '[]'); }catch(e){}
+try{ themeSel = localStorage.getItem('sweetTD.themeSel') || ''; }catch(e){}
+function applyThemeSel(){
+  themeOverride = (themeSel && redeemed.includes(themeSel) && SP_THEMES[themeSel])
+    ? SP_THEMES[themeSel] : null;
+}
+applyThemeSel();
+
 // ウェーブ w をたたかっている間のテーマ（w=0 はまだ始まっていないのでステージ1）
-const themeOf = w => THEMES[Math.max(0, Math.ceil(w/STAGE_WAVES)-1) % THEMES.length];
+// きせかえ中は限定テーマを優先する
+const themeOf = w => themeOverride ? themeOverride.th
+  : THEMES[Math.max(0, Math.ceil(w/STAGE_WAVES)-1) % THEMES.length];
 
 /* ==========================================================
    なかまキャラ（ステージクリアごとに1人ずつ集まる）
@@ -563,8 +587,9 @@ function bgmTick(){
   if (!sndOn || !actx) return;
   // ミュートしていた間のぶんを一気に鳴らさないための巻きなおし
   if (bgmNext < actx.currentTime - 0.1) bgmNext = actx.currentTime + 0.05;
-  // いまのステージの曲（ウェーブが変わると自動でつぎの曲へ）
-  const B = BGMS[Math.max(0, Math.ceil(Math.max(wave,1)/STAGE_WAVES)-1) % BGMS.length];
+  // いまのステージの曲（ウェーブが変わると自動でつぎの曲へ。きせかえ中はその曲）
+  const B = themeOverride ? themeOverride.bgm
+    : BGMS[Math.max(0, Math.ceil(Math.max(wave,1)/STAGE_WAVES)-1) % BGMS.length];
   const stepDur = 60 / B.bpm / 2;    // 8分音符
   while (bgmNext < actx.currentTime + 0.25){
     const i = bgmStep % 16;
@@ -1966,7 +1991,54 @@ function buildHelp(){
     '<li>ときどき<b>🎁ボーナスウェーブ</b>！ふってくるおかしを ぜんぶタップすると💗+3</li>' +
     '<li>進行はじどうセーブ。💗がなくなっても<b>つづきから</b>そのウェーブに再挑戦できるよ</li>' +
     '<li>うわさでは、<b>ウェーブ60</b>で でんせつのなかまに会えるらしい…✨</li></ul></div>';
+  h += '<div class="hSec"><h3>🔑 あいことば</h3>' +
+    '<p>とくべつな「あいことば」を知っていたら、ここに入れてみてね。限定テーマがとどくよ🎁</p>' +
+    '<div style="display:flex;gap:6px;margin-top:6px">' +
+    '<input id="pwIn" placeholder="あいことばを いれてね" ' +
+    'style="flex:1;min-width:0;border:2px solid #ffd9ec;border-radius:10px;padding:8px;font:inherit;font-size:12px;background:rgba(255,255,255,.9)">' +
+    '<button class="mini" id="pwBtn">おくる</button></div>' +
+    '<div id="pwMsg" style="font-size:10.5px;color:#b98ae0;margin-top:5px"></div>' +
+    redeemed.filter(id => SP_THEMES[id]).map(id =>
+      '<button class="mini" data-sp="' + id + '" style="margin-top:6px;width:100%">' +
+      (themeSel === id
+        ? '🌸 「' + SP_THEMES[id].th.name + '」をつかい中（タップでもとにもどす）'
+        : '🌸 「' + SP_THEMES[id].th.name + '」にきせかえる') + '</button>').join('') +
+    '</div>';
   helpBody.innerHTML = h;
+
+  // あいことばの入力
+  $('pwBtn').onclick = () => {
+    const v = ($('pwIn').value || '').trim();
+    const c = CODES[v];
+    if (!c){
+      $('pwMsg').textContent = 'うーん、ちがうみたい…';
+      beep(160,.09,'square',.03,.7);
+      return;
+    }
+    if (redeemed.includes(c.theme)){
+      $('pwMsg').textContent = 'その あいことばは もう つかったよ✨';
+      return;
+    }
+    redeemed.push(c.theme);
+    try{ localStorage.setItem('sweetTD.codes', JSON.stringify(redeemed)); }catch(e){}
+    themeSel = c.theme;
+    try{ localStorage.setItem('sweetTD.themeSel', themeSel); }catch(e){}
+    applyThemeSel();
+    celebrate({ conf: 90, rays: 2, fanfare: 1 });
+    buildHelp();
+    $('pwMsg').textContent = c.msg;
+  };
+  // きせかえの切りかえ
+  for (const b of helpBody.querySelectorAll('[data-sp]')){
+    b.onclick = () => {
+      const id = b.dataset.sp;
+      themeSel = themeSel === id ? '' : id;
+      try{ localStorage.setItem('sweetTD.themeSel', themeSel); }catch(e){}
+      applyThemeSel();
+      beep(700,.08,'triangle',.04);
+      buildHelp();
+    };
+  }
 }
 btnHelp.onclick = () => { buildHelp(); helpOv.classList.add('on'); beep(700,.08,'triangle',.04); };
 helpClose.onclick = () => helpOv.classList.remove('on');
