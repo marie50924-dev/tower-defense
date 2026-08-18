@@ -215,7 +215,7 @@
     </div>
     <div id="colOv">
       <div id="colHead">
-        <div>👑 おかしの国 これくしょん <span id="colCount"></span></div>
+        <div>👑 これくしょん <span id="colCount" style="white-space:nowrap"></span></div>
         <button class="mini" id="colKing">🏰</button>
         <button class="mini" id="colShare">📤</button>
         <button class="mini gray" id="colClose">とじる</button>
@@ -1310,7 +1310,7 @@ function buildColGrid(){
     '<div class="cst"><div class="ck">たおしたかず</div><div class="cn">' + rec.kills + '</div></div>' +
     '<div class="cst"><div class="ck">ランキング(めやす)</div><div class="cn">' + (rec.bw > 0 ? 'じょうい' + rankPct() + '%' : '—') + '</div></div>';
   colHint.style.display = (colTab === 'ch' || colTab === 'all') ? '' : 'none';
-  colHint.textContent = '📌 なかまをタップでバーに はる／はがす（' + pins.length + '/' + PIN_MAX + '）　いっぱいのときは いちばん左と こうたい';
+  colHint.innerHTML = '📌 なかまをタップでバーに はる／はがす（' + pins.length + '/' + PIN_MAX + '）<br>いっぱいのときは いちばん左と こうたい';
   colDone.style.display = CHARS.every(c => dex['ch_'+c.id]) ? '' : 'none';
   colGrid.innerHTML = '';
   for (const o of list){
@@ -1345,11 +1345,11 @@ function buildColGrid(){
                 stars -= cost;
                 items[o.pid] = Math.min(ITEM_MAX, (items[o.pid]||0) + 1); saveItems();
                 beep(760,.1,'triangle',.05); syncHUD(); buildColGrid();
-                colHint.textContent = o.name + 'を 1こ かった！もういちどタップではろう';
+                colHint.innerHTML = o.name + 'を 1こ かった！<br>もういちどタップで はろう';
               }
             } else {
               buyWait = o.pid;
-              colHint.textContent = '⭐' + cost + 'で ' + o.name + 'を 1こかう？（もういちどタップ）';
+              colHint.innerHTML = '⭐' + cost + 'で ' + o.name + 'を 1こかう？<br>（もういちどタップで けってい）';
               beep(600,.06,'triangle',.04);
             }
             return;
@@ -1362,7 +1362,7 @@ function buildColGrid(){
             colHint.textContent = o.name + 'を ずかんに もどしたよ';
           } else if (r2 && r2.swap){
             const sw = r2.swap === 'rpurin' ? 'にじいろプリン' : (CHARS.find(c => c.id === r2.swap) || {}).name;
-            colHint.textContent = o.name + 'を はった！（' + sw + 'は ずかんにもどったよ）';
+            colHint.innerHTML = o.name + 'を はった！<br>（' + sw + 'は ずかんにもどったよ）';
           }
         };
       }
