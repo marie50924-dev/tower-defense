@@ -798,6 +798,12 @@ function update(dt){
   if (wflash > 0) wflash = Math.max(0, wflash - dt*1.8);
   if (celebT > 0) celebT = Math.max(0, celebT - dt);
 
+  // 全キャラコンプリートのお披露目は、たたかいと他の画面が落ちついてから
+  if (pendingComplete && !running &&
+      !ov.classList.contains('on') && !colOv.classList.contains('on') &&
+      !helpOv.classList.contains('on') && !kingOv.classList.contains('on'))
+    showComplete();
+
   // 応援パレードのなかまたち
   for (let i=paraders.length-1;i>=0;i--){
     const p = paraders[i];
@@ -1094,6 +1100,7 @@ function unlock(id){
   if (dex[id]) return false;
   dex[id] = { w: wave, d: dateStr() };
   saveDex();
+  checkComplete();   // これが最後のひとりだったら、おかしの国がかんせいする
   return true;
 }
 
@@ -1757,6 +1764,18 @@ function drawKingdom(g, W, H){
   };
   cloud(W*0.16,H*0.13,W*0.05,.9); cloud(W*0.5,H*0.08,W*0.04,.7); cloud(W*0.9,H*0.18,W*0.045,.8);
 
+  // かんせいの国には にじがかかる
+  const complete = dexList().every(o => dex[o.id]);
+  if (complete){
+    const rb = ['#ffb3c8','#ffd9a8','#fff3b0','#c8ecc8','#b8d8f8','#d8c8f0'];
+    g.lineWidth = W*0.012; g.globalAlpha = 0.55; g.lineCap = 'butt';
+    for (let i=0;i<rb.length;i++){
+      g.strokeStyle = rb[i];
+      g.beginPath(); g.arc(W*0.5, H*0.62, W*0.42 - i*W*0.012, Math.PI*1.05, Math.PI*1.95); g.stroke();
+    }
+    g.globalAlpha = 1;
+  }
+
   /* --- とおくのアイスのやま（かすみで遠近感） --- */
   const scoop = (x,y,r,c1,c2,haze) => {
     const gr = g.createLinearGradient(0,y-r,0,y);
@@ -2006,6 +2025,29 @@ function drawKingdom(g, W, H){
     }
   }
 
+  /* --- ぜんいんコンプリートなら、ようせいも てきも おまつりに参加 --- */
+  if (complete){
+    for (const [pid,x,y,s] of [
+      ['tw_candy',0.27,0.7,42],['tw_ice',0.72,0.62,40],['tw_choco',0.09,0.6,40],['tw_star',0.47,0.545,38],
+      ['en_slime',0.18,0.9,44],['en_fast',0.075,0.68,38],['en_tank',0.63,0.78,44],
+      ['en_crystal',0.25,0.49,34],['en_bat',0.42,0.2,38],['en_golem',0.9,0.56,50],['en_boss',0.76,0.9,48],
+    ]) put(pid, x, y, s*S1);
+    // よぞらの花火
+    const firework = (x,y,r,col) => {
+      const fg = g.createRadialGradient(x,y,0, x,y,r);
+      fg.addColorStop(0,'rgba(255,255,255,.9)'); fg.addColorStop(1,'rgba(255,255,255,0)');
+      g.fillStyle = fg; g.beginPath(); g.arc(x,y,r,0,TAU); g.fill();
+      for (let i=0;i<10;i++){
+        const a = i*TAU/10;
+        star4(x+Math.cos(a)*r*0.7, y+Math.sin(a)*r*0.7, r*0.13, col, a);
+        ell(x+Math.cos(a+0.31)*r*0.45, y+Math.sin(a+0.31)*r*0.45, r*0.05, r*0.05, col);
+      }
+    };
+    firework(W*0.32, H*0.07, W*0.055, '#ff9ec9');
+    firework(W*0.5,  H*0.16, W*0.045, '#ffd76e');
+    firework(W*0.95, H*0.07, W*0.05,  '#9ed8ff');
+  }
+
   /* --- しあげ：ふちのビネットとタイトル --- */
   const vg = g.createRadialGradient(W/2,H*0.55,H*0.3, W/2,H*0.55,H*0.95);
   vg.addColorStop(0,'rgba(120,80,120,0)'); vg.addColorStop(1,'rgba(120,80,120,.16)');
@@ -2016,7 +2058,33 @@ function drawKingdom(g, W, H){
   g.strokeText('まほうのおかしの国', W/2, H*0.058);
   g.fillStyle = '#e05f9e';
   g.fillText('まほうのおかしの国', W/2, H*0.058);
-  return { got, lgGot };
+
+  /* --- かんせいのあかし：きんの額ぶち・リボン・日付 --- */
+  if (complete){
+    g.strokeStyle = 'rgba(255,200,90,.9)'; g.lineWidth = W*0.009;
+    g.strokeRect(W*0.012, H*0.016, W*0.976, H*0.968);
+    g.strokeStyle = 'rgba(255,238,180,.95)'; g.lineWidth = W*0.003;
+    g.strokeRect(W*0.028, H*0.036, W*0.944, H*0.928);
+    const rbg = g.createLinearGradient(0, H*0.085, 0, H*0.085 + H*0.055);
+    rbg.addColorStop(0,'#ffe9b8'); rbg.addColorStop(1,'#ffd06e');
+    g.fillStyle = rbg;
+    rr2(W/2 - W*0.155, H*0.085, W*0.31, H*0.055, H*0.028); g.fill();
+    g.strokeStyle = '#d99a1e'; g.lineWidth = W*0.0025;
+    rr2(W/2 - W*0.155, H*0.085, W*0.31, H*0.055, H*0.028); g.stroke();
+    g.font = "800 " + (W*0.03) + "px 'Hiragino Maru Gothic ProN',sans-serif";
+    g.fillStyle = '#a06a10';
+    g.fillText('🎉 ぜんいん だいしゅうごう！ 🎉', W/2, H*0.113);
+    let doneD = '';
+    try{ doneD = localStorage.getItem('sweetTD.done') || ''; }catch(e){}
+    if (doneD){
+      g.font = "800 " + (W*0.022) + "px 'Hiragino Maru Gothic ProN',sans-serif";
+      g.fillStyle = 'rgba(107,74,99,.75)';
+      g.textAlign = 'right';
+      g.fillText('かんせい ' + doneD, W*0.955, H*0.955);
+      g.textAlign = 'center';
+    }
+  }
+  return { got, lgGot, complete };
 }
 
 function buildKingdom(){
@@ -2028,10 +2096,47 @@ function buildKingdom(){
   const g = kingCv.getContext('2d');
   g.setTransform(dpr,0,0,dpr,0,0);
   const r = drawKingdom(g, w, h);
-  kingCap.textContent = r.got >= 12 && r.lgGot >= 3
-    ? '🏰 おかしの国は だいにぎわい！ みんな あつまったよ 🎉'
+  kingCap.textContent = r.complete
+    ? '🏆 ずかんぜんいんの かんせいの一枚！ ようせいも てきのみんなも おまつりだよ 🎉'
+    : r.got >= 12 && r.lgGot >= 3
+    ? '🏰 だいにぎわい！ ずかんをコンプリートすると かんせいの一枚に…✨'
     : 'なかま ' + r.got + '/12・でんせつ ' + r.lgGot + '/3 が くらしているよ。あつめるほど にぎやかに✨';
 }
+/* ---------- ぜんいんコンプリート（全26キャラ）の完成イベント ---------- */
+let pendingComplete = false;
+function checkComplete(){
+  try{ if (localStorage.getItem('sweetTD.done')) return; }catch(e){ return; }
+  if (!dexList().every(o => dex[o.id])) return;
+  try{ localStorage.setItem('sweetTD.done', dateStr()); }catch(e){}
+  pendingComplete = true;   // 実際の表示は、ウェーブや他の画面が落ちついてから
+}
+function showComplete(){
+  pendingComplete = false;
+  ovT.textContent = '🏰 おかしの国 かんせい！！';
+  ovB.innerHTML = '';
+  // かんせいした国のプレビューをその場で描く
+  const pw = 260, ph = Math.round(pw*0.78);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  const pv = document.createElement('canvas');
+  pv.width = pw*dpr; pv.height = ph*dpr;
+  pv.style.width = pw+'px'; pv.style.height = ph+'px';
+  pv.style.borderRadius = '12px'; pv.style.display = 'block'; pv.style.margin = '0 auto 6px';
+  const pg = pv.getContext('2d'); pg.setTransform(dpr,0,0,dpr,0,0);
+  drawKingdom(pg, pw, ph);
+  ovB.append(pv);
+  const d = document.createElement('div');
+  d.innerHTML = 'ずかんの <b>ぜんいん</b>が あつまって、<br><b>おかしの国が ほんとうに かんせい</b>しました！<br>' +
+    'タワーのようせいも、てきだったみんなも、いまでは おまつりのなかま🎉<br>' +
+    '<span style="opacity:.7">🏰ボタンから いつでも ながめられるよ</span>';
+  ovB.append(d);
+  ovBtn.textContent = '国を見る 🏰';
+  ovBtn.onclick = () => { ov.classList.remove('on'); kingOv.classList.add('on'); buildKingdom(); };
+  ovShare.style.display = '';
+  ov.classList.add('on');
+  celebrate({ rays: 5, conf: 260, rings: true, flash: true, fanfare: 2 });
+  parade();
+}
+
 $('colKing').onclick = () => { kingOv.classList.add('on'); buildKingdom(); beep(700,.08,'triangle',.04); };
 $('kingClose').onclick = () => kingOv.classList.remove('on');
 $('kingShare').onclick = async () => {
