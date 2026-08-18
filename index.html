@@ -875,7 +875,7 @@ function celebrate(o){
    ========================================================== */
 const BONUS_EMO = ['🍬','🍩','🍪','🧁','🍓','🍭','🍰','🍮'];
 function startBonus(){
-  bonus = { spawnLeft: 10, total: 10, spT: 0.4, items: [], got: 0, missed: 0 };
+  bonus = { spawnLeft: 30, total: 30, spT: 0.4, items: [], got: 0, missed: 0 };
   btnWave.disabled = true;
   btnWave.innerHTML = '🎁 ボーナスタイム！<br>おかしを タップ！';
   floatTx(COLS*CELL/2, ROWS*CELL*0.35, '🎁 ボーナスウェーブ！', '#ff8fc4');
