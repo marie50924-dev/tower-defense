@@ -161,6 +161,14 @@
   .cst.best .cn{color:#c9821e}
 
   #tip{font-size:10.5px;text-align:center;opacity:.55;line-height:1.5}
+
+  /* ---------- 画面ぜんたいにあふれる紙吹雪 ---------- */
+  #confetti{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:99}
+  .cf{position:absolute;top:-7vh;will-change:transform;animation:confFall linear forwards}
+  @keyframes confFall{
+    0%{transform:translateY(0) rotate(0) scale(1)}
+    100%{transform:translateY(115vh) rotate(var(--rot)) scale(.85)}
+  }
 </style>
 </head>
 <body>
@@ -232,6 +240,8 @@
   <div id="tip">ウェーブは自動でやってくる！ボタンで「はやよび」すると⭐ボーナス✨<br>たたかいかたは ❓ を見てね</div>
 
 </div>
+
+<div id="confetti"></div>
 
 <script>
 (() => {
@@ -367,6 +377,8 @@ let towers = [], enemies = [], shots = [], parts = [], floats = [], sparks = [],
 let hearts, stars, wave, selTool, selTower, running, spawnQ, spawnT, over;
 let speed = 1, time = 0, flash = 0;
 let nextT = 0, wvTick = -1;   // つぎのウェーブまでのカウントダウン
+let celebT = 0, wflash = 0;   // お祝いの光芒と白フラッシュ
+let paraders = [];            // 応援パレード中のなかま
 
 let pathCells = new Set(), pathPts = [], segLen = [], pathLen = 0;
 
@@ -460,7 +472,7 @@ function reset(){
   buildPath(); measurePath(); makeSparks();
   for (const k in skCd) skCd[k] = 0;
   for (const k in buffs) buffs[k] = 0;
-  gifts = [];
+  gifts = []; paraders = []; celebT = 0; wflash = 0;
   buildSkillBar();
   syncHUD(); buildShop(); closeInfo();
   ov.classList.remove('on');
@@ -551,6 +563,7 @@ btnUp.onclick = () => {
   for (let i=0;i<10;i++) puff(px, py, '#ffffff');
   for (let i=0;i<8;i++) mote(px, py - CELL*0.2, '#ffe27a');
   floatTx(px, py - CELL*0.65, t.lv >= 3 ? 'さいきょう！' : 'レベルアップ！', '#ffb43f');
+  if (t.lv >= 3) celebrate({ conf: 40, rays: 1.5 });   // さいだいレベルはひときわ祝う
   beep(620,.12,'triangle',.06);
   setTimeout(()=>beep(830,.12,'triangle',.06),110);
   setTimeout(()=>beep(1050,.22,'triangle',.07),220);
@@ -655,11 +668,96 @@ function mote(x,y,color){
 }
 
 /* ==========================================================
+   お祝いエンジン（達成の瞬間を画面いっぱいに祝う）
+   ========================================================== */
+const confettiEl = document.getElementById('confetti');
+const CONF_EMOJI = ['🎉','⭐','💗','🍬','✨','🌸','💖','🧁'];
+/* 画面ぜんたい（盤面の外まで）に紙吹雪を降らせる */
+function confettiBurst(n){
+  n = Math.min(n, 260 - confettiEl.children.length);   // 出しすぎて重くならないように
+  for (let i=0;i<n;i++){
+    const s = document.createElement('span');
+    s.className = 'cf';
+    s.textContent = CONF_EMOJI[(Math.random()*CONF_EMOJI.length)|0];
+    s.style.left = (Math.random()*100) + '%';
+    s.style.fontSize = (13 + Math.random()*16) + 'px';
+    s.style.setProperty('--rot', ((Math.random() < .5 ? -1 : 1)*(360 + Math.random()*540)) + 'deg');
+    s.style.animationDuration = (1.8 + Math.random()*1.7) + 's';
+    s.style.animationDelay = (Math.random()*0.5) + 's';
+    s.addEventListener('animationend', () => s.remove());
+    confettiEl.append(s);
+  }
+}
+/* 豪華なファンファーレ（big=true でさらに長く） */
+function fanfare(big){
+  beep(660,.12,'triangle',.06);
+  setTimeout(()=>beep(830,.12,'triangle',.06),110);
+  setTimeout(()=>beep(990,.14,'triangle',.06),220);
+  setTimeout(()=>beep(1320,.25,'triangle',.07),340);
+  if (big){
+    setTimeout(()=>beep(990,.1,'triangle',.05),560);
+    setTimeout(()=>beep(1180,.12,'triangle',.06),660);
+    setTimeout(()=>beep(1580,.35,'triangle',.07),780);
+  }
+}
+/* 演出の重ねがけ： {rays:秒, conf:枚数, rings:true, flash:true, fanfare:1|2, x,y} */
+function celebrate(o){
+  o = o || {};
+  if (o.rays) celebT = Math.max(celebT, o.rays);
+  if (o.conf) confettiBurst(o.conf);
+  if (o.flash) wflash = 1;
+  if (o.rings){
+    const x = o.x !== undefined ? o.x : COLS*CELL/2;
+    const y = o.y !== undefined ? o.y : ROWS*CELL/2;
+    ring(x, y, '#ffffff', CELL*3);
+    setTimeout(()=>ring(x, y, '#ffd76e', CELL*4.2), 120);
+    setTimeout(()=>ring(x, y, '#ff9ec9', CELL*5.4), 240);
+  }
+  if (o.fanfare) fanfare(o.fanfare >= 2);
+}
+
+/* ---------- なかまの応援パレード ---------- */
+const pcache = {};
+function portraitOf(pid){
+  if (!pcache[pid]) pcache[pid] = charThumb({ pid }, 44);
+  return pcache[pid];
+}
+const CHEERS = ['やったね！','すごーい！','さすが✨','おめでとう🎉','かっこいい！','だいすき💗'];
+/* あつめたなかまが下を行進してお祝いしてくれる */
+function parade(){
+  const got = dexList().filter(o => o.cat === 'ch' && dex[o.id]).map(o => o.pid);
+  got.slice(0, 8).forEach((pid, i) => {
+    paraders.push({ pid, x: -CELL*(1.2 + i*1.4), y: ROWS*CELL - CELL*0.85,
+                    vx: CELL*2.4, ph: Math.random()*6.3,
+                    msg: CHEERS[(Math.random()*CHEERS.length)|0] });
+  });
+}
+/* ボス撃破などで、ひとりだけぴょこっと出てくる */
+function cheerOne(x, y){
+  const got = dexList().filter(o => o.cat === 'ch' && dex[o.id]).map(o => o.pid);
+  if (!got.length) return;
+  paraders.push({ pid: got[(Math.random()*got.length)|0],
+                  x: Math.min(Math.max(x, CELL), COLS*CELL - CELL),
+                  y: Math.min(y, ROWS*CELL - CELL*0.85),
+                  vx: 0, ph: Math.random()*6.3, msg: 'ナイス✨', life: 1.5 });
+}
+
+/* ==========================================================
    更新
    ========================================================== */
 function update(dt){
   time += dt;
   if (flash > 0) flash = Math.max(0, flash - dt*2.2);
+  if (wflash > 0) wflash = Math.max(0, wflash - dt*1.8);
+  if (celebT > 0) celebT = Math.max(0, celebT - dt);
+
+  // 応援パレードのなかまたち
+  for (let i=paraders.length-1;i>=0;i--){
+    const p = paraders[i];
+    p.ph += dt*8;
+    if (p.vx){ p.x += p.vx*dt; if (p.x > COLS*CELL + CELL*1.5) paraders.splice(i,1); }
+    else { p.life -= dt; if (p.life <= 0) paraders.splice(i,1); }
+  }
 
   // なかまワザのクールダウンと一時バフ（表示は1秒きざみで十分）
   let cdMoved = false;
@@ -807,6 +905,8 @@ function update(dt){
     nextT = NEXT_WAIT;                       // つぎは自動でやってくる
     rec.bw = Math.max(rec.bw, wave); saveRec();
     syncHUD();
+    // 10ウェーブの節目はちいさなお祝い（クリアの節目はstageClearが盛大にやる）
+    if (wave % 10 === 0 && wave % STAGE_WAVES !== 0) celebrate({ conf: 30, fanfare: 1 });
     if (wave % STAGE_WAVES === 0) stageClear();
   }
 }
@@ -854,6 +954,11 @@ function killEnemy(e, px, py){
   stars += g;
   rec.kills++;                                            // じぶんきろく（保存はウェーブ終了時）
   floatTx(px, py, '+'+g, '#ffb43f');
+  if (e.k === 'boss'){
+    // ボス撃破は小さなお祝い＋なかまがひとかけつけてくれる
+    celebrate({ conf: 36, rings: true, x: px, y: py, fanfare: 1 });
+    cheerOne(px, py + CELL*1.2);
+  }
   if (Math.random() < dropRate(e.k)) spawnGift(px, py);   // ときどきワザのプレゼントを落とす
   for (let i=0;i<14;i++) puff(px, py, ENEMIES[e.k].color);
   beep(520,.1,'sine',.035);
@@ -879,8 +984,8 @@ function gameOver(){
   ovShare.style.display = '';
   ov.classList.add('on');
   if (newRec){
-    beep(660,.15,'triangle',.06);
-    setTimeout(()=>beep(880,.2,'triangle',.06),150);
+    // まけても新記録はしっかり祝う（「もう1回」の気持ちにつながる）
+    celebrate({ rays: 2.5, conf: 90, fanfare: 1 });
   } else {
     beep(180,.5,'sawtooth',.06,.4);
   }
@@ -941,12 +1046,15 @@ function stageClear(){
   ovB.append(d);
   buildSkillBar();   // 新しいなかまのワザをすぐ使えるように
   ovBtn.textContent = 'つぎのステージへ ▶';
-  ovBtn.onclick = () => ov.classList.remove('on');
+  // とじた直後に、なかまの応援パレードがよく見えるように
+  ovBtn.onclick = () => {
+    ov.classList.remove('on');
+    parade();
+    confettiBurst(40);
+  };
   ovShare.style.display = '';
   ov.classList.add('on');
-  beep(660,.16,'triangle',.07);
-  setTimeout(()=>beep(880,.16,'triangle',.07),150);
-  setTimeout(()=>beep(1180,.3,'triangle',.07),300);
+  celebrate({ rays: 3.5, conf: done ? 220 : 120, rings: true, flash: true, fanfare: done ? 2 : 1 });
   syncHUD();
 }
 
@@ -1363,6 +1471,9 @@ function checkLogin(){
   ovBtn.textContent = 'うけとる ✨';
   ovBtn.onclick = () => { ov.classList.remove('on'); syncHUD(); };
   ov.classList.add('on');
+  // 7日目（でんせつのなかま）はとびきり盛大に
+  if (day >= 7) celebrate({ rays: 3, conf: 160, flash: true, fanfare: 2 });
+  else celebrate({ conf: 24 + day*6 });
   beep(700,.12,'triangle',.05);
   setTimeout(()=>beep(930,.15,'triangle',.05),130);
 }
@@ -2467,6 +2578,24 @@ function render(){
     sparkle(gf.x + CELL*0.16, gf.y - CELL*0.16, CELL*0.055, gf.rot*2, '#ffffff');
   }
 
+  // 応援パレード（なかまがふきだしつきで行進）
+  for (const p of paraders){
+    const bob = Math.abs(Math.sin(p.ph)) * CELL*0.18;
+    ctx.drawImage(portraitOf(p.pid), p.x - 22, p.y - 22 - bob, 44, 44);
+    if (p.msg){
+      ctx.font = '800 ' + (CELL*0.28) + 'px system-ui,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const w2 = ctx.measureText(p.msg).width + CELL*0.4;
+      const bx = p.x, by = p.y - CELL*1.05 - bob;
+      ctx.fillStyle = 'rgba(255,255,255,.95)';
+      roundRect(bx - w2/2, by - CELL*0.26, w2, CELL*0.52, CELL*0.26); ctx.fill();
+      ctx.strokeStyle = 'rgba(224,95,158,.4)'; ctx.lineWidth = 1.5;
+      roundRect(bx - w2/2, by - CELL*0.26, w2, CELL*0.52, CELL*0.26); ctx.stroke();
+      ctx.fillStyle = '#e05f9e';
+      ctx.fillText(p.msg, bx, by);
+    }
+  }
+
   for (const p of parts){
     const k = 1 - p.age/p.life;
     ctx.globalAlpha = k;
@@ -2493,8 +2622,31 @@ function render(){
   }
   ctx.globalAlpha = 1;
 
+  // お祝いの光芒（金色の光線がくるくる回る）
+  if (celebT > 0){
+    const a = Math.min(1, celebT) * 0.4;
+    ctx.save();
+    ctx.translate(W/2, H*0.42);
+    ctx.rotate(time*0.6);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = '#ffe9a8';
+    for (let i=0;i<12;i++){
+      ctx.rotate(Math.PI/6);
+      ctx.beginPath();
+      ctx.moveTo(0,0);
+      ctx.arc(0, 0, H*0.75, -0.09, 0.09);
+      ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
   if (flash > 0){
     ctx.fillStyle = 'rgba(255,90,140,' + (flash*0.3) + ')';
+    ctx.fillRect(0,0,W,H);
+  }
+  if (wflash > 0){
+    ctx.fillStyle = 'rgba(255,255,255,' + (wflash*0.7) + ')';
     ctx.fillRect(0,0,W,H);
   }
   ctx.restore();
