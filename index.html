@@ -103,7 +103,7 @@
     box-shadow:0 4px 0 var(--pink-d), 0 6px 16px rgba(224,95,158,.3);cursor:pointer;
   }
   .btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--pink-d)}
-  .btn.sm{flex:0 0 58px;font-size:14px;background:linear-gradient(180deg,#c9b6ff,#a586f5);box-shadow:0 4px 0 #7d5fd0}
+  .btn.sm{flex:0 0 50px;font-size:13px;background:linear-gradient(180deg,#c9b6ff,#a586f5);box-shadow:0 4px 0 #7d5fd0}
   .btn.sm:active{box-shadow:0 1px 0 #7d5fd0}
   .btn:disabled{opacity:.45}
 
@@ -140,6 +140,17 @@
   .cPin{position:absolute;top:-7px;right:-5px;font-size:15px;filter:drop-shadow(0 1px 1px rgba(120,90,120,.4))}
   #colHint{text-align:center;font-size:10px;color:#b98ae0;background:rgba(255,255,255,.55);
     border-radius:10px;padding:5px 4px}
+
+  /* ---------- たたかいかたガイド ---------- */
+  #helpOv{position:absolute;inset:0;display:none;flex-direction:column;gap:8px;border-radius:20px;
+    background:rgba(255,244,251,.97);backdrop-filter:blur(6px);padding:12px;overflow-y:auto;z-index:3}
+  #helpOv.on{display:flex;animation:pop .3s cubic-bezier(.2,1.4,.5,1)}
+  .hSec{background:rgba(255,255,255,.8);border:2px solid #ffd9ec;border-radius:14px;padding:9px 11px}
+  .hSec h3{margin:0 0 5px;font-size:13px;color:var(--pink-d)}
+  .hSec p, .hSec li{font-size:11px;line-height:1.6;margin:0}
+  .hSec ul{margin:0;padding-left:0;list-style:none}
+  .hSec li{margin-bottom:4px}
+  .hSec b{color:var(--pink-d)}
   #colTotal{text-align:center;font-size:11px;opacity:.7;padding:2px 0 4px}
   #colStats{display:flex;gap:6px}
   .cst{flex:1;background:rgba(255,255,255,.8);border:2px solid rgba(255,255,255,.9);
@@ -168,6 +179,13 @@
       <div id="ovB"></div>
       <button class="btn" id="ovBtn" style="flex:0 0 auto;padding:12px 30px"></button>
       <button class="mini" id="ovShare" style="display:none">きろくをシェア 📤</button>
+    </div>
+    <div id="helpOv">
+      <div id="colHeadH" style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pink-d)">
+        <div style="flex:1">❓ たたかいかたガイド</div>
+        <button class="mini gray" id="helpClose">とじる</button>
+      </div>
+      <div id="helpBody"></div>
     </div>
     <div id="colOv">
       <div id="colHead">
@@ -207,10 +225,11 @@
     <button class="btn" id="btnWave">つぎのウェーブ ▶</button>
     <button class="btn sm" id="btnSpd">1x</button>
     <button class="btn sm" id="btnCol">👑</button>
+    <button class="btn sm" id="btnHelp">❓</button>
     <button class="btn sm" id="btnSnd">♪</button>
   </div>
 
-  <div id="tip">おかしを置いて、まほうの国をまもろう！<br>20ウェーブごとに なかまがふえて、おかしの国が かんせいに近づくよ 👑✨</div>
+  <div id="tip">ウェーブは自動でやってくる！ボタンで「はやよび」すると⭐ボーナス✨<br>たたかいかたは ❓ を見てね</div>
 
 </div>
 
@@ -265,19 +284,19 @@ function waveList(n){
   const total = 8 + Math.min(28, n*2);
   for (let i=0;i<total;i++){
     let t = 'slime';
-    if (n >= 3  && i%4 === 3) t = 'fast';
-    if (n >= 5  && i%6 === 5) t = 'tank';
-    if (n >= 12 && i%7 === 2) t = 'crystal';
-    if (n >= 22 && i%5 === 4) t = 'bat';
-    if (n >= 35 && i%9 === 8) t = 'golem';
+    if (n >= 2  && i%4 === 3) t = 'fast';
+    if (n >= 4  && i%6 === 5) t = 'tank';
+    if (n >= 9  && i%7 === 2) t = 'crystal';
+    if (n >= 16 && i%5 === 4) t = 'bat';
+    if (n >= 28 && i%9 === 8) t = 'golem';
     out.push(t);
   }
   if (n % 10 === 0) out.push('boss');
-  if (n % 10 === 0 && n >= 50) out.push('boss');
+  if (n % 10 === 0 && n >= 40) out.push('boss');
   return out;
 }
-// 30ウェーブをこえたあたりから指数的にきつくする（エンドレスの緊張感）
-const hpScale = n => (1 + (n-1)*0.28) * Math.pow(1.05, Math.max(0, n-30));
+// 序盤からじわっと痛く、20をこえたら指数的にきつくする（ギリギリの緊張感）
+const hpScale = n => (1 + (n-1)*0.32) * Math.pow(1.05, Math.max(0, n-18));
 // 後半はもらえるおほしさまも少しずつ増やして、強化が追いつくようにする
 // （ベリーおうじが なかまだと さらに +10%）
 const goldOf = k => Math.round(ENEMIES[k].gold * (1 + Math.max(0, wave-30)*0.04) * (hasCh('prince') ? 1.1 : 1) * (buffs.gold > 0 ? 2 : 1));
@@ -347,6 +366,7 @@ let CELL = 40;
 let towers = [], enemies = [], shots = [], parts = [], floats = [], sparks = [], rings = [];
 let hearts, stars, wave, selTool, selTower, running, spawnQ, spawnT, over;
 let speed = 1, time = 0, flash = 0;
+let nextT = 0, wvTick = -1;   // つぎのウェーブまでのカウントダウン
 
 let pathCells = new Set(), pathPts = [], segLen = [], pathLen = 0;
 
@@ -435,7 +455,7 @@ function reset(){
   towers = []; enemies = []; shots = []; parts = []; floats = []; rings = [];
   hearts = 20; stars = 250 + todayStartStars(); wave = 0;   // ログインボーナスぶんを上のせ
   selTool = null; selTower = null; running = false; over = false;
-  spawnQ = []; spawnT = 0; speed = 1; flash = 0;
+  spawnQ = []; spawnT = 0; speed = 1; flash = 0; nextT = 0;
   btnSpd.textContent = '1x';
   buildPath(); measurePath(); makeSparks();
   for (const k in skCd) skCd[k] = 0;
@@ -445,6 +465,7 @@ function reset(){
   syncHUD(); buildShop(); closeInfo();
   ov.classList.remove('on');
   colOv.classList.remove('on');
+  helpOv.classList.remove('on');
   ovShare.style.display = 'none';
   btnWave.disabled = false;
   btnWave.textContent = 'つぎのウェーブ ▶';
@@ -592,8 +613,16 @@ cv.addEventListener('pointerdown', e => {
 /* ==========================================================
    ウェーブ
    ========================================================== */
-btnWave.onclick = () => {
+/* ウェーブ開始。early=true なら「はやよび」で、のこり秒数ぶんのボーナス⭐ */
+const NEXT_WAIT = 10;          // つぎのウェーブが自動ではじまるまでの秒数
+function startWave(early){
   if (running || over) return;
+  if (early && nextT > 0 && wave > 0){
+    const b = Math.ceil(nextT * (2 + wave*0.4));
+    stars += b;
+    floatTx(COLS*CELL/2, CELL*1.4, 'はやよび +⭐' + b, '#ffb43f');
+  }
+  nextT = 0;
   wave++;
   spawnQ = waveList(wave).slice();
   spawnT = 0; running = true;
@@ -604,7 +633,8 @@ btnWave.onclick = () => {
     floatTx(COLS*CELL/2, CELL*2.2, '「' + themeOf(wave).name + '」', '#b98ae0');
   beep(560,.2,'triangle',.06);
   syncHUD();
-};
+}
+btnWave.onclick = () => startWave(true);
 btnSpd.onclick = () => { speed = speed % 5 + 1; btnSpd.textContent = speed + 'x'; };
 btnSnd.onclick = () => { sndOn = !sndOn; btnSnd.style.opacity = sndOn ? 1 : .45; if (sndOn) beep(600,.1); };
 
@@ -637,15 +667,29 @@ function update(dt){
   for (const k in buffs) if (buffs[k] > 0) buffs[k] = Math.max(0, buffs[k] - dt);
   if (cdMoved && (time*2|0) !== skTick){ skTick = time*2|0; syncSkills(); }
 
-  // 敵の出現
+  // つぎのウェーブへのカウントダウン（画面を見ているときだけ進む。
+  // はやよびすると のこり秒数ぶんボーナス⭐がもらえる）
+  if (!running && !over && wave > 0 && nextT > 0 &&
+      !ov.classList.contains('on') && !colOv.classList.contains('on') &&
+      !helpOv.classList.contains('on')){
+    nextT -= dt;
+    if (nextT <= 0){
+      nextT = 0;
+      startWave(false);
+    } else if ((time*4|0) !== wvTick){
+      wvTick = time*4|0;
+      const b = Math.ceil(nextT * (2 + wave*0.4));
+      btnWave.textContent = '▶ はやよび +⭐' + b + '（あと' + Math.ceil(nextT) + '）';
+    }
+  }
+
+  // 敵の出現（ウェーブが進むと間かくが少しずつ短くなる）
   if (running && spawnQ.length){
     spawnT -= dt;
     if (spawnT <= 0){
       const k = spawnQ.shift();
-      const E = ENEMIES[k];
-      const hp = E.hp*hpScale(wave);
-      enemies.push({ k, d:0, hp, max:hp, slow:0, slowAmt:0, wob:Math.random()*6.3, ph:Math.random()*6.3 });
-      spawnT = (k === 'boss' || k === 'golem') ? 1.2 : 0.62;
+      spawnEnemy(k, 0);
+      spawnT = (k === 'boss' || k === 'golem') ? 1.2 : Math.max(0.4, 0.62 - wave*0.004);
     }
   }
 
@@ -654,6 +698,18 @@ function update(dt){
     const e = enemies[i], E = ENEMIES[e.k];
     if (e.slow > 0) e.slow -= dt;
     if (e.stun > 0) e.stun -= dt;                    // まもりのたての足止め
+    // ボスはスライムをしょうかんしてくる（数がふえすぎたら休む）
+    if (e.k === 'boss'){
+      e.sum = (e.sum === undefined ? 3 : e.sum) - dt;
+      if (e.sum <= 0 && enemies.length < 60){
+        e.sum = 4;
+        const p = posAt(e.d);
+        for (let j=0;j<2;j++) spawnEnemy('slime', Math.max(0, e.d - CELL*(0.6 + j*0.5)));
+        ring(p.x, p.y, ENEMIES.boss.dark, CELL*1.6);
+        floatTx(p.x, p.y - CELL*0.9, 'しょうかん！', '#dd8028');
+        beep(240,.15,'square',.04,.8);
+      }
+    }
     const mul = e.stun > 0 ? 0 : (e.slow > 0 ? (1 - e.slowAmt) : 1);
     e.d += E.spd * CELL * mul * dt;
     e.wob += dt*9;
@@ -748,6 +804,7 @@ function update(dt){
     beep(700,.15,'triangle',.06); setTimeout(()=>beep(940,.22,'triangle',.06),130);
     btnWave.disabled = false;
     btnWave.textContent = 'つぎのウェーブ ▶';
+    nextT = NEXT_WAIT;                       // つぎは自動でやってくる
     rec.bw = Math.max(rec.bw, wave); saveRec();
     syncHUD();
     if (wave % STAGE_WAVES === 0) stageClear();
@@ -776,6 +833,14 @@ function hitTarget(s, p){
     if (s.lv >= 3){ for (let i=0;i<4;i++) puff(p.x, p.y, '#ffffff'); ring(p.x, p.y, T.color, CELL*1.1); }
   }
   for (const e of dead) killEnemy(e, p.x, p.y);
+}
+
+/* 敵をひとり道においてスタートさせる（通常出現とボスのしょうかんで共用） */
+function spawnEnemy(k, d0){
+  const E = ENEMIES[k];
+  const hp = E.hp * hpScale(wave);
+  enemies.push({ k, d: d0 || 0, hp, max: hp, slow:0, slowAmt:0,
+                 wob: Math.random()*6.3, ph: Math.random()*6.3 });
 }
 
 /* 敵をたおしたときの共通処理（ごほうび・エフェクト・ずかん） */
@@ -848,7 +913,7 @@ function unlock(id){
 /* ステージクリア（20ウェーブ）ごとのごほうび。なかまを1人むかえて、次のステージへ */
 function stageClear(){
   const stageNo = wave / STAGE_WAVES;
-  hearts = Math.min(20, hearts + 5 + (hasCh('apple') ? 3 : 0));   // ごほうびにハートを回復
+  hearts = Math.min(20, hearts + 3 + (hasCh('apple') ? 3 : 0));   // ごほうびにハートを回復
   const ch = CHARS.find(c => !dex['ch_'+c.id]);
   if (ch){
     unlock('ch_' + ch.id);
@@ -989,18 +1054,18 @@ function buildColGrid(){
    スターの使い道でもある。ねだんはウェーブとともに上がる
    ========================================================== */
 const SKILLS = [
-  { ch:'purin',  name:'まもり',     base:70,  cd:12, needEnemy:true,  color:'#ffd98a' },
-  { ch:'choco',  name:'ばくだん',   base:110, cd:15, needEnemy:true,  color:'#a5713f' },
-  { ch:'gumgum', name:'スロー',     base:60,  cd:10, needEnemy:true,  color:'#9be89b' },
-  { ch:'donut',  name:'かいふく',   base:120, cd:20, needEnemy:false, color:'#ff9ec9' },
-  { ch:'taffy',  name:'マーチ',     base:90,  cd:25, needEnemy:false, color:'#9ed8ff' },
-  { ch:'cake',   name:'おいわい',   base:90,  cd:18, needEnemy:true,  color:'#fff0b8' },
-  { ch:'fairy',  name:'こな',       base:80,  cd:25, needEnemy:false, color:'#ffd0df' },
-  { ch:'prince', name:'はた',       base:90,  cd:30, needEnemy:false, color:'#ff8f8f' },
-  { ch:'apple',  name:'いやし',     base:60,  cd:12, needEnemy:false, color:'#ff5a5a' },
-  { ch:'queen',  name:'いのり',     base:130, cd:45, needEnemy:false, color:'#dcebf8' },
-  { ch:'king',   name:'ごうれい',   base:150, cd:30, needEnemy:false, color:'#ffe27a' },
-  { ch:'rpurin', name:'おくりもの', base:100, cd:35, needEnemy:false, color:'#c9a7ff' },
+  { ch:'purin',  name:'まもり',     base:70,  cd:12, needEnemy:true,  color:'#ffd98a', desc:'てき全員を3.5びょう足止め。とつげきをしのぐときに' },
+  { ch:'choco',  name:'ばくだん',   base:110, cd:15, needEnemy:true,  color:'#a5713f', desc:'てき全体に大ダメージ（HPのわりあい）。ピンチの切りふだ' },
+  { ch:'gumgum', name:'スロー',     base:60,  cd:10, needEnemy:true,  color:'#9be89b', desc:'てき全員を6びょうスロー。はやい敵のむれに' },
+  { ch:'donut',  name:'かいふく',   base:120, cd:20, needEnemy:false, color:'#ff9ec9', desc:'ハート+4。まもりがくずれたあとに' },
+  { ch:'taffy',  name:'マーチ',     base:90,  cd:25, needEnemy:false, color:'#9ed8ff', desc:'8びょう こうげきそくど2ばい。ボスがきたら' },
+  { ch:'cake',   name:'おいわい',   base:90,  cd:18, needEnemy:true,  color:'#fff0b8', desc:'てき全体に小ダメージ。ざこそうじに' },
+  { ch:'fairy',  name:'こな',       base:80,  cd:25, needEnemy:false, color:'#ffd0df', desc:'8びょう はんい1.4ばい。とどかない敵に' },
+  { ch:'prince', name:'はた',       base:90,  cd:30, needEnemy:false, color:'#ff8f8f', desc:'10びょう ⭐2ばい。かせぎどきに' },
+  { ch:'apple',  name:'いやし',     base:60,  cd:12, needEnemy:false, color:'#ff5a5a', desc:'ハート+2。かるくて安い回復' },
+  { ch:'queen',  name:'いのり',     base:130, cd:45, needEnemy:false, color:'#dcebf8', desc:'ほかのワザのじゅんびを完了させる' },
+  { ch:'king',   name:'ごうれい',   base:150, cd:30, needEnemy:false, color:'#ffe27a', desc:'8びょう こうげき2ばい。ボスやゴーレムに' },
+  { ch:'rpurin', name:'おくりもの', base:100, cd:35, needEnemy:false, color:'#c9a7ff', desc:'プレゼントを2こもらう' },
 ];
 let skCd = {}, skTick = -1;
 for (const s of SKILLS) skCd[s.ch] = 0;
@@ -1368,6 +1433,46 @@ async function shareScore(){
 }
 ovShare.onclick = shareScore;
 $('colShare').onclick = shareScore;   // 図鑑からもいつでもシェアできる
+
+/* ==========================================================
+   たたかいかたガイド（❓ボタン）
+   ========================================================== */
+const helpOv = $('helpOv'), helpBody = $('helpBody'), btnHelp = $('btnHelp'), helpClose = $('helpClose');
+const TOWER_TIPS = {
+  candy: 'れんしゃがはやい きほんのおかし。どこにでも',
+  ice:   'あてた敵をおそくする。はやい敵（ぴょん・こうもり）の通り道に',
+  choco: 'まわりをまとめて攻撃。むれ・ぶあついアーマーもちに',
+  star:  'とおくまでとどく一撃。道のまんなかに置くと大かつやく',
+};
+function buildHelp(){
+  let h = '';
+  h += '<div class="hSec"><h3>▶ ウェーブと「はやよび」</h3>' +
+    '<p>ウェーブがおわると <b>10びょうで自動でつぎがスタート</b>。' +
+    'まちきれないときはボタンをタップすると、<b>のこり秒数×ボーナス⭐</b>がもらえるよ。' +
+    'じゅんびを取るか、⭐を取るか、まいかいのかけひき！</p></div>';
+  h += '<div class="hSec"><h3>🍬 おかし（タワー）のとくい分野</h3><ul>' +
+    ORDER.map(k => '<li>' + TOWERS[k].ic + ' <b>' + TOWERS[k].name + '</b>：' + TOWER_TIPS[k] + '</li>').join('') +
+    '</ul><p style="margin-top:4px">置いたおかしをタップ →「つよくする」でレベルアップ（さいだいLv3）</p></div>';
+  h += '<div class="hSec"><h3>👾 てきのヒント</h3><ul>' +
+    '<li>🛡 <b>クリスタル・ゴーレム</b>：アーマーでダメージを減らす → 一発が大きい チョコ・スターで</li>' +
+    '<li>💨 <b>ぴょん・こうもり</b>：とてもはやい → アイスやスローでおそくして</li>' +
+    '<li>👑 <b>ボス</b>：スライムを<b>しょうかん</b>してくる！ワザでいっきにたおそう</li></ul></div>';
+  h += '<div class="hSec"><h3>✨ なかまワザのつかいかた</h3>' +
+    '<p>👑ずかんで なかまをタップ → ワザバーに<b>はる</b>（7こまで）。バーをタップで発動、<b>1こへる</b>よ。' +
+    'はがしても1こへるので注意！ 敵のプレゼント🎁・ログインボーナス・⭐で買い足して補充してね。</p><ul style="margin-top:5px">' +
+    SKILLS.map(s => {
+      const c = CHARS.find(x => x.id === s.ch);
+      const nm = c ? c.name : 'にじいろプリン';
+      return '<li><b>' + s.name + '</b>（' + nm + '）：' + s.desc + '</li>';
+    }).join('') + '</ul></div>';
+  h += '<div class="hSec"><h3>🏆 つよくなるコツ</h3><ul>' +
+    '<li>はやよびボーナスで⭐をかせいで、どんどん強化する</li>' +
+    '<li>ワザは<b>ここぞ</b>でつかう。ボス・ラッシュ・ハートのピンチに</li>' +
+    '<li>20ウェーブごとのクリアで なかまとハートがもらえるよ</li></ul></div>';
+  helpBody.innerHTML = h;
+}
+btnHelp.onclick = () => { buildHelp(); helpOv.classList.add('on'); beep(700,.08,'triangle',.04); };
+helpClose.onclick = () => helpOv.classList.remove('on');
 
 /* ---------- なかまの似顔絵（Canvasに直接描く） ---------- */
 function charThumb(ch, size){
