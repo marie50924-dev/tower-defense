@@ -77,10 +77,14 @@
   .mini.gray{background:linear-gradient(180deg,#cfc4dd,#a898bd);box-shadow:0 3px 0 #857399}
   .mini:disabled{opacity:.4}
 
-  /* ---------- なかまワザ ---------- */
-  #skillBar{display:flex;gap:5px;padding:5px}
-  .sk{flex:1;position:relative;border:none;border-radius:12px;padding:3px 2px 4px;font:inherit;
-    background:rgba(255,255,255,.6);cursor:pointer;text-align:center;line-height:1.1;color:var(--ink)}
+  /* ---------- なかまワザ（タスクバー：横スクロール・7スロット） ---------- */
+  #skillBar{display:flex;gap:5px;padding:5px;overflow-x:auto;-webkit-overflow-scrolling:touch;
+    scroll-snap-type:x proximity;flex-shrink:0}
+  .sk{flex:0 0 68px;scroll-snap-align:start;position:relative;border:none;border-radius:12px;
+    padding:3px 2px 4px;font:inherit;background:rgba(255,255,255,.6);cursor:pointer;
+    text-align:center;line-height:1.1;color:var(--ink);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:60px}
+  .sk.empty{border:2px dashed rgba(185,138,224,.45);background:rgba(255,255,255,.3);color:#b98ae0}
   .sk:active{transform:scale(.95)}
   .sk:disabled{opacity:.45}
   .sk canvas{display:block;margin:0 auto}
@@ -132,6 +136,10 @@
   .cTt{font-size:9px;opacity:.6;line-height:1.3}
   .cLv{font-size:9px;color:#e0a52e;letter-spacing:.08em}
   .cGet{font-size:8.5px;opacity:.5;line-height:1.3;margin-top:1px}
+  .cCard{position:relative}
+  .cPin{position:absolute;top:-7px;right:-5px;font-size:15px;filter:drop-shadow(0 1px 1px rgba(120,90,120,.4))}
+  #colHint{text-align:center;font-size:10px;color:#b98ae0;background:rgba(255,255,255,.55);
+    border-radius:10px;padding:5px 4px}
   #colTotal{text-align:center;font-size:11px;opacity:.7;padding:2px 0 4px}
   #colStats{display:flex;gap:6px}
   .cst{flex:1;background:rgba(255,255,255,.8);border:2px solid rgba(255,255,255,.9);
@@ -174,6 +182,7 @@
         <button class="ctab" data-t="ch">なかま</button>
       </div>
       <div id="colStats"></div>
+      <div id="colHint" style="display:none">📌 あつめたなかまをタップすると ワザバーに はったり はがしたり できるよ（7こまで）</div>
       <div id="colDone" style="display:none">🏰 おかしの国が かんせいしたよ！ みんな あつまった 🎉</div>
       <div id="colGrid"></div>
       <div id="colTotal"></div>
@@ -271,7 +280,7 @@ function waveList(n){
 const hpScale = n => (1 + (n-1)*0.28) * Math.pow(1.05, Math.max(0, n-30));
 // 後半はもらえるおほしさまも少しずつ増やして、強化が追いつくようにする
 // （ベリーおうじが なかまだと さらに +10%）
-const goldOf = k => Math.round(ENEMIES[k].gold * (1 + Math.max(0, wave-30)*0.04) * (hasCh('prince') ? 1.1 : 1));
+const goldOf = k => Math.round(ENEMIES[k].gold * (1 + Math.max(0, wave-30)*0.04) * (hasCh('prince') ? 1.1 : 1) * (buffs.gold > 0 ? 2 : 1));
 
 /* ==========================================================
    ステージ（20ウェーブクリアごとに景色が変わる）
@@ -300,13 +309,13 @@ const CHARS = [
   { id:'choco',  name:'チョコ',         title:'ゆうかんなトリュフ', fx:'ワザ「チョコばくだん」がつかえる' },
   { id:'gumgum', name:'グミグミ',       title:'ぷるぷるグミ',       fx:'ワザ「ぷるぷるスロー」がつかえる' },
   { id:'donut',  name:'ドーナツ',       title:'いやしのパンやさん', fx:'ワザ「ハートかいふく」がつかえる' },
-  { id:'taffy',  name:'タフィー',       title:'ふえふきキャンディ', fx:'おうえん：こうげきそくどUP' },
-  { id:'cake',   name:'ケーキちゃん',   title:'ちいさなケーキ',     fx:'おうえん：ウェーブボーナス+20%' },
-  { id:'fairy',  name:'ベリーようせい', title:'マカロンのようせい', fx:'おうえん：タワーのはんい+5%' },
-  { id:'prince', name:'ベリーおうじ',   title:'マカロンのおうじ',   fx:'おうえん：おほしさま+10%' },
-  { id:'apple',  name:'アップルひめ',   title:'あまいひめさま',     fx:'おうえん：クリアのかいふく+3' },
-  { id:'queen',  name:'おうひさま',     title:'おうさまのおきさき', fx:'おうえん：ワザのねだん-20%' },
-  { id:'king',   name:'おうさま',       title:'ケーキのおうさま',   fx:'おうえん：タワーのこうげき+10%' },
+  { id:'taffy',  name:'タフィー',       title:'ふえふきキャンディ', fx:'ワザ「ふえのマーチ」＋そくどUP' },
+  { id:'cake',   name:'ケーキちゃん',   title:'ちいさなケーキ',     fx:'ワザ「おいわいシャワー」＋ボーナス+20%' },
+  { id:'fairy',  name:'ベリーようせい', title:'マカロンのようせい', fx:'ワザ「ようせいのこな」＋はんい+5%' },
+  { id:'prince', name:'ベリーおうじ',   title:'マカロンのおうじ',   fx:'ワザ「いちごのはた」＋おほしさま+10%' },
+  { id:'apple',  name:'アップルひめ',   title:'あまいひめさま',     fx:'ワザ「りんごのいやし」＋かいふく+3' },
+  { id:'queen',  name:'おうひさま',     title:'おうさまのおきさき', fx:'ワザ「おうひのいのり」＋ねだん-20%' },
+  { id:'king',   name:'おうさま',       title:'ケーキのおうさま',   fx:'ワザ「おうのごうれい」＋こうげき+10%' },
 ];
 
 /* ずかん用のよみもの。おかし（タワー）は置くと、てきはたおすと登録される */
@@ -329,7 +338,7 @@ const ov = $('ov'), ovT = $('ovT'), ovB = $('ovB'), ovBtn = $('ovBtn'), ovShare 
 const colStats = $('colStats');
 const colOv = $('colOv'), colGrid = $('colGrid'), colCount = $('colCount'), colDone = $('colDone');
 const btnCol = $('btnCol'), colClose = $('colClose'), colTabsEl = $('colTabs'), colTotal = $('colTotal');
-const skillBar = $('skillBar');
+const skillBar = $('skillBar'), colHint = $('colHint');
 
 /* ==========================================================
    状態
@@ -430,6 +439,7 @@ function reset(){
   btnSpd.textContent = '1x';
   buildPath(); measurePath(); makeSparks();
   for (const k in skCd) skCd[k] = 0;
+  for (const k in buffs) buffs[k] = 0;
   gifts = [];
   buildSkillBar();
   syncHUD(); buildShop(); closeInfo();
@@ -495,10 +505,10 @@ function closeInfo(){
   selTower = null;
 }
 
-// なかまの「おうえん」ボーナスは、集めたらずっと効く
-const dmgOf   = t => TOWERS[t.k].dmg   * Math.pow(1.6, t.lv-1)  * (hasCh('king')  ? 1.1  : 1);
-const rangeOf = t => TOWERS[t.k].range * Math.pow(1.12, t.lv-1) * (hasCh('fairy') ? 1.05 : 1);
-const rateOf  = t => TOWERS[t.k].rate  * Math.pow(0.9, t.lv-1)  * (hasCh('taffy') ? 0.93 : 1);
+// なかまの「おうえん」ボーナス（ずっと有効）と、ワザの一時バフ（数秒だけ）
+const dmgOf   = t => TOWERS[t.k].dmg   * Math.pow(1.6, t.lv-1)  * (hasCh('king')  ? 1.1  : 1) * (buffs.dmg > 0 ? 2   : 1);
+const rangeOf = t => TOWERS[t.k].range * Math.pow(1.12, t.lv-1) * (hasCh('fairy') ? 1.05 : 1) * (buffs.rng > 0 ? 1.4 : 1);
+const rateOf  = t => TOWERS[t.k].rate  * Math.pow(0.9, t.lv-1)  * (hasCh('taffy') ? 0.93 : 1) * (buffs.spd > 0 ? 0.5 : 1);
 const sellOf  = t => {
   let paid = TOWERS[t.k].cost;
   for (let i=1;i<t.lv;i++) paid += Math.round(TOWERS[t.k].cost*UP_MUL[i]);
@@ -621,9 +631,10 @@ function update(dt){
   time += dt;
   if (flash > 0) flash = Math.max(0, flash - dt*2.2);
 
-  // なかまワザのクールダウン（表示は1秒きざみで十分）
+  // なかまワザのクールダウンと一時バフ（表示は1秒きざみで十分）
   let cdMoved = false;
   for (const k in skCd) if (skCd[k] > 0){ skCd[k] = Math.max(0, skCd[k] - dt); cdMoved = true; }
+  for (const k in buffs) if (buffs[k] > 0) buffs[k] = Math.max(0, buffs[k] - dt);
   if (cdMoved && (time*2|0) !== skTick){ skTick = time*2|0; syncSkills(); }
 
   // 敵の出現
@@ -796,7 +807,7 @@ function gameOver(){
     (newRec
       ? '<span style="' + badge + ';animation:blink .5s infinite alternate">✨ しんきろく！ ウェーブ' + rec.bw + ' ✨</span>'
       : '<span style="' + badge + '">🏆 じぶんベスト ウェーブ' + rec.bw + '</span>') +
-    '<br><span style="opacity:.7">たおしたかず：' + rec.kills + '</span><br>' +
+    '<br><span style="opacity:.7">たおしたかず：' + rec.kills + '　ランキング：じょうい' + rankPct() + '%くらい（めやす）</span><br>' +
     'もういちど ちょうせんしてみよう ✨';
   ovBtn.textContent = 'もういちど';
   ovBtn.onclick = () => reset();
@@ -841,10 +852,11 @@ function stageClear(){
   const ch = CHARS.find(c => !dex['ch_'+c.id]);
   if (ch){
     unlock('ch_' + ch.id);
-    // ワザもちのなかまなら、おためし用にストックを1つプレゼント
+    // おためし用にストックを1つプレゼントし、あきがあればタスクバーにも自動ではる
     if (SKILLS.some(s => s.ch === ch.id)){
       items[ch.id] = Math.min(9, items[ch.id] + 1);
       saveItems();
+      if (pins.length < PIN_MAX && !pins.includes(ch.id)){ pins.push(ch.id); savePins(); }
     }
   }
   const got = CHARS.filter(c => dex['ch_'+c.id]).length;
@@ -893,7 +905,7 @@ function dexList(){
     ...CHARS.map((c,i) => ({ id:'ch_'+c.id, pid:c.id, name:c.name, title:c.title, cat:'ch', fx:c.fx,
                              hint:'ステージ' + (i+1) + 'クリアで なかまに' })),
     { id:'sp_rpurin', pid:'rpurin', name:'にじいろプリン', title:'でんせつのプリン', cat:'ch',
-      fx:'おうえん：プレゼントがおちやすくなる', hint:'ログインボーナス7にちめで なかまに' },
+      fx:'ワザ「にじのおくりもの」＋ドロップUP', hint:'ログインボーナス7にちめで なかまに' },
   ];
 }
 function buildColGrid(){
@@ -903,7 +915,9 @@ function buildColGrid(){
   colStats.innerHTML =
     '<div class="cst best"><div class="ck">🏆 じぶんベスト</div><div class="cn">ウェーブ' + rec.bw + '</div></div>' +
     '<div class="cst"><div class="ck">たおしたかず</div><div class="cn">' + rec.kills + '</div></div>' +
-    '<div class="cst"><div class="ck">あそんだ回数</div><div class="cn">' + rec.plays + '</div></div>';
+    '<div class="cst"><div class="ck">ランキング(めやす)</div><div class="cn">' + (rec.bw > 0 ? 'じょうい' + rankPct() + '%' : '—') + '</div></div>';
+  colHint.style.display = (colTab === 'ch' || colTab === 'all') ? '' : 'none';
+  colHint.textContent = '📌 あつめたなかまをタップすると ワザバーに はったり はがしたり できるよ（' + pins.length + '/' + PIN_MAX + '）';
   colDone.style.display = CHARS.every(c => dex['ch_'+c.id]) ? '' : 'none';
   colGrid.innerHTML = '';
   for (const o of list){
@@ -918,6 +932,21 @@ function buildColGrid(){
       if (o.fx) html += '<div class="cTt" style="color:#b98ae0">✨' + o.fx + '</div>';
       if (rec.d) html += '<div class="cGet">' + (rec.w ? 'ウェーブ' + rec.w + '・' : '') + rec.d + '</div>';
       d.insertAdjacentHTML('beforeend', html);
+      // なかまはタップでワザバーに はる／はがす
+      if (o.cat === 'ch' && SKILLS.some(s => s.ch === o.pid)){
+        if (pins.includes(o.pid)) d.insertAdjacentHTML('beforeend', '<div class="cPin">📌</div>');
+        d.style.cursor = 'pointer';
+        d.onclick = () => {
+          const r2 = togglePin(o.pid);
+          if (r2 === 'full'){
+            colHint.textContent = '📌 ワザバーは ' + PIN_MAX + 'こまで！ どれかを はがしてね';
+            beep(160,.09,'square',.03,.7);
+            return;
+          }
+          beep(r2 === 'on' ? 760 : 480, .08, 'triangle', .04);
+          buildColGrid();
+        };
+      }
     } else {
       d.innerHTML = '<div style="font-size:32px;line-height:64px">？</div>' +
         '<div class="cNm">？？？</div><div class="cTt">' + o.hint + '</div>';
@@ -933,23 +962,54 @@ function buildColGrid(){
    スターの使い道でもある。ねだんはウェーブとともに上がる
    ========================================================== */
 const SKILLS = [
-  { ch:'purin',  name:'まもり',   base:70,  cd:12, needEnemy:true,  color:'#ffd98a' },
-  { ch:'choco',  name:'ばくだん', base:110, cd:15, needEnemy:true,  color:'#a5713f' },
-  { ch:'gumgum', name:'スロー',   base:60,  cd:10, needEnemy:true,  color:'#9be89b' },
-  { ch:'donut',  name:'かいふく', base:120, cd:20, needEnemy:false, color:'#ff9ec9' },
+  { ch:'purin',  name:'まもり',     base:70,  cd:12, needEnemy:true,  color:'#ffd98a' },
+  { ch:'choco',  name:'ばくだん',   base:110, cd:15, needEnemy:true,  color:'#a5713f' },
+  { ch:'gumgum', name:'スロー',     base:60,  cd:10, needEnemy:true,  color:'#9be89b' },
+  { ch:'donut',  name:'かいふく',   base:120, cd:20, needEnemy:false, color:'#ff9ec9' },
+  { ch:'taffy',  name:'マーチ',     base:90,  cd:25, needEnemy:false, color:'#9ed8ff' },
+  { ch:'cake',   name:'おいわい',   base:90,  cd:18, needEnemy:true,  color:'#fff0b8' },
+  { ch:'fairy',  name:'こな',       base:80,  cd:25, needEnemy:false, color:'#ffd0df' },
+  { ch:'prince', name:'はた',       base:90,  cd:30, needEnemy:false, color:'#ff8f8f' },
+  { ch:'apple',  name:'いやし',     base:60,  cd:12, needEnemy:false, color:'#ff5a5a' },
+  { ch:'queen',  name:'いのり',     base:130, cd:45, needEnemy:false, color:'#dcebf8' },
+  { ch:'king',   name:'ごうれい',   base:150, cd:30, needEnemy:false, color:'#ffe27a' },
+  { ch:'rpurin', name:'おくりもの', base:100, cd:35, needEnemy:false, color:'#c9a7ff' },
 ];
-let skCd = { purin:0, choco:0, gumgum:0, donut:0 };
-let skTick = -1;
-function hasCh(id){ return !!dex['ch_' + id]; }
+let skCd = {}, skTick = -1;
+for (const s of SKILLS) skCd[s.ch] = 0;
+/* ワザの一時バフ（のこり秒数） */
+let buffs = { spd:0, dmg:0, rng:0, gold:0 };
+function hasCh(id){ return id === 'rpurin' ? !!dex['sp_rpurin'] : !!dex['ch_' + id]; }
 const skillCost = s => Math.round(s.base * (1 + wave*0.03) * (hasCh('queen') ? 0.8 : 1));
 
 /* ---------- ワザのストック（ドロップでたまり、ブラウザに残る） ---------- */
-let items = { purin:0, choco:0, gumgum:0, donut:0 };
+let items = {};
+for (const s of SKILLS) items[s.ch] = 0;
 try{
   const it = JSON.parse(localStorage.getItem('sweetTD.items') || '{}');
   for (const k in items) if (typeof it[k] === 'number') items[k] = Math.max(0, Math.min(9, it[k]|0));
 }catch(e){}
 function saveItems(){ try{ localStorage.setItem('sweetTD.items', JSON.stringify(items)); }catch(e){} }
+
+/* ---------- タスクバーのピン（はったなかま。7こまで・ブラウザに残る） ---------- */
+const PIN_MAX = 7;
+let pins = null;
+try{ pins = JSON.parse(localStorage.getItem('sweetTD.pins') || 'null'); }catch(e){}
+if (Array.isArray(pins)){
+  pins = pins.filter(ch => SKILLS.some(s => s.ch === ch)).slice(0, PIN_MAX);
+} else {
+  // はじめて（旧バージョンから）のときは、もっているワザもちを自動でならべる
+  pins = ['purin','choco','gumgum','donut'].filter(ch => hasCh(ch));
+}
+function savePins(){ try{ localStorage.setItem('sweetTD.pins', JSON.stringify(pins)); }catch(e){} }
+/* はる／はがすの切り替え。'on'／'off'／'full' を返す */
+function togglePin(ch){
+  const i = pins.indexOf(ch);
+  if (i >= 0){ pins.splice(i, 1); savePins(); buildSkillBar(); return 'off'; }
+  if (pins.length >= PIN_MAX) return 'full';
+  pins.push(ch); savePins(); buildSkillBar();
+  return 'on';
+}
 
 /* たおした敵がプレゼントを落とす確率。大物ほど落としやすい。
    にじいろプリン（ログインボーナス7日目のなかま）がいると1.5倍 */
@@ -962,9 +1022,11 @@ function spawnGift(x, y){
   const opts = SKILLS.filter(s => hasCh(s.ch) && items[s.ch] < 9);   // 9こでカンスト
   if (!opts.length) return;
   const s = opts[(Math.random()*opts.length)|0];
-  const i = SKILLS.indexOf(s);
+  // はってあるスロットの位置へ飛ばす（はっていないワザは中央へ）
+  const pi = pins.indexOf(s.ch);
+  const frac = pi >= 0 ? (Math.min(pi, PIN_MAX-1) + 0.5) / PIN_MAX : 0.5;
   gifts.push({ sx:x, sy:y, x, y,
-               tx:(i+0.5)*COLS*CELL/SKILLS.length, ty:ROWS*CELL - CELL*0.15,
+               tx: frac * COLS*CELL, ty:ROWS*CELL - CELL*0.15,
                t:0, life:0.8, ch:s.ch, rot:Math.random()*6.3 });
 }
 
@@ -1004,42 +1066,93 @@ function useSkill(s){
     ring(W/2, H/2, '#9be89b', H*0.7);
     floatTx(W/2, H*0.4, 'ぷるぷるスロー！', '#4faf5f');
     beep(420,.25,'sine',.05,.7);
-  } else {
+  } else if (s.ch === 'donut'){
     hearts = Math.min(20, hearts + 4);
     floatTx(W/2, H*0.4, 'ハートかいふく💗', '#ff6f9c');
     for (let i=0;i<16;i++) mote(W/2 + (Math.random()-0.5)*W*0.5, H*0.55, '#ffb0cf');
     beep(700,.15,'triangle',.06);
     setTimeout(()=>beep(930,.2,'triangle',.06),140);
+  } else if (s.ch === 'taffy'){
+    buffs.spd = 8;                      // 8秒こうげきそくど2倍
+    ring(W/2, H/2, '#9ed8ff', H*0.7);
+    floatTx(W/2, H*0.4, 'ふえのマーチ♪ そくど2ばい！', '#4aa8dd');
+    beep(660,.1,'triangle',.05); setTimeout(()=>beep(880,.1,'triangle',.05),110);
+    setTimeout(()=>beep(990,.14,'triangle',.05),220);
+  } else if (s.ch === 'cake'){
+    for (const e of [...enemies]){
+      const p = posAt(e.d);
+      e.hp -= e.max*0.12 + 10;
+      for (let i=0;i<5;i++) puff(p.x, p.y, '#fff0b8');
+      if (e.hp <= 0) killEnemy(e, p.x, p.y);
+    }
+    ring(W/2, H/2, '#fff0b8', H*0.7);
+    floatTx(W/2, H*0.4, 'おいわいシャワー！', '#e0a52e');
+    beep(760,.18,'triangle',.06);
+  } else if (s.ch === 'fairy'){
+    buffs.rng = 8;                      // 8秒はんい1.4倍
+    ring(W/2, H/2, '#ffd0df', H*0.7);
+    floatTx(W/2, H*0.4, 'ようせいのこな✨ はんいUP！', '#e06f9c');
+    beep(880,.15,'triangle',.05);
+  } else if (s.ch === 'prince'){
+    buffs.gold = 10;                    // 10秒おほしさま2倍
+    ring(W/2, H/2, '#ffd76e', H*0.7);
+    floatTx(W/2, H*0.4, 'いちごのはた！ ⭐2ばい！', '#e0a52e');
+    beep(700,.12,'triangle',.05); setTimeout(()=>beep(930,.16,'triangle',.05),120);
+  } else if (s.ch === 'apple'){
+    hearts = Math.min(20, hearts + 2);
+    floatTx(W/2, H*0.4, 'りんごのいやし💗+2', '#ff6f9c');
+    for (let i=0;i<10;i++) mote(W/2 + (Math.random()-0.5)*W*0.4, H*0.55, '#ffb0cf');
+    beep(700,.14,'triangle',.05);
+  } else if (s.ch === 'queen'){
+    for (const k in skCd) if (k !== 'queen') skCd[k] = 0;   // ほかのワザをすぐ使えるように
+    ring(W/2, H/2, '#dcebf8', H*0.8);
+    floatTx(W/2, H*0.4, 'おうひのいのり✨ ワザふっかつ！', '#7d9fd0');
+    beep(620,.12,'triangle',.05); setTimeout(()=>beep(830,.12,'triangle',.05),110);
+    setTimeout(()=>beep(1050,.2,'triangle',.06),220);
+  } else if (s.ch === 'king'){
+    buffs.dmg = 8;                      // 8秒こうげき2倍
+    ring(W/2, H/2, '#ffe27a', H*0.8);
+    floatTx(W/2, H*0.4, 'おうのごうれい！ こうげき2ばい！', '#c9821e');
+    beep(440,.2,'triangle',.06); setTimeout(()=>beep(660,.25,'triangle',.06),160);
+  } else if (s.ch === 'rpurin'){
+    spawnGift(W/2 - CELL, H*0.35);      // プレゼントを2こおとす
+    spawnGift(W/2 + CELL, H*0.4);
+    floatTx(W/2, H*0.3, 'にじのおくりもの🎁', '#b98ae0');
+    beep(880,.1,'triangle',.05); setTimeout(()=>beep(1100,.14,'triangle',.05),110);
   }
   syncHUD(); syncSkills();
 }
 
 function buildSkillBar(){
   skillBar.innerHTML = '';
-  for (const s of SKILLS){
-    const c = CHARS.find(x => x.id === s.ch);
+  // はってあるなかまのワザボタン（さいだい7こ・横スクロール）
+  for (const ch of pins){
+    const s = SKILLS.find(x => x.ch === ch);
+    if (!s || !hasCh(ch)) continue;
     const b = document.createElement('button');
     b.className = 'sk';
-    b.dataset.ch = s.ch;
-    if (hasCh(s.ch)){
-      b.append(charThumb({ pid:s.ch }, 30));
-      b.insertAdjacentHTML('beforeend',
-        '<div class="skN">' + s.name + '</div><div class="skC"></div>' +
-        '<div class="skStock" style="display:none"></div>' +
-        '<div class="skCd" style="display:none"></div>');
-      b.onclick = () => useSkill(s);
-    } else {
-      b.disabled = true;
-      b.insertAdjacentHTML('beforeend',
-        '<div style="font-size:16px;line-height:30px">？</div>' +
-        '<div class="skN">' + c.name + '</div><div class="skC">ステージ' + (CHARS.indexOf(c)+1) + 'で</div>');
-    }
+    b.dataset.ch = ch;
+    b.append(charThumb({ pid:ch }, 30));
+    b.insertAdjacentHTML('beforeend',
+      '<div class="skN">' + s.name + '</div><div class="skC"></div>' +
+      '<div class="skStock" style="display:none"></div>' +
+      '<div class="skCd" style="display:none"></div>');
+    b.onclick = () => useSkill(s);
+    skillBar.append(b);
+  }
+  // のこりは「はれる」空きスロット
+  for (let i = skillBar.children.length; i < PIN_MAX; i++){
+    const b = document.createElement('button');
+    b.className = 'sk empty';
+    b.disabled = true;
+    b.innerHTML = '<div style="font-size:16px;line-height:30px">＋</div><div class="skN">ずかんではる</div>';
     skillBar.append(b);
   }
   syncSkills();
 }
 function syncSkills(){
   for (const b of skillBar.children){
+    if (!b.dataset.ch) continue;
     const s = SKILLS.find(x => x.ch === b.dataset.ch);
     if (!hasCh(s.ch)) continue;
     const st = items[s.ch];
@@ -1064,6 +1177,8 @@ try{
   for (const k in rec) if (typeof r[k] === 'number') rec[k] = r[k];
 }catch(e){}
 function saveRec(){ try{ localStorage.setItem('sweetTD.rec', JSON.stringify(rec)); }catch(e){} }
+/* ベストウェーブからの推定順位（％）。サーバーがないので統計的なめやす */
+const rankPct = () => Math.max(1, Math.round(100 * Math.pow(0.85, rec.bw)));
 
 /* ==========================================================
    ログインボーナス（1日1回・7日サイクル）
@@ -1108,6 +1223,7 @@ function applyLoginReward(day){
     default:
       if (!dex['sp_rpurin']){
         unlock('sp_rpurin');
+        if (pins.length < PIN_MAX && !pins.includes('rpurin')){ pins.push('rpurin'); savePins(); }
         return 'でんせつのなかま <b>にじいろプリン</b> が なかまに！！<br>✨ プレゼントが おちやすくなる ✨';
       }
       return addStart(500);
@@ -1124,6 +1240,7 @@ function checkLogin(){
   lg.last = today; lg.streak = day;
   try{ localStorage.setItem('sweetTD.login', JSON.stringify(lg)); }catch(e){}
   const msg = applyLoginReward(day);
+  buildSkillBar();      // ごほうびのストックや新しいなかまをバーへ反映
   let st = '<div style="display:flex;gap:5px;justify-content:center;margin:8px 0">';
   for (let i=1;i<=7;i++){
     const on = i <= day;
@@ -2242,7 +2359,7 @@ function render(){
    ========================================================== */
 function resize(){
   const w = Math.min(document.getElementById('app').clientWidth - 20, 460);
-  const h = window.innerHeight - 306;   // なかまワザのバーのぶんも確保する
+  const h = window.innerHeight - 330;   // なかまワザのバーのぶんも確保する
   CELL = Math.max(24, Math.floor(Math.min(w/COLS, h/ROWS)));
   const W = COLS*CELL, H = ROWS*CELL;
   const dpr = Math.min(window.devicePixelRatio||1, 2.5);
