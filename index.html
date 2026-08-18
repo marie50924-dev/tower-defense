@@ -86,6 +86,7 @@
     text-align:center;line-height:1.1;color:var(--ink);
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;min-height:60px}
   .sk.empty{border:2px dashed rgba(185,138,224,.45);background:rgba(255,255,255,.3);color:#b98ae0}
+  .sk.off{opacity:.45}
   .sk:active{transform:scale(.95)}
   .sk:disabled{opacity:.45}
   .sk canvas{display:block;margin:0 auto}
@@ -1575,7 +1576,24 @@ function buildSkillBar(){
     b.insertAdjacentHTML('beforeend',
       '<div class="skN">' + s.name + '</div><div class="skC"></div>' +
       '<div class="skCd" style="display:none"></div>');
-    b.onclick = () => useSkill(s);
+    // タップで発動、ながおし（0.55秒）でずかんにもどす
+    let lpTimer = null, lpFired = false;
+    const cancelLp = () => { if (lpTimer){ clearTimeout(lpTimer); lpTimer = null; } };
+    b.addEventListener('pointerdown', () => {
+      lpFired = false;
+      lpTimer = setTimeout(() => {
+        lpFired = true;
+        const nm = ch === 'rpurin' ? 'にじいろプリン' : (CHARS.find(c => c.id === ch) || {}).name;
+        togglePin(ch);
+        floatTx(COLS*CELL/2, ROWS*CELL - CELL*0.6, nm + 'を ずかんにもどした', '#b98ae0');
+        beep(480,.1,'triangle',.04);
+      }, 550);
+    });
+    b.addEventListener('pointerup', cancelLp);
+    b.addEventListener('pointerleave', cancelLp);
+    b.addEventListener('pointercancel', cancelLp);
+    b.addEventListener('contextmenu', e => e.preventDefault());
+    b.onclick = () => { if (lpFired){ lpFired = false; return; } useSkill(s); };
     skillBar.append(b);
   }
   // のこりは「はれる」空きスロット
@@ -1598,7 +1616,9 @@ function syncSkills(){
     const cd = skCd[s.ch], cdEl = b.querySelector('.skCd');
     cdEl.style.display = cd > 0 ? '' : 'none';
     if (cd > 0) cdEl.textContent = Math.ceil(cd);
-    b.disabled = over || cd > 0 || st < 1;
+    // disabled属性だと「ながおしではがす」もできなくなるので、見た目だけ無効化
+    // （発動条件はuseSkill側でチェックずみ）
+    b.classList.toggle('off', over || cd > 0 || st < 1);
   }
 }
 
@@ -1792,6 +1812,7 @@ function buildHelp(){
   h += '<div class="hSec"><h3>✨ なかまワザのつかいかた</h3>' +
     '<p>👑ずかんで なかまをタップ → ワザバーに<b>はる</b>（7こまで）。バーをタップで発動、<b>1こへる</b>よ。' +
     'バーがいっぱいのときは、いちばん左のなかまが ずかんにもどって<b>こうたい</b>。' +
+    'バーのなかまを<b>ながおし</b>しても ずかんにもどせるよ。' +
     '敵のプレゼント🎁・ログインボーナス・⭐で買い足して補充してね。</p><ul style="margin-top:5px">' +
     SKILLS.map(s => {
       const c = CHARS.find(x => x.id === s.ch);
