@@ -775,7 +775,7 @@ function startWave(early){
   spawnQ = waveList(wave).slice();
   spawnT = 0; running = true;
   btnWave.disabled = true;
-  btnWave.textContent = 'ウェーブ ' + wave + ' しんこう中';
+  btnWave.innerHTML = 'ウェーブ' + wave + '<br>しんこう中';
   // 新しいステージの最初のウェーブでは、景色の名前をお披露目する
   if ((wave-1) % STAGE_WAVES === 0)
     floatTx(COLS*CELL/2, CELL*2.2, '「' + themeOf(wave).name + '」', '#b98ae0');
@@ -947,7 +947,7 @@ function update(dt){
     } else if ((time*4|0) !== wvTick){
       wvTick = time*4|0;
       const b = Math.ceil(nextT * (2 + wave*0.4));
-      btnWave.textContent = '▶ はやよび +⭐' + b + '（あと' + Math.ceil(nextT) + '）';
+      btnWave.innerHTML = '▶ はやよび +⭐' + b + '<br>あと' + Math.ceil(nextT) + 'びょう';
     }
   }
 
