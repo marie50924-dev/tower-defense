@@ -195,6 +195,7 @@
       <div id="ovT"></div>
       <div id="ovB"></div>
       <button class="btn" id="ovBtn" style="flex:0 0 auto;padding:12px 30px"></button>
+      <button class="mini gray" id="ovAlt" style="display:none"></button>
       <button class="mini" id="ovShare" style="display:none">きろくをシェア 📤</button>
     </div>
     <div id="kingOv">
@@ -411,7 +412,7 @@ const $ = id => document.getElementById(id);
 const vHp = $('vHp'), vSt = $('vSt'), vWv = $('vWv'), vBw = $('vBw'), hpBox = $('hpBox');
 const shopEl = $('shop'), infoEl = $('info'), infoIc = $('infoIc'), infoTx = $('infoTx');
 const btnUp = $('btnUp'), btnSell = $('btnSell'), btnWave = $('btnWave'), btnSpd = $('btnSpd'), btnSnd = $('btnSnd');
-const ov = $('ov'), ovT = $('ovT'), ovB = $('ovB'), ovBtn = $('ovBtn'), ovShare = $('ovShare');
+const ov = $('ov'), ovT = $('ovT'), ovB = $('ovB'), ovBtn = $('ovBtn'), ovShare = $('ovShare'), ovAlt = $('ovAlt');
 const colStats = $('colStats');
 const colOv = $('colOv'), colGrid = $('colGrid'), colCount = $('colCount'), colDone = $('colDone');
 const btnCol = $('btnCol'), colClose = $('colClose'), colTabsEl = $('colTabs'), colTotal = $('colTotal');
@@ -604,6 +605,7 @@ function reset(){
   helpOv.classList.remove('on');
   kingOv.classList.remove('on');
   ovShare.style.display = 'none';
+  ovAlt.style.display = 'none';
   btnWave.disabled = false;
   btnWave.textContent = 'つぎのウェーブ ▶';
 }
@@ -703,6 +705,7 @@ btnUp.onclick = () => {
   beep(620,.12,'triangle',.06);
   setTimeout(()=>beep(830,.12,'triangle',.06),110);
   setTimeout(()=>beep(1050,.22,'triangle',.07),220);
+  saveRun();
   syncHUD(); openInfo(t);
 };
 btnSell.onclick = () => {
@@ -711,7 +714,7 @@ btnSell.onclick = () => {
   towers = towers.filter(x => x !== t);
   beep(420,.15,'sine',.05,.6);
   for (let i=0;i<12;i++) puff(cx(t.c), cy(t.r), '#ffd7ec');
-  closeInfo(); syncHUD(); syncShop();
+  closeInfo(); saveRun(); syncHUD(); syncShop();
 };
 
 /* ==========================================================
@@ -772,6 +775,7 @@ cv.addEventListener('pointerdown', e => {
   }
   beep(620,.16,'triangle',.05);
   for (let i=0;i<14;i++) puff(cx(c), cy(r), T.color);
+  saveRun();
   syncHUD();
 });
 
@@ -1171,6 +1175,7 @@ function update(dt){
     if (!ov.classList.contains('on') && !pendingComplete &&
         wave >= 2 && wave % STAGE_WAVES !== 0 && Math.random() < 0.2)
       startBonus();
+    saveRun();   // ここまでの進行をオートセーブ
   }
 }
 
@@ -1243,8 +1248,12 @@ function gameOver(){
       : '<span style="' + badge + '">🏆 じぶんベスト ウェーブ' + rec.bw + '</span>') +
     '<br><span style="opacity:.7">たおしたかず：' + rec.kills + '　ランキング：じょうい' + rankPct() + '%くらい（めやす）</span><br>' +
     'もういちど ちょうせんしてみよう ✨';
-  ovBtn.textContent = 'もういちど';
-  ovBtn.onclick = () => reset();
+  saveRun(Math.max(0, wave - 1));   // たおれたウェーブをやりなおせる状態で保存
+  ovBtn.textContent = 'つづきから ▶（💗10）';
+  ovBtn.onclick = () => continueRun();
+  ovAlt.textContent = 'さいしょから やりなおす';
+  ovAlt.style.display = '';
+  ovAlt.onclick = () => { clearRun(); reset(); };
   ovShare.style.display = '';
   ov.classList.add('on');
   if (newRec){
@@ -1314,6 +1323,7 @@ function stageClear(){
     : 'ハートが かいふくしたよ 💗<br>つぎのステージも がんばろう！') + unlockMsg;
   ovB.append(d);
   buildSkillBar();   // 新しいなかまのワザをすぐ使えるように
+  ovAlt.style.display = 'none';
   ovBtn.textContent = 'つぎのステージへ ▶';
   // とじた直後に、なかまの応援パレードがよく見えるように
   ovBtn.onclick = () => {
@@ -1349,6 +1359,7 @@ function legendArrival(L){
     'border:2px solid #ffd76e;border-radius:999px;padding:6px 14px;margin:7px 0;color:#c9821e">' +
     L.fx + '</span><br>これからは ときどき そらを とんでくれるよ';
   ovB.append(d);
+  ovAlt.style.display = 'none';
   ovBtn.textContent = 'ありがとう ✨';
   ovBtn.onclick = () => { ov.classList.remove('on'); parade(); };
   ovShare.style.display = '';
@@ -1705,6 +1716,52 @@ function syncSkills(){
 }
 
 /* ==========================================================
+   プレイのオートセーブ（とちゅうのウェーブから再開できる）
+   ========================================================== */
+function saveRun(w){
+  try{
+    localStorage.setItem('sweetTD.run', JSON.stringify({
+      w: (w !== undefined ? w : wave), st: stars, hp: hearts,
+      tw: towers.map(t => ({ k:t.k, c:t.c, r:t.r, lv:t.lv })),
+    }));
+  }catch(e){}
+}
+function clearRun(){ try{ localStorage.removeItem('sweetTD.run'); }catch(e){} }
+/* 起動時：セーブがあれば、そのウェーブから再開する */
+function tryResume(){
+  let rn = null;
+  try{ rn = JSON.parse(localStorage.getItem('sweetTD.run') || 'null'); }catch(e){}
+  if (!rn || !rn.w || rn.w < 1) return;
+  wave = rn.w;
+  stars = Math.max(0, rn.st | 0);
+  hearts = Math.min(maxHearts(), Math.max(1, rn.hp | 0));
+  towers = (rn.tw || [])
+    .filter(t => TOWERS[t.k] && !pathCells.has(key(t.c, t.r)))
+    .map(t => ({ k:t.k, c:t.c, r:t.r, lv:Math.min(5, Math.max(1, t.lv|0)),
+                 cd:0, ang:-Math.PI/2, pulse:0, ph:Math.random()*6.3 }));
+  floatTx(COLS*CELL/2, ROWS*CELL/2, 'つづきから さいかい！', '#b98ae0');
+  syncHUD();
+}
+/* ゲームオーバーからの「つづきから」：たおれたウェーブを💗10で再挑戦 */
+function continueRun(){
+  over = false; running = false;
+  enemies = []; shots = []; spawnQ = []; gifts = [];
+  wave = Math.max(0, wave - 1);
+  hearts = Math.min(10, maxHearts());
+  phoenixUsed = false; nextT = 0;
+  for (const k in skCd) skCd[k] = 0;
+  for (const k in buffs) buffs[k] = 0;
+  ov.classList.remove('on');
+  ovAlt.style.display = 'none';
+  btnWave.disabled = false;
+  btnWave.textContent = 'つぎのウェーブ ▶';
+  floatTx(COLS*CELL/2, ROWS*CELL/2, 'つづきから！がんばろう💗', '#ff6f9c');
+  beep(660,.15,'triangle',.06);
+  saveRun();
+  syncHUD();
+}
+
+/* ==========================================================
    じぶんきろく（ベストウェーブ・たおした数・プレイ回数）
    ========================================================== */
 let rec = { bw:0, kills:0, plays:0 };
@@ -1790,6 +1847,7 @@ function checkLogin(){
   ovB.innerHTML = '<b>' + day + 'にちめ</b>の ログインボーナス！' + st + msg +
     (day === 6 ? '<br><span style="opacity:.7">あしたは でんせつのなかまが…！？</span>' : '');
   ovShare.style.display = 'none';
+  ovAlt.style.display = 'none';
   ovBtn.textContent = 'うけとる ✨';
   ovBtn.onclick = () => { ov.classList.remove('on'); syncHUD(); };
   ov.classList.add('on');
@@ -1906,6 +1964,7 @@ function buildHelp(){
     '<li>ワザは<b>ここぞ</b>でつかう。ボス・ラッシュ・ハートのピンチに</li>' +
     '<li>20ウェーブごとのクリアで なかまとハートがもらえるよ</li>' +
     '<li>ときどき<b>🎁ボーナスウェーブ</b>！ふってくるおかしを ぜんぶタップすると💗+3</li>' +
+    '<li>進行はじどうセーブ。💗がなくなっても<b>つづきから</b>そのウェーブに再挑戦できるよ</li>' +
     '<li>うわさでは、<b>ウェーブ60</b>で でんせつのなかまに会えるらしい…✨</li></ul></div>';
   helpBody.innerHTML = h;
 }
@@ -2324,6 +2383,7 @@ function showComplete(){
     'タワーのようせいも、てきだったみんなも、いまでは おまつりのなかま🎉<br>' +
     '<span style="opacity:.7">🏰ボタンから いつでも ながめられるよ</span>';
   ovB.append(d);
+  ovAlt.style.display = 'none';
   ovBtn.textContent = '国を見る 🏰';
   ovBtn.onclick = () => { ov.classList.remove('on'); kingOv.classList.add('on'); buildKingdom(); };
   ovShare.style.display = '';
@@ -3636,6 +3696,7 @@ function loop(ts){
 
 reset();
 resize();
+tryResume();      // とちゅうのセーブがあれば、そのウェーブから再開
 checkLogin();     // きょうはじめての起動ならプレゼントを渡す
 requestAnimationFrame(loop);
 
