@@ -206,6 +206,7 @@
         <button class="ctab" data-t="tw">おかし</button>
         <button class="ctab" data-t="en">てき</button>
         <button class="ctab" data-t="ch">なかま</button>
+        <button class="ctab" data-t="lg">でんせつ</button>
       </div>
       <div id="colStats"></div>
       <div id="colHint" style="display:none">📌 あつめたなかまをタップすると ワザバーに はったり はがしたり できるよ（7こまで）</div>
@@ -356,6 +357,20 @@ const DEX_TOWERS  = ORDER.map(k => ({ id:'tw_'+k, name:TOWERS[k].name, title:TOW
 const DEX_ENEMIES = Object.keys(ENEMIES).map(k => ({ id:'en_'+k, name:ENEMIES[k].name, title:ENEMY_TITLES[k] }));
 
 /* ==========================================================
+   でんせつのなかま：とうたつウェーブで出会えて、永続の「しゅくふく」をくれる
+   ========================================================== */
+const LEGENDS = [
+  { id:'whale',   name:'ほしのクジラ',       title:'ほしぞらのでんせつ', wave:60,
+    fx:'しゅくふく：はじまりのハート+2',                 tease:'ウェーブ60で なにかが おきる…' },
+  { id:'phoenix', name:'ふしちょう',         title:'ほのおのでんせつ',   wave:120,
+    fx:'しゅくふく：1プレイに1回 ハート0でふみとどまる', tease:'ウェーブ120で なにかが おきる…' },
+  { id:'chronos', name:'クロノスちょうろう', title:'ときのでんせつ',     wave:200,
+    fx:'しゅくふく：はやよびのまち時間+3びょう',         tease:'ウェーブ200で なにかが おきる…' },
+];
+const hasLg = id => !!dex['lg_' + id];
+const maxHearts = () => 20 + (hasLg('whale') ? 2 : 0);
+
+/* ==========================================================
    DOM
    ========================================================== */
 const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
@@ -379,6 +394,8 @@ let speed = 1, time = 0, flash = 0;
 let nextT = 0, wvTick = -1;   // つぎのウェーブまでのカウントダウン
 let celebT = 0, wflash = 0;   // お祝いの光芒と白フラッシュ
 let paraders = [];            // 応援パレード中のなかま
+let phoenixUsed = false;      // ふしちょうのごかご（1プレイ1回）
+let flyer = null, flyT = 12;  // そらをとぶでんせつ（sil=影のときは予告）
 
 let pathCells = new Set(), pathPts = [], segLen = [], pathLen = 0;
 
@@ -465,7 +482,7 @@ function beep(f, dur, type='sine', vol=0.05, slide=1.4){
    ========================================================== */
 function reset(){
   towers = []; enemies = []; shots = []; parts = []; floats = []; rings = [];
-  hearts = 20; stars = 250 + todayStartStars(); wave = 0;   // ログインボーナスぶんを上のせ
+  hearts = maxHearts(); stars = 250 + todayStartStars(); wave = 0;   // ログインボーナスぶんを上のせ
   selTool = null; selTower = null; running = false; over = false;
   spawnQ = []; spawnT = 0; speed = 1; flash = 0; nextT = 0;
   btnSpd.textContent = '1x';
@@ -473,6 +490,7 @@ function reset(){
   for (const k in skCd) skCd[k] = 0;
   for (const k in buffs) buffs[k] = 0;
   gifts = []; paraders = []; celebT = 0; wflash = 0;
+  phoenixUsed = false; flyer = null; flyT = 10;
   buildSkillBar();
   syncHUD(); buildShop(); closeInfo();
   ov.classList.remove('on');
@@ -717,10 +735,14 @@ function celebrate(o){
 }
 
 /* ---------- なかまの応援パレード ---------- */
-const pcache = {};
+const pcache = {}, scache = {};
 function portraitOf(pid){
   if (!pcache[pid]) pcache[pid] = charThumb({ pid }, 44);
   return pcache[pid];
+}
+function silOf(pid){
+  if (!scache[pid]) scache[pid] = silhouetteThumb(pid, 52);
+  return scache[pid];
 }
 const CHEERS = ['やったね！','すごーい！','さすが✨','おめでとう🎉','かっこいい！','だいすき💗'];
 /* あつめたなかまが下を行進してお祝いしてくれる */
@@ -757,6 +779,31 @@ function update(dt){
     p.ph += dt*8;
     if (p.vx){ p.x += p.vx*dt; if (p.x > COLS*CELL + CELL*1.5) paraders.splice(i,1); }
     else { p.life -= dt; if (p.life <= 0) paraders.splice(i,1); }
+  }
+
+  // そらをとぶでんせつ。出会う前は影だけがよぎって期待をさそう
+  if (!flyer){
+    flyT -= dt;
+    if (flyT <= 0){
+      flyT = 22 + Math.random()*18;
+      const owned = LEGENDS.filter(l => dex['lg_' + l.id]);
+      const next = LEGENDS.find(l => !dex['lg_' + l.id]);
+      let pick = null, sil = false;
+      if (owned.length && Math.random() < 0.7) pick = owned[(Math.random()*owned.length)|0];
+      else if (next && rec.bw >= next.wave - 30){ pick = next; sil = true; }  // 条件が近いと影が見える
+      else if (owned.length) pick = owned[(Math.random()*owned.length)|0];
+      if (pick){
+        const dir = Math.random() < .5 ? 1 : -1;
+        flyer = { pid: pick.id, sil, dir,
+                  x: dir > 0 ? -CELL*2 : COLS*CELL + CELL*2,
+                  y: CELL*(1.2 + Math.random()*2),
+                  v: CELL*(1.2 + Math.random()*0.8) };
+        if (sil) floatTx(COLS*CELL/2, CELL*1.2, '…なにかが みている✨', '#b98ae0');
+      }
+    }
+  } else {
+    flyer.x += flyer.dir * flyer.v * dt;
+    if (flyer.x < -CELL*3 || flyer.x > COLS*CELL + CELL*3) flyer = null;
   }
 
   // なかまワザのクールダウンと一時バフ（表示は1秒きざみで十分）
@@ -815,8 +862,17 @@ function update(dt){
       enemies.splice(i,1);
       hearts -= (e.k === 'boss' ? 5 : 1);
       flash = 1; beep(200,.28,'sawtooth',.06,.5);
+      if (hearts <= 0){
+        // ふしちょうのしゅくふく：1プレイに1回だけふみとどまる
+        if (hasLg('phoenix') && !phoenixUsed){
+          phoenixUsed = true; hearts = 1;
+          celebrate({ conf: 50, rings: true, fanfare: 1 });
+          floatTx(COLS*CELL/2, ROWS*CELL/2, 'ふしちょうの ごかご！🔥', '#ff8a3a');
+        } else {
+          syncHUD(); gameOver(); return;
+        }
+      }
       syncHUD();
-      if (hearts <= 0){ gameOver(); return; }
     }
   }
 
@@ -902,12 +958,13 @@ function update(dt){
     beep(700,.15,'triangle',.06); setTimeout(()=>beep(940,.22,'triangle',.06),130);
     btnWave.disabled = false;
     btnWave.textContent = 'つぎのウェーブ ▶';
-    nextT = NEXT_WAIT;                       // つぎは自動でやってくる
+    nextT = NEXT_WAIT + (hasLg('chronos') ? 3 : 0);   // クロノスのしゅくふくで じっくり
     rec.bw = Math.max(rec.bw, wave); saveRec();
     syncHUD();
     // 10ウェーブの節目はちいさなお祝い（クリアの節目はstageClearが盛大にやる）
     if (wave % 10 === 0 && wave % STAGE_WAVES !== 0) celebrate({ conf: 30, fanfare: 1 });
     if (wave % STAGE_WAVES === 0) stageClear();
+    else checkLegends();
   }
 }
 
@@ -1018,7 +1075,7 @@ function unlock(id){
 /* ステージクリア（20ウェーブ）ごとのごほうび。なかまを1人むかえて、次のステージへ */
 function stageClear(){
   const stageNo = wave / STAGE_WAVES;
-  hearts = Math.min(20, hearts + 3 + (hasCh('apple') ? 3 : 0));   // ごほうびにハートを回復
+  hearts = Math.min(maxHearts(), hearts + 3 + (hasCh('apple') ? 3 : 0));   // ごほうびにハートを回復
   const ch = CHARS.find(c => !dex['ch_'+c.id]);
   if (ch){
     unlock('ch_' + ch.id);
@@ -1051,10 +1108,40 @@ function stageClear(){
     ov.classList.remove('on');
     parade();
     confettiBurst(40);
+    checkLegends();      // クリアの節目がでんせつの条件と重なったとき用
   };
   ovShare.style.display = '';
   ov.classList.add('on');
   celebrate({ rays: 3.5, conf: done ? 220 : 120, rings: true, flash: true, fanfare: done ? 2 : 1 });
+  syncHUD();
+}
+
+/* ---------- でんせつとの出会い ---------- */
+/* とうたつ記録が条件をこえていたら、でんせつが降臨する（1体ずつ） */
+function checkLegends(){
+  if (over || ov.classList.contains('on')) return;
+  const L = LEGENDS.find(l => rec.bw >= l.wave && !dex['lg_' + l.id]);
+  if (L) legendArrival(L);
+}
+function legendArrival(L){
+  unlock('lg_' + L.id);
+  ovT.textContent = '✨ でんせつとの であい ✨';
+  ovB.innerHTML = '';
+  const th = charThumb({ pid: L.id }, 110);
+  th.style.display = 'block'; th.style.margin = '0 auto 4px';
+  ovB.append(th);
+  const d = document.createElement('div');
+  d.innerHTML = 'でんせつのなかま <b>' + L.name + '</b>（' + L.title + '）が<br>' +
+    'あなたの がんばりを ずっと見ていました。<br>' +
+    '<span style="display:inline-block;background:linear-gradient(90deg,#ffe9b8,#ffd9ec);' +
+    'border:2px solid #ffd76e;border-radius:999px;padding:6px 14px;margin:7px 0;color:#c9821e">' +
+    L.fx + '</span><br>これからは ときどき そらを とんでくれるよ';
+  ovB.append(d);
+  ovBtn.textContent = 'ありがとう ✨';
+  ovBtn.onclick = () => { ov.classList.remove('on'); parade(); };
+  ovShare.style.display = '';
+  ov.classList.add('on');
+  celebrate({ rays: 4, conf: 240, rings: true, flash: true, fanfare: 2 });
   syncHUD();
 }
 
@@ -1080,6 +1167,8 @@ function dexList(){
                              hint:'ステージ' + (i+1) + 'クリアで なかまに' })),
     { id:'sp_rpurin', pid:'rpurin', name:'にじいろプリン', title:'でんせつのプリン', cat:'ch',
       fx:'ワザ「にじのおくりもの」＋ドロップUP', hint:'ログインボーナス7にちめで なかまに' },
+    ...LEGENDS.map(l => ({ id:'lg_'+l.id, pid:l.id, name:l.name, title:l.title, cat:'lg', fx:l.fx,
+                           hint:l.tease, legend:true })),
   ];
 }
 function buildColGrid(){
@@ -1147,6 +1236,11 @@ function buildColGrid(){
           if (r2 === 'off') colHint.textContent = o.name + 'を はがした（1こへったよ）のこり ×' + items[o.pid];
         };
       }
+    } else if (o.legend){
+      // でんせつはシルエットで「なにかがいる」感を出して期待させる
+      d.append(silhouetteThumb(o.pid, 64));
+      d.insertAdjacentHTML('beforeend',
+        '<div class="cNm">？？？</div><div class="cTt" style="color:#b98ae0">✨' + o.hint + '</div>');
     } else {
       d.innerHTML = '<div style="font-size:32px;line-height:64px">？</div>' +
         '<div class="cNm">？？？</div><div class="cTt">' + o.hint + '</div>';
@@ -1277,7 +1371,7 @@ function useSkill(s){
     floatTx(W/2, H*0.4, 'ぷるぷるスロー！', '#4faf5f');
     beep(420,.25,'sine',.05,.7);
   } else if (s.ch === 'donut'){
-    hearts = Math.min(20, hearts + 4);
+    hearts = Math.min(maxHearts(), hearts + 4);
     floatTx(W/2, H*0.4, 'ハートかいふく💗', '#ff6f9c');
     for (let i=0;i<16;i++) mote(W/2 + (Math.random()-0.5)*W*0.5, H*0.55, '#ffb0cf');
     beep(700,.15,'triangle',.06);
@@ -1309,7 +1403,7 @@ function useSkill(s){
     floatTx(W/2, H*0.4, 'いちごのはた！ ⭐2ばい！', '#e0a52e');
     beep(700,.12,'triangle',.05); setTimeout(()=>beep(930,.16,'triangle',.05),120);
   } else if (s.ch === 'apple'){
-    hearts = Math.min(20, hearts + 2);
+    hearts = Math.min(maxHearts(), hearts + 2);
     floatTx(W/2, H*0.4, 'りんごのいやし💗+2', '#ff6f9c');
     for (let i=0;i<10;i++) mote(W/2 + (Math.random()-0.5)*W*0.4, H*0.55, '#ffb0cf');
     beep(700,.14,'triangle',.05);
@@ -1579,7 +1673,8 @@ function buildHelp(){
   h += '<div class="hSec"><h3>🏆 つよくなるコツ</h3><ul>' +
     '<li>はやよびボーナスで⭐をかせいで、どんどん強化する</li>' +
     '<li>ワザは<b>ここぞ</b>でつかう。ボス・ラッシュ・ハートのピンチに</li>' +
-    '<li>20ウェーブごとのクリアで なかまとハートがもらえるよ</li></ul></div>';
+    '<li>20ウェーブごとのクリアで なかまとハートがもらえるよ</li>' +
+    '<li>うわさでは、<b>ウェーブ60</b>で でんせつのなかまに会えるらしい…✨</li></ul></div>';
   helpBody.innerHTML = h;
 }
 btnHelp.onclick = () => { buildHelp(); helpOv.classList.add('on'); beep(700,.08,'triangle',.04); };
@@ -1594,6 +1689,17 @@ function charThumb(ch, size){
   const g = c.getContext('2d');
   g.setTransform(dpr,0,0,dpr,0,0);
   drawPortrait(g, ch.pid || ch.id, size);
+  return c;
+}
+
+/* まだ出会っていないでんせつの、うすむらさきの影 */
+function silhouetteThumb(pid, size){
+  const c = charThumb({ pid }, size);
+  const g = c.getContext('2d');
+  g.setTransform(1,0,0,1,0,0);
+  g.globalCompositeOperation = 'source-in';
+  g.fillStyle = '#c3b3d6';
+  g.fillRect(0, 0, c.width, c.height);
   return c;
 }
 
@@ -1783,6 +1889,91 @@ function drawPortrait(g, id, S){
       }
     }
     face(M, M+(key==='golem'||key==='tank' ? 0 : R*0.02), R*0.82, angry ? 'angry' : '');
+  } else if (id === 'whale'){
+    /* ---- ほしのクジラ ---- */
+    const y = M + S*0.02;
+    const gr = g.createLinearGradient(0, y - R, 0, y + R);
+    gr.addColorStop(0,'#8fb0e8'); gr.addColorStop(1,'#5a7fc8');
+    g.fillStyle = gr;
+    g.beginPath(); g.ellipse(M - S*0.02, y, R*1.3, R*0.85, 0, 0, TAU); g.fill();
+    // しっぽ
+    g.beginPath();
+    g.moveTo(M + R*1.1, y - R*0.05);
+    g.quadraticCurveTo(M + R*1.65, y - R*0.75, M + R*1.8, y - R*0.35);
+    g.quadraticCurveTo(M + R*1.6, y - R*0.02, M + R*1.5, y + R*0.12);
+    g.quadraticCurveTo(M + R*1.72, y + R*0.55, M + R*1.45, y + R*0.6);
+    g.quadraticCurveTo(M + R*1.2, y + R*0.32, M + R*1.1, y + R*0.15);
+    g.closePath(); g.fill();
+    // しろいおなか
+    g.fillStyle = '#dfe9fb';
+    g.beginPath(); g.ellipse(M - S*0.02, y + R*0.38, R*1.1, R*0.4, 0, 0, TAU); g.fill();
+    // ほしもよう
+    star(M - R*0.55, y - R*0.35, S*0.032, '#fff');
+    star(M + R*0.25, y - R*0.48, S*0.042, '#ffe27a');
+    star(M - R*0.05, y - R*0.05, S*0.026, '#fff');
+    // あたまのうえの ほしのしお
+    g.strokeStyle = '#bfe0ff'; g.lineWidth = S*0.014; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(M - R*0.5, y - R*0.82); g.lineTo(M - R*0.5, y - R*1.1); g.stroke();
+    star(M - R*0.5, y - R*1.28, S*0.05, '#bfe0ff');
+    face(M - R*0.55, y + R*0.02, R*0.52);
+  } else if (id === 'phoenix'){
+    /* ---- ふしちょう ---- */
+    const y = M + S*0.03;
+    for (const s of [-1,1]){
+      g.save(); g.translate(M + s*R*0.75, y - R*0.1); g.rotate(s*0.5);
+      g.fillStyle = 'rgba(255,170,80,.95)';
+      g.beginPath(); g.ellipse(0, 0, R*0.7, R*0.35, s*0.5, 0, TAU); g.fill();
+      g.fillStyle = 'rgba(255,214,110,.9)';
+      g.beginPath(); g.ellipse(s*R*0.1, R*0.12, R*0.45, R*0.22, s*0.5, 0, TAU); g.fill();
+      g.restore();
+    }
+    // しっぽのほのお
+    g.lineCap = 'round';
+    g.strokeStyle = '#ff9a4a'; g.lineWidth = S*0.024;
+    g.beginPath(); g.moveTo(M - R*0.05, y + R*0.6); g.quadraticCurveTo(M - R*0.5, y + R*1.1, M - R*0.75, y + R*0.9); g.stroke();
+    g.strokeStyle = '#ffd76e'; g.lineWidth = S*0.02;
+    g.beginPath(); g.moveTo(M + R*0.1, y + R*0.6); g.quadraticCurveTo(M + R*0.5, y + R*1.15, M + R*0.72, y + R*0.95); g.stroke();
+    ball(M, y, R*0.85, '#ffb35a', '#e07028');
+    // あたまのかざりばね
+    g.strokeStyle = '#ffd76e'; g.lineWidth = S*0.018;
+    for (const [dx,len] of [[-0.25,0.5],[0,0.65],[0.25,0.5]]){
+      g.beginPath();
+      g.moveTo(M + dx*R*0.6, y - R*0.72);
+      g.quadraticCurveTo(M + dx*R, y - R*(0.72+len), M + dx*R*1.4, y - R*(0.55+len));
+      g.stroke();
+    }
+    face(M, y, R*0.7);
+  } else if (id === 'chronos'){
+    /* ---- クロノスちょうろう（とけいのこうらのカメ） ---- */
+    const y = M + S*0.05;
+    g.fillStyle = '#9bc48f';
+    for (const dx of [-0.85, 0.85]){
+      g.beginPath(); g.ellipse(M + dx*R, y + R*0.5, R*0.26, R*0.18, 0, 0, TAU); g.fill();
+    }
+    const gr2 = g.createRadialGradient(M - R*0.3, y - R*0.5, R*0.2, M, y, R*1.3);
+    gr2.addColorStop(0,'#cfe8b8'); gr2.addColorStop(1,'#7fae6a');
+    g.fillStyle = gr2;
+    g.beginPath(); g.ellipse(M + R*0.1, y - R*0.05, R*1.05, R*0.8, 0, 0, TAU); g.fill();
+    g.strokeStyle = '#5f8a4e'; g.lineWidth = S*0.012;
+    g.beginPath(); g.ellipse(M + R*0.1, y - R*0.05, R*1.05, R*0.8, 0, 0, TAU); g.stroke();
+    // こうらの とけい
+    g.fillStyle = '#fff6e0';
+    g.beginPath(); g.arc(M + R*0.15, y - R*0.1, R*0.48, 0, TAU); g.fill();
+    g.strokeStyle = '#c9a24e'; g.lineWidth = S*0.013;
+    g.beginPath(); g.arc(M + R*0.15, y - R*0.1, R*0.48, 0, TAU); g.stroke();
+    g.strokeStyle = '#6b4a63'; g.lineWidth = S*0.011; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(M + R*0.15, y - R*0.1); g.lineTo(M + R*0.15, y - R*0.45); g.stroke();
+    g.beginPath(); g.moveTo(M + R*0.15, y - R*0.1); g.lineTo(M + R*0.42, y); g.stroke();
+    // あたまと しろいまゆげ
+    ball(M - R*1.05, y + R*0.05, R*0.4, '#b8dca6', '#6f9e5c');
+    g.strokeStyle = '#fff'; g.lineWidth = S*0.018; g.lineCap = 'round';
+    for (const s of [-1,1]){
+      g.beginPath();
+      g.moveTo(M - R*1.05 + s*R*0.18, y - R*0.18);
+      g.lineTo(M - R*1.05 + s*R*0.3,  y - R*0.3);
+      g.stroke();
+    }
+    face(M - R*1.05, y + R*0.08, R*0.3);
   } else if (id === 'purin'){
     const y = M + S*0.06;
     // プリンのからだ
@@ -2078,6 +2269,17 @@ function drawBoard(){
     ctx.fillStyle = cols[i%4];
     ctx.fillRect(-CELL*0.055, -CELL*0.02, CELL*0.11, CELL*0.04);
     ctx.restore();
+  }
+
+  // そらをとぶでんせつ（影のときはうっすら）
+  if (flyer){
+    const img = flyer.sil ? silOf(flyer.pid) : portraitOf(flyer.pid);
+    const fb = Math.sin(time*2 + 1) * CELL*0.12;
+    ctx.globalAlpha = flyer.sil ? 0.5 : 0.95;
+    ctx.drawImage(img, flyer.x - 26, flyer.y - 26 + fb, 52, 52);
+    ctx.globalAlpha = 1;
+    if (!flyer.sil)
+      sparkle(flyer.x - flyer.dir*CELL*0.75, flyer.y + fb, CELL*0.09, time*5, '#ffffff');
   }
 
   // 置ける場所のうっすらしたガイド
