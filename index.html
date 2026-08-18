@@ -2843,6 +2843,31 @@ function drawBoard(){
     ctx.restore();
   }
 
+  // いまのステージ名（右上のかわいいラベル。左上は敵の入り口なので避ける）
+  {
+    const stN = Math.max(1, Math.ceil(Math.max(wave,1)/STAGE_WAVES));
+    const label = '🍭 ステージ' + stN + '・' + TH.name;
+    ctx.font = "800 " + (CELL*0.27) + "px 'Hiragino Maru Gothic ProN','Noto Sans JP',system-ui,sans-serif";
+    const lw = ctx.measureText(label).width;
+    const bx = COLS*CELL - CELL*0.22 - lw - CELL*0.56;
+    // まるいピル（ピンクのふちどり＋ふんわり影）
+    ctx.save();
+    ctx.shadowColor = 'rgba(190,140,180,.4)'; ctx.shadowBlur = CELL*0.12; ctx.shadowOffsetY = CELL*0.04;
+    ctx.fillStyle = 'rgba(255,255,255,.85)';
+    roundRect(bx, CELL*0.14, lw + CELL*0.56, CELL*0.6, CELL*0.3); ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = 'rgba(255,143,196,.75)'; ctx.lineWidth = 2;
+    roundRect(bx, CELL*0.14, lw + CELL*0.56, CELL*0.6, CELL*0.3); ctx.stroke();
+    // 白フチつきのピンク文字
+    ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.lineWidth = CELL*0.09; ctx.strokeStyle = '#ffffff'; ctx.lineJoin = 'round';
+    ctx.strokeText(label, bx + CELL*0.28, CELL*0.45);
+    ctx.fillStyle = '#e05f9e';
+    ctx.fillText(label, bx + CELL*0.28, CELL*0.45);
+    // ゆれるキラキラをそえる
+    sparkle(bx - CELL*0.12, CELL*0.3 + Math.sin(time*2.5)*CELL*0.05, CELL*0.09, time*2, '#ffd76e');
+  }
+
   // そらをとぶでんせつ（影のときはうっすら）
   if (flyer){
     const img = flyer.sil ? silOf(flyer.pid) : portraitOf(flyer.pid);
