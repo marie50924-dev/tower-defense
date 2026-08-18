@@ -499,6 +499,63 @@ function beep(f, dur, type='sine', vol=0.05, slide=1.4){
 }
 
 /* ==========================================================
+   BGM（WebAudioで生成。ステージごとに曲がかわる）
+   ========================================================== */
+// THEMESと同じならび：テンポ・音色・メロディ（MIDI番号、0は休符）・ベース
+const BGMS = [
+  { bpm: 96,  wv:'triangle', vol:.030,   // シュガーガーデン：あかるいハ長調
+    mel:[72,76,79,76, 81,79,76,72, 74,76,77,74, 76,74,72,67],
+    bass:[48,53,55,48] },
+  { bpm: 104, wv:'triangle', vol:.032,   // いちご：はずむヘ長調
+    mel:[77,81,84,81, 79,77,79,81, 77,74,77,81, 84,81,79,77],
+    bass:[53,50,55,53] },
+  { bpm: 84,  wv:'sine',     vol:.034,   // チョコ：まったりニ短調
+    mel:[74,77,81,77, 74,72,70,72, 74,77,81,84, 81,77,74,72],
+    bass:[50,46,48,45] },
+  { bpm: 76,  wv:'triangle', vol:.028,   // こおり：すきとおった高音
+    mel:[81,84,88,0,  84,81,84,0,  79,83,86,0,  88,86,84,81],
+    bass:[45,52,48,52] },
+  { bpm: 70,  wv:'sine',     vol:.030,   // よぞら：ゆめみるホ短調
+    mel:[76,79,83,88, 0,83,79,76,  74,79,83,86, 0,88,91,88],
+    bass:[40,47,43,45] },
+];
+let bgmTimer = null, bgmStep = 0, bgmNext = 0;
+const midiF = m => 440 * Math.pow(2, (m-69)/12);
+function bgmNote(f, t, dur, wv, vol){
+  const o = actx.createOscillator(), gg = actx.createGain();
+  o.type = wv; o.frequency.value = f;
+  gg.gain.setValueAtTime(0.0001, t);
+  gg.gain.linearRampToValueAtTime(vol, t + 0.02);
+  gg.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(gg).connect(actx.destination);
+  o.start(t); o.stop(t + dur + 0.05);
+}
+function bgmTick(){
+  if (!sndOn || !actx) return;
+  // ミュートしていた間のぶんを一気に鳴らさないための巻きなおし
+  if (bgmNext < actx.currentTime - 0.1) bgmNext = actx.currentTime + 0.05;
+  // いまのステージの曲（ウェーブが変わると自動でつぎの曲へ）
+  const B = BGMS[Math.max(0, Math.ceil(Math.max(wave,1)/STAGE_WAVES)-1) % BGMS.length];
+  const stepDur = 60 / B.bpm / 2;    // 8分音符
+  while (bgmNext < actx.currentTime + 0.25){
+    const i = bgmStep % 16;
+    if (B.mel[i]) bgmNote(midiF(B.mel[i]), bgmNext, stepDur*0.95, B.wv, B.vol);
+    if (i % 4 === 0) bgmNote(midiF(B.bass[(bgmStep >> 2) % 4]), bgmNext, stepDur*3.5, 'sine', B.vol*1.15);
+    bgmStep++; bgmNext += stepDur;
+  }
+}
+function bgmStart(){
+  if (bgmTimer) return;
+  try{
+    if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+  }catch(e){ return; }
+  bgmNext = actx.currentTime + 0.1; bgmStep = 0;
+  bgmTimer = setInterval(bgmTick, 120);
+}
+function bgmStop(){ if (bgmTimer){ clearInterval(bgmTimer); bgmTimer = null; } }
+
+/* ==========================================================
    ゲーム開始
    ========================================================== */
 function reset(){
@@ -688,6 +745,7 @@ function startWave(early){
   }
   nextT = 0;
   wave++;
+  bgmStart();          // 最初のウェーブからBGM開始（タップ後なので再生できる）
   spawnQ = waveList(wave).slice();
   spawnT = 0; running = true;
   btnWave.disabled = true;
@@ -1063,6 +1121,7 @@ function killEnemy(e, px, py){
 
 function gameOver(){
   over = true; running = false;
+  bgmStop();           // しずかに結果とむきあう
   const newRec = wave > 0 && wave > rec.bw;      // 更新前のベストとくらべて新記録か
   rec.plays++; rec.bw = Math.max(rec.bw, wave); saveRec();
   ovT.textContent = 'おかしの国が…！';
