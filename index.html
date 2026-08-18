@@ -924,7 +924,8 @@ function endBonus(){
     floatTx(COLS*CELL/2, ROWS*CELL*0.4, 'パーフェクト！💗+3', '#ff6f9c');
     celebrate({ rays: 2.5, conf: 90, rings: true, fanfare: 1 });
   } else {
-    floatTx(COLS*CELL/2, ROWS*CELL*0.4, gotN + 'こゲット！またこんどね🍬', '#b98ae0');
+    floatTx(COLS*CELL/2, ROWS*CELL*0.38, 'おしかったね！', '#b98ae0');
+    floatTx(COLS*CELL/2, ROWS*CELL*0.48, 'あとすこしだった…（' + gotN + 'こゲット）', '#b98ae0');
     beep(420,.2,'sine',.05,.7);
   }
 }
@@ -3479,8 +3480,38 @@ function render(){
     sparkle(gf.x + CELL*0.16, gf.y - CELL*0.16, CELL*0.055, gf.rot*2, '#ffffff');
   }
 
-  // ボーナスウェーブ：ふってくるおかしと のこりカウント
+  // ボーナスウェーブ：専用の夢見る背景に切りかえて、ふってくるおかしと のこりカウント
   if (bonus){
+    const W2 = COLS*CELL, H2 = ROWS*CELL;
+    // パステルの空（ステージの上にかぶせる、ここだけの景色）
+    const bbg = ctx.createLinearGradient(0, 0, 0, H2);
+    bbg.addColorStop(0,'rgba(255,214,236,.94)');
+    bbg.addColorStop(0.5,'rgba(232,220,255,.94)');
+    bbg.addColorStop(1,'rgba(255,246,224,.94)');
+    ctx.fillStyle = bbg; ctx.fillRect(0, 0, W2, H2);
+    // おおきなハートの光（まんなかにふんわり）
+    const hg = ctx.createRadialGradient(W2/2, H2*0.45, 0, W2/2, H2*0.45, H2*0.42);
+    hg.addColorStop(0,'rgba(255,255,255,.5)'); hg.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle = hg; ctx.fillRect(0, 0, W2, H2);
+    // ゆっくりながれる雲
+    for (let i=0;i<5;i++){
+      const cx2 = ((time*10 + i*167) % (W2 + CELL*6)) - CELL*3;
+      const cy2 = H2*(0.1 + (i*0.19) % 0.75);
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = '#ffffff';
+      for (const [dx,dy,r] of [[-1,0,.5],[0,-.3,.65],[1,0,.45],[0,.15,.75]]){
+        ctx.beginPath();
+        ctx.ellipse(cx2+dx*CELL*0.8, cy2+dy*CELL*0.5, CELL*r*1.15, CELL*r*0.58, 0, 0, 6.3);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+    // きらめき
+    for (const s of sparks){
+      ctx.globalAlpha = 0.5 + Math.sin(s.ph)*0.35;
+      sparkle(s.x, s.y, s.r*1.3, s.ph*0.4, '#ffffff');
+    }
+    ctx.globalAlpha = 1;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     for (const it of bonus.items){
       ctx.save(); ctx.translate(it.x, it.y);
