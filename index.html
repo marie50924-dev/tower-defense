@@ -348,6 +348,17 @@ const THEMES = [
     spr:['#ffffff','#bfe8ff','#c9a7ff','#ffd0df'] },
   { name:'よぞらのくに',         g1:'#ded4f6', g2:'#d3c7f1', p1:'#d9b96a', p2:'#f6e2a4',
     spr:['#ffffff','#ffe27a','#ff9ec9','#bfe8ff'] },
+  // ---- 後半戦（W101〜200）はさらに新しい国へ ----
+  { name:'キャラメルのさばく',   g1:'#f5dfb0', g2:'#efd49c', p1:'#b5722f', p2:'#dda45e',
+    spr:['#ffffff','#ffd76e','#ff9ec9','#b98ae0'] },
+  { name:'ソーダのうみべ',       g1:'#d3f2f5', g2:'#c2ebf0', p1:'#e8c49a', p2:'#fff0d8',
+    spr:['#ffffff','#8fd8ff','#b6f0c4','#ffd0df'] },
+  { name:'マカロンのもり',       g1:'#c8e6c0', g2:'#b8dcae', p1:'#8a5a34', p2:'#b07d4e',
+    spr:['#ffd0df','#fff0b8','#c9a7ff','#ffffff'] },
+  { name:'ゆきのケーキやま',     g1:'#f2f4fa', g2:'#e6eaf5', p1:'#a8c4e6', p2:'#dceafc',
+    spr:['#ffffff','#bfe8ff','#ffd0df','#e8d8ff'] },
+  { name:'にじのてんくう',       g1:'#eadcf8', g2:'#f6d9ee', p1:'#d9a54e', p2:'#ffe9b0',
+    spr:['#ff9ec9','#ffd76e','#8fe3c4','#9ed8ff'] },
 ];
 // ウェーブ w をたたかっている間のテーマ（w=0 はまだ始まっていないのでステージ1）
 const themeOf = w => THEMES[Math.max(0, Math.ceil(w/STAGE_WAVES)-1) % THEMES.length];
@@ -518,6 +529,21 @@ const BGMS = [
   { bpm: 70,  wv:'sine',     vol:.030,   // よぞら：ゆめみるホ短調
     mel:[76,79,83,88, 0,83,79,76,  74,79,83,86, 0,88,91,88],
     bass:[40,47,43,45] },
+  { bpm: 88,  wv:'triangle', vol:.032,   // キャラメルのさばく：エキゾチックなト調
+    mel:[67,70,74,72, 67,65,67,70, 72,74,77,74, 72,70,67,65],
+    bass:[43,48,46,41] },
+  { bpm: 112, wv:'triangle', vol:.030,   // ソーダのうみべ：しゅわっとはずむホ長調
+    mel:[76,80,83,80, 88,83,80,76, 81,80,78,76, 80,78,76,71],
+    bass:[52,45,47,52] },
+  { bpm: 80,  wv:'sine',     vol:.032,   // マカロンのもり：やさしいワルツふうト長調
+    mel:[79,83,86,0,  84,81,79,0,  78,81,84,86, 84,81,79,74],
+    bass:[43,48,50,43] },
+  { bpm: 66,  wv:'triangle', vol:.026,   // ゆきのケーキやま：オルゴールのしずけさ
+    mel:[84,88,91,0,  89,88,86,0,  84,86,88,84, 81,0,79,0],
+    bass:[45,50,52,45] },
+  { bpm: 100, wv:'triangle', vol:.034,   // にじのてんくう：クロノスへむかう最終ステージ
+    mel:[72,76,79,84, 83,79,76,79, 74,77,81,86, 84,81,77,72],
+    bass:[48,53,45,55] },
 ];
 let bgmTimer = null, bgmStep = 0, bgmNext = 0;
 const midiF = m => 440 * Math.pow(2, (m-69)/12);
