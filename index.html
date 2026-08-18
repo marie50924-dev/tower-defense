@@ -274,7 +274,9 @@ const TOWERS = {
            desc:'遠くまでとどく強力な一撃' },
 };
 const ORDER = ['candy','ice','choco','star'];
-const UP_MUL = [0, 0.8, 1.4];        // レベル2,3 の値段 = cost * これ
+const UP_MUL = [0, 0.8, 1.4, 2.2, 3.2];        // レベル2〜5 の値段 = cost * これ
+// レベル上限は じぶんベストで解放されていく（一度解放すればずっと有効）
+const maxLv = () => rec.bw >= 100 ? 5 : rec.bw >= 60 ? 4 : 3;
 
 /* ==========================================================
    敵の設定
@@ -306,8 +308,9 @@ function waveList(n){
   if (n % 10 === 0 && n >= 40) out.push('boss');
   return out;
 }
-// 序盤からじわっと痛く、20をこえたら指数的にきつくする（ギリギリの緊張感）
-const hpScale = n => (1 + (n-1)*0.32) * Math.pow(1.05, Math.max(0, n-18));
+// 序盤からじわっと痛く、18をこえたらゆるやかな複利。
+// Lv5タワー＋ワザをつかいこなせば、がんばればW200に届くカーブにしてある
+const hpScale = n => (1 + (n-1)*0.30) * Math.pow(1.02, Math.max(0, n-18));
 // 後半はもらえるおほしさまも少しずつ増やして、強化が追いつくようにする
 // （ベリーおうじが なかまだと さらに +10%）
 const goldOf = k => Math.round(ENEMIES[k].gold * (1 + Math.max(0, wave-30)*0.04) * (hasCh('prince') ? 1.1 : 1) * (buffs.gold > 0 ? 2 : 1));
@@ -543,12 +546,15 @@ function openInfo(t){
   const T = TOWERS[t.k];
   infoEl.classList.add('on'); shopEl.style.display = 'none';
   infoIc.textContent = T.ic;
-  const up = t.lv < 3 ? Math.round(T.cost * UP_MUL[t.lv]) : null;
+  const cap = maxLv();
+  const up = t.lv < cap ? Math.round(T.cost * UP_MUL[t.lv]) : null;
   infoTx.innerHTML =
     `<b>${T.name} Lv.${t.lv}</b>　こうげき ${Math.round(dmgOf(t))}　はんい ${rangeOf(t).toFixed(1)}<br>` +
     `<span style="opacity:.65">${T.desc}</span>`;
   btnUp.disabled = !up || stars < up;
-  btnUp.textContent = up ? `つよくする ⭐${up}` : 'さいだいレベル';
+  btnUp.textContent = up ? `つよくする ⭐${up}`
+    : t.lv < 5 ? `Lv${t.lv+1}はベストW${t.lv === 3 ? 60 : 100}で解放`
+    : 'さいだいレベル';
   btnSell.textContent = `うる ⭐${sellOf(t)}`;
 }
 function closeInfo(){
@@ -567,21 +573,22 @@ const sellOf  = t => {
 };
 
 btnUp.onclick = () => {
-  const t = selTower; if (!t || t.lv >= 3) return;
+  const t = selTower; if (!t || t.lv >= maxLv()) return;
   const c = Math.round(TOWERS[t.k].cost * UP_MUL[t.lv]);
   if (stars < c) return;
   stars -= c; t.lv++; t.pulse = 1;
   // ずかんに「ここまで育てた」記録を残す
-  const rec = dex['tw_' + t.k];
-  if (rec && (rec.lv || 1) < t.lv){ rec.lv = t.lv; saveDex(); }
+  const rc = dex['tw_' + t.k];
+  if (rc && (rc.lv || 1) < t.lv){ rc.lv = t.lv; saveDex(); }
   const px = cx(t.c), py = cy(t.r);
   ring(px, py, '#ffffff', CELL*1.5);
-  ring(px, py, t.lv >= 3 ? '#ffd76e' : TOWERS[t.k].color, CELL*2.1);
+  ring(px, py, t.lv >= 5 ? '#ffd76e' : TOWERS[t.k].color, CELL*2.1);
   for (let i=0;i<18;i++) puff(px, py, '#fff2a8');
   for (let i=0;i<10;i++) puff(px, py, '#ffffff');
   for (let i=0;i<8;i++) mote(px, py - CELL*0.2, '#ffe27a');
-  floatTx(px, py - CELL*0.65, t.lv >= 3 ? 'さいきょう！' : 'レベルアップ！', '#ffb43f');
-  if (t.lv >= 3) celebrate({ conf: 40, rays: 1.5 });   // さいだいレベルはひときわ祝う
+  floatTx(px, py - CELL*0.65, t.lv >= 5 ? 'さいきょう！' : 'レベルアップ！', '#ffb43f');
+  if (t.lv >= 5) celebrate({ conf: 60, rays: 2 });        // さいきょうはひときわ祝う
+  else if (t.lv >= 3) celebrate({ conf: 30 });
   beep(620,.12,'triangle',.06);
   setTimeout(()=>beep(830,.12,'triangle',.06),110);
   setTimeout(()=>beep(1050,.22,'triangle',.07),220);
@@ -879,7 +886,7 @@ function update(dt){
   // タワーの攻撃
   for (const t of towers){
     if (t.lv >= 2 && Math.random() < dt*(t.lv-1)*1.7)
-      mote(cx(t.c), cy(t.r) - CELL*0.08, t.lv >= 3 ? '#ffe27a' : '#ffffff');
+      mote(cx(t.c), cy(t.r) - CELL*0.08, t.lv >= 4 ? '#ffe27a' : '#ffffff');
     if (t.pulse > 0) t.pulse = Math.max(0, t.pulse - dt*2.6);
     t.cd -= dt;
     const R = rangeOf(t)*CELL, ox = cx(t.c), oy = cy(t.r);
@@ -1095,11 +1102,15 @@ function stageClear(){
     th.style.display = 'block'; th.style.margin = '0 auto 4px';
     ovB.append(th);
   }
+  // Lv解放の節目なら いっしょにお知らせ
+  let unlockMsg = '';
+  if (wave === 60)  unlockMsg = '<br>🔓 おかしを <b>Lv4</b> まで つよくできるようになった！';
+  if (wave === 100) unlockMsg = '<br>🔓 おかしを <b>Lv5</b> まで つよくできるようになった！';
   const d = document.createElement('div');
-  d.innerHTML = ch
+  d.innerHTML = (ch
     ? '<b>' + ch.name + '</b>（' + ch.title + '）が なかまになった！<br>✨ ' + ch.fx + ' ✨<br>なかま ' + got + ' / ' + CHARS.length +
       (done ? '<br>ぜんいん あつまったよ！ あなたは でんせつのえいゆう ✨' : '')
-    : 'ハートが かいふくしたよ 💗<br>つぎのステージも がんばろう！';
+    : 'ハートが かいふくしたよ 💗<br>つぎのステージも がんばろう！') + unlockMsg;
   ovB.append(d);
   buildSkillBar();   // 新しいなかまのワザをすぐ使えるように
   ovBtn.textContent = 'つぎのステージへ ▶';
@@ -1657,7 +1668,8 @@ function buildHelp(){
     'じゅんびを取るか、⭐を取るか、まいかいのかけひき！</p></div>';
   h += '<div class="hSec"><h3>🍬 おかし（タワー）のとくい分野</h3><ul>' +
     ORDER.map(k => '<li>' + TOWERS[k].ic + ' <b>' + TOWERS[k].name + '</b>：' + TOWER_TIPS[k] + '</li>').join('') +
-    '</ul><p style="margin-top:4px">置いたおかしをタップ →「つよくする」でレベルアップ（さいだいLv3）</p></div>';
+    '</ul><p style="margin-top:4px">置いたおかしをタップ →「つよくする」でレベルアップ。' +
+    'さいしょはLv3まで。<b>ベストW60でLv4、W100でLv5</b>がかいほうされて、つぎのプレイからずっと使えるよ</p></div>';
   h += '<div class="hSec"><h3>👾 てきのヒント</h3><ul>' +
     '<li>🛡 <b>クリスタル・ゴーレム</b>：アーマーでダメージを減らす → 一発が大きい チョコ・スターで</li>' +
     '<li>💨 <b>ぴょん・こうもり</b>：とてもはやい → アイスやスローでおそくして</li>' +
@@ -2430,10 +2442,10 @@ function drawTower(t){
   ctx.strokeStyle = 'rgba(160,120,160,.3)'; ctx.lineWidth = 1.5;
   roundRect(-R*0.95, R*0.4, R*1.9, R*0.55, R*0.28); ctx.stroke();
 
-  // 強化オーラ（Lv2でしろく、Lv3できんいろに）
+  // 強化オーラ（Lv2でしろく、Lv4からきんいろに）
   if (t.lv >= 2){
     const pu = 0.75 + Math.sin(time*3.2 + t.ph)*0.25;
-    const col = t.lv >= 3 ? '255,214,110' : '255,255,255';
+    const col = t.lv >= 4 ? '255,214,110' : '255,255,255';
     const ag = ctx.createRadialGradient(0,0,R*0.6, 0,0,R*1.8);
     ag.addColorStop(0, 'rgba('+col+',0)');
     ag.addColorStop(0.62, 'rgba('+col+','+(0.34*pu)+')');
@@ -2446,9 +2458,9 @@ function drawTower(t){
   glossyBall(R, T.color, T.dark);
   drawFace(R, t.ph, 'smile');
 
-  // 頭のかざり（レベルで大きくなる）
+  // 頭のかざり（レベルで大きくなる。5段階でも大きくなりすぎない係数）
   ctx.save(); ctx.translate(0, -R*1.05);
-  ctx.scale(1 + (t.lv-1)*0.22, 1 + (t.lv-1)*0.22);
+  ctx.scale(1 + (t.lv-1)*0.13, 1 + (t.lv-1)*0.13);
   if (t.k === 'candy'){
     ctx.fillStyle = '#fff';
     ctx.fillRect(-R*0.045, -R*0.12, R*0.09, R*0.4);
@@ -2511,13 +2523,14 @@ function drawTower(t){
   }
   ctx.restore();
 
-  // むねのリボン（Lv3できんいろ）
-  drawBow(-R*0.6, -R*0.74, R*(0.3 + (t.lv-1)*0.05), t.lv >= 3 ? '#e8b12e' : T.dark);
+  // むねのリボン（Lv4からきんいろ）
+  drawBow(-R*0.6, -R*0.74, R*(0.3 + (t.lv-1)*0.05), t.lv >= 4 ? '#e8b12e' : T.dark);
 
-  // Lv3はまわりを星がくるくるまわる
+  // Lv3からまわりを星がくるくるまわる（レベルで数がふえる）
   if (t.lv >= 3){
-    for (let i=0;i<5;i++){
-      const a = time*2.4 + t.ph + i*1.2566;
+    const n = t.lv + 2;
+    for (let i=0;i<n;i++){
+      const a = time*2.4 + t.ph + i*Math.PI*2/n;
       const rr = R*(1.45 + 0.12*Math.sin(time*3 + i*1.7));
       sparkle(Math.cos(a)*rr, Math.sin(a)*rr*0.62 - R*0.1,
               R*(i%2 ? 0.09 : 0.14), a*2, i%2 ? '#ffffff' : '#ffe27a');
@@ -2526,10 +2539,10 @@ function drawTower(t){
 
   ctx.restore();
 
-  // レベルの星（Lv3で小さな王冠も）
+  // レベルの星（さいだいのLv5で小さな王冠も）
   for (let i=0;i<t.lv;i++)
-    sparkle(x - (t.lv-1)*CELL*0.075 + i*CELL*0.15, y + CELL*0.4, CELL*0.06, 0, '#ffd76e');
-  if (t.lv >= 3){
+    sparkle(x - (t.lv-1)*CELL*0.06 + i*CELL*0.12, y + CELL*0.4, CELL*0.055, 0, '#ffd76e');
+  if (t.lv >= 5){
     ctx.save(); ctx.translate(x + R*0.7, y + bob - R*1.25); ctx.rotate(0.35);
     ctx.fillStyle = '#ffd76e'; ctx.strokeStyle = '#d99a1e'; ctx.lineWidth = 1;
     ctx.beginPath();
