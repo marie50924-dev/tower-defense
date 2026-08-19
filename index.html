@@ -422,6 +422,8 @@ const CODES = {
   'とりっくおあとりーと': { theme:'halloween', msg:'🎃 限定テーマ「おばけのおかしまつり」が とどいた！' },
   'めりーくりすます':     { theme:'christmas', msg:'🎄 限定テーマ「せいなるよるのくに」が とどいた！' },
   'あまいはーと':         { theme:'valentine', msg:'💝 限定テーマ「チョコとハートのくに」が とどいた！' },
+  // 作者用のかくしコード：SNS動画の撮影に使う演出よびだし
+  'さつえいすたじお':     { studio: true,      msg:'📹 さつえいスタジオが つかえるようになった！' },
 };
 let redeemed = [], themeSel = '', themeOverride = null;
 try{ redeemed = JSON.parse(localStorage.getItem('sweetTD.codes') || '[]'); }catch(e){}
@@ -1020,9 +1022,9 @@ function silOf(pid){
   return scache[pid];
 }
 const CHEERS = ['やったね！','すごーい！','さすが✨','おめでとう🎉','かっこいい！','だいすき💗'];
-/* あつめたなかまが下を行進してお祝いしてくれる */
-function parade(){
-  const got = dexList().filter(o => o.cat === 'ch' && dex[o.id]).map(o => o.pid);
+/* あつめたなかまが下を行進してお祝いしてくれる（all=true で全員：撮影用） */
+function parade(all){
+  const got = dexList().filter(o => o.cat === 'ch' && (all || dex[o.id])).map(o => o.pid);
   got.slice(0, 8).forEach((pid, i) => {
     paraders.push({ pid, x: -CELL*(1.2 + i*1.4), y: ROWS*CELL - CELL*0.85,
                     vx: CELL*2.4, ph: Math.random()*6.3,
@@ -1422,8 +1424,8 @@ function checkLegends(){
   const L = LEGENDS.find(l => rec.bw >= l.wave && !dex['lg_' + l.id]);
   if (L) legendArrival(L);
 }
-function legendArrival(L){
-  unlock('lg_' + L.id);
+function legendArrival(L, preview){
+  if (!preview) unlock('lg_' + L.id);   // 撮影プレビューでは図鑑にとうろくしない
   ovT.textContent = '✨ でんせつとの であい ✨';
   ovB.innerHTML = '';
   const th = charThumb({ pid: L.id }, 110);
@@ -2052,6 +2054,7 @@ function buildHelp(){
    あいことば・きせかえ（メイン画面の🔑ボタンからひらく）
    ========================================================== */
 const pwOv = $('pwOv'), pwBody = $('pwBody');
+let studioLg = 0;   // でんせつプレビューの順ぐり
 function buildPw(){
   pwBody.innerHTML =
     '<p style="font-size:11.5px;line-height:1.7;margin:0">とくべつな「あいことば」を入れると、' +
@@ -2067,7 +2070,15 @@ function buildPw(){
       '<button class="mini" data-sp="' + id + '" style="margin-top:6px;width:100%">' +
       (themeSel === id
         ? '「' + SP_THEMES[id].th.name + '」をつかい中（タップでもとにもどす）'
-        : '「' + SP_THEMES[id].th.name + '」にきせかえる') + '</button>').join('');
+        : '「' + SP_THEMES[id].th.name + '」にきせかえる') + '</button>').join('') +
+    (redeemed.includes('studio')
+      ? '<div style="font-size:11px;color:var(--pink-d);margin-top:12px">📹 さつえいスタジオ</div>' +
+        '<p style="font-size:10px;opacity:.6;margin:2px 0 0;line-height:1.5">SNS動画用に演出をよびだせるよ。<br>きろくが変わることがあるので、ふだんのデータでは注意！</p>' +
+        '<button class="mini" data-st="legend" style="margin-top:6px;width:100%">🐋 でんせつ降臨（プレビュー・図鑑にはのこらない）</button>' +
+        '<button class="mini" data-st="party" style="margin-top:6px;width:100%">🎉 クリアのおいわい＋全員パレード</button>' +
+        '<button class="mini" data-st="bonus" style="margin-top:6px;width:100%">🎁 ボーナスウェーブを今すぐ開始</button>' +
+        '<button class="mini" data-st="save" style="margin-top:6px;width:100%">📦 さつえい用セーブ（Lv5タワー・W54）をよみこむ</button>'
+      : '');
 
   // あいことばの入力
   $('pwBtn').onclick = () => {
@@ -2078,19 +2089,51 @@ function buildPw(){
       beep(160,.09,'square',.03,.7);
       return;
     }
-    if (redeemed.includes(c.theme)){
+    const id = c.theme || (c.studio ? 'studio' : '');
+    if (redeemed.includes(id)){
       $('pwMsg').textContent = 'その あいことばは もう つかったよ✨';
       return;
     }
-    redeemed.push(c.theme);
+    redeemed.push(id);
     try{ localStorage.setItem('sweetTD.codes', JSON.stringify(redeemed)); }catch(e){}
-    themeSel = c.theme;
-    try{ localStorage.setItem('sweetTD.themeSel', themeSel); }catch(e){}
-    applyThemeSel();
+    if (c.theme){
+      themeSel = c.theme;
+      try{ localStorage.setItem('sweetTD.themeSel', themeSel); }catch(e){}
+      applyThemeSel();
+    }
     celebrate({ conf: 90, rays: 2, fanfare: 1 });
     buildPw();
     $('pwMsg').textContent = c.msg;
   };
+  // さつえいスタジオのボタン
+  for (const b of pwBody.querySelectorAll('[data-st]')){
+    b.onclick = () => {
+      const k = b.dataset.st;
+      pwOv.classList.remove('on');
+      if (k === 'legend'){
+        legendArrival(LEGENDS[studioLg % LEGENDS.length], true);
+        studioLg++;
+      } else if (k === 'party'){
+        celebrate({ rays: 3.5, conf: 160, rings: true, flash: true, fanfare: 2 });
+        parade(true);
+      } else if (k === 'bonus'){
+        if (!running && !bonus && !over) startBonus();
+      } else if (k === 'save'){
+        if (running || over) return;
+        towers = [];
+        [['star',3,3],['star',5,3],['star',4,6],['star',2,7],['star',6,7],['star',4,9],
+         ['choco',3,4],['choco',5,4],['ice',2,6],['ice',6,6],['candy',3,10],['candy',5,10]]
+          .forEach(([kk,cc,rr]) => towers.push({ k:kk, c:cc, r:rr, lv:5, cd:0,
+                                                 ang:-Math.PI/2, pulse:0, ph:Math.random()*6.3 }));
+        wave = 54; stars = 3000; hearts = maxHearts();
+        nextT = 0; enemies = []; shots = []; spawnQ = [];
+        btnWave.disabled = false; btnWave.textContent = 'つぎのウェーブ ▶';
+        saveRun(); syncHUD();
+        floatTx(COLS*CELL/2, ROWS*CELL/2, '📦 さつえい用セーブ よみこみ！', '#b98ae0');
+      }
+      beep(700,.08,'triangle',.04);
+    };
+  }
   // きせかえの切りかえ
   for (const b of pwBody.querySelectorAll('[data-sp]')){
     b.onclick = () => {
