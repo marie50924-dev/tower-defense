@@ -150,6 +150,13 @@
   #kingCv{width:100%;border-radius:14px;box-shadow:0 6px 18px rgba(180,130,175,.35)}
   #kingCap{text-align:center;font-size:11px;opacity:.7;line-height:1.5}
 
+  /* ---------- あいことば・きせかえ ---------- */
+  #pwRow{text-align:center}
+  #pwOv{position:absolute;inset:0;display:none;flex-direction:column;gap:10px;border-radius:20px;
+    background:rgba(255,244,251,.97);backdrop-filter:blur(6px);padding:14px;overflow-y:auto;z-index:5}
+  #pwOv.on{display:flex;animation:pop .3s cubic-bezier(.2,1.4,.5,1)}
+  #pwBody{background:rgba(255,255,255,.8);border:2px solid #ffd9ec;border-radius:14px;padding:11px}
+
   /* ---------- たたかいかたガイド ---------- */
   #helpOv{position:absolute;inset:0;display:none;flex-direction:column;gap:8px;border-radius:20px;
     background:rgba(255,244,251,.97);backdrop-filter:blur(6px);padding:12px;overflow-y:auto;z-index:3}
@@ -207,6 +214,13 @@
       <canvas id="kingCv"></canvas>
       <div id="kingCap"></div>
     </div>
+    <div id="pwOv">
+      <div style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pink-d)">
+        <div style="flex:1">🔑 あいことば・きせかえ</div>
+        <button class="mini gray" id="pwClose">とじる</button>
+      </div>
+      <div id="pwBody"></div>
+    </div>
     <div id="helpOv">
       <div id="colHeadH" style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pink-d)">
         <div style="flex:1">❓ たたかいかたガイド</div>
@@ -257,6 +271,8 @@
     <button class="btn sm" id="btnHelp">❓</button>
     <button class="btn sm" id="btnSnd">♪</button>
   </div>
+
+  <div id="pwRow"><button class="mini" id="btnPw">🔑 あいことば・きせかえ</button></div>
 
   <div id="tip">ウェーブは自動でやってくる！ボタンで「はやよび」すると⭐ボーナス✨<br>たたかいかたは ❓ を見てね</div>
 
@@ -661,6 +677,7 @@ function reset(){
   colOv.classList.remove('on');
   helpOv.classList.remove('on');
   kingOv.classList.remove('on');
+  pwOv.classList.remove('on');
   ovShare.style.display = 'none';
   ovAlt.style.display = 'none';
   btnWave.disabled = false;
@@ -948,7 +965,8 @@ function bonusUpdate(dt){
   if (!bonus) return;
   // ずかんなどを見ているあいだは止めてあげる
   if (ov.classList.contains('on') || colOv.classList.contains('on') ||
-      helpOv.classList.contains('on') || kingOv.classList.contains('on')) return;
+      helpOv.classList.contains('on') || kingOv.classList.contains('on') ||
+      pwOv.classList.contains('on')) return;
   const H = ROWS*CELL;
   if (bonus.spawnLeft > 0){
     bonus.spT -= dt;
@@ -1033,7 +1051,8 @@ function update(dt){
   // 全キャラコンプリートのお披露目は、たたかいと他の画面が落ちついてから
   if (pendingComplete && !running &&
       !ov.classList.contains('on') && !colOv.classList.contains('on') &&
-      !helpOv.classList.contains('on') && !kingOv.classList.contains('on'))
+      !helpOv.classList.contains('on') && !kingOv.classList.contains('on') &&
+      !pwOv.classList.contains('on'))
     showComplete();
 
   // 応援パレードのなかまたち
@@ -1079,7 +1098,8 @@ function update(dt){
   // はやよびすると のこり秒数ぶんボーナス⭐がもらえる）
   if (!running && !over && wave > 0 && nextT > 0 && !bonus &&
       !ov.classList.contains('on') && !colOv.classList.contains('on') &&
-      !helpOv.classList.contains('on') && !kingOv.classList.contains('on')){
+      !helpOv.classList.contains('on') && !kingOv.classList.contains('on') &&
+      !pwOv.classList.contains('on')){
     nextT -= dt;
     if (nextT <= 0){
       nextT = 0;
@@ -2024,19 +2044,30 @@ function buildHelp(){
     '<li>進行はじどうセーブ。💗がなくなっても<b>つづきから</b>そのウェーブに再挑戦できるよ</li>' +
     '<li>うわさでは、<b>ウェーブ60</b>で でんせつのなかまに会えるらしい…✨</li></ul></div>';
   h += '<div class="hSec"><h3>🔑 あいことば</h3>' +
-    '<p>とくべつな「あいことば」を知っていたら、ここに入れてみてね。限定テーマがとどくよ🎁</p>' +
-    '<div style="display:flex;gap:6px;margin-top:6px">' +
+    '<p>とくべつな「あいことば」を手に入れたら、メイン画面の<b>「🔑あいことば・きせかえ」</b>ボタンから入れてね。限定テーマがとどくよ🎁</p></div>';
+  helpBody.innerHTML = h;
+}
+
+/* ==========================================================
+   あいことば・きせかえ（メイン画面の🔑ボタンからひらく）
+   ========================================================== */
+const pwOv = $('pwOv'), pwBody = $('pwBody');
+function buildPw(){
+  pwBody.innerHTML =
+    '<p style="font-size:11.5px;line-height:1.7;margin:0">とくべつな「あいことば」を入れると、' +
+    '限定テーマ（見た目とBGMのきせかえ）がとどくよ🎁<br>あいことばは SNSのキャンペーンで配布中！</p>' +
+    '<div style="display:flex;gap:6px;margin-top:9px">' +
     '<input id="pwIn" placeholder="あいことばを いれてね" ' +
-    'style="flex:1;min-width:0;border:2px solid #ffd9ec;border-radius:10px;padding:8px;font:inherit;font-size:12px;background:rgba(255,255,255,.9)">' +
+    'style="flex:1;min-width:0;border:2px solid #ffd9ec;border-radius:10px;padding:9px;font:inherit;font-size:13px;background:rgba(255,255,255,.95)">' +
     '<button class="mini" id="pwBtn">おくる</button></div>' +
-    '<div id="pwMsg" style="font-size:10.5px;color:#b98ae0;margin-top:5px"></div>' +
+    '<div id="pwMsg" style="font-size:11px;color:#b98ae0;margin-top:6px;line-height:1.5"></div>' +
+    (redeemed.filter(id => SP_THEMES[id]).length
+      ? '<div style="font-size:11px;color:var(--pink-d);margin-top:10px">🎀 きせかえ</div>' : '') +
     redeemed.filter(id => SP_THEMES[id]).map(id =>
       '<button class="mini" data-sp="' + id + '" style="margin-top:6px;width:100%">' +
       (themeSel === id
-        ? '🌸 「' + SP_THEMES[id].th.name + '」をつかい中（タップでもとにもどす）'
-        : '🌸 「' + SP_THEMES[id].th.name + '」にきせかえる') + '</button>').join('') +
-    '</div>';
-  helpBody.innerHTML = h;
+        ? '「' + SP_THEMES[id].th.name + '」をつかい中（タップでもとにもどす）'
+        : '「' + SP_THEMES[id].th.name + '」にきせかえる') + '</button>').join('');
 
   // あいことばの入力
   $('pwBtn').onclick = () => {
@@ -2057,21 +2088,23 @@ function buildHelp(){
     try{ localStorage.setItem('sweetTD.themeSel', themeSel); }catch(e){}
     applyThemeSel();
     celebrate({ conf: 90, rays: 2, fanfare: 1 });
-    buildHelp();
+    buildPw();
     $('pwMsg').textContent = c.msg;
   };
   // きせかえの切りかえ
-  for (const b of helpBody.querySelectorAll('[data-sp]')){
+  for (const b of pwBody.querySelectorAll('[data-sp]')){
     b.onclick = () => {
       const id = b.dataset.sp;
       themeSel = themeSel === id ? '' : id;
       try{ localStorage.setItem('sweetTD.themeSel', themeSel); }catch(e){}
       applyThemeSel();
       beep(700,.08,'triangle',.04);
-      buildHelp();
+      buildPw();
     };
   }
 }
+$('btnPw').onclick = () => { buildPw(); pwOv.classList.add('on'); beep(700,.08,'triangle',.04); };
+$('pwClose').onclick = () => pwOv.classList.remove('on');
 btnHelp.onclick = () => { buildHelp(); helpOv.classList.add('on'); beep(700,.08,'triangle',.04); };
 helpClose.onclick = () => helpOv.classList.remove('on');
 
@@ -3773,7 +3806,7 @@ function render(){
    ========================================================== */
 function resize(){
   const w = Math.min(document.getElementById('app').clientWidth - 20, 460);
-  const h = window.innerHeight - 330;   // なかまワザのバーのぶんも確保する
+  const h = window.innerHeight - 362;   // なかまワザのバーと🔑ボタンのぶんも確保する
   CELL = Math.max(24, Math.floor(Math.min(w/COLS, h/ROWS)));
   const W = COLS*CELL, H = ROWS*CELL;
   const dpr = Math.min(window.devicePixelRatio||1, 2.5);
