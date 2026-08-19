@@ -1983,12 +1983,12 @@ function makeShareCard(){
   });
   g.font = "800 28px 'Hiragino Maru Gothic ProN',sans-serif";
   g.fillStyle = '#b98ae0';
-  g.fillText('marie50924-dev.github.io/tower-defense', W2/2, H2 - 35);
+  g.fillText('okashi-no-kuni.github.io', W2/2, H2 - 35);
   return c;
 }
 async function shareScore(){
   const text = 'まほうのおかしの国を ウェーブ' + Math.max(1, wave, rec.bw) + 'まで まもりぬいた！ #おかしの国TD';
-  const url = 'https://marie50924-dev.github.io/tower-defense/';
+  const url = 'https://okashi-no-kuni.github.io/';
   try{
     const blob = await new Promise(r => makeShareCard().toBlob(r, 'image/png'));
     const file = new File([blob], 'sweet-td.png', { type:'image/png' });
@@ -2581,7 +2581,7 @@ $('kingShare').onclick = async () => {
   c.width = W2; c.height = H2;
   const r = drawKingdom(c.getContext('2d'), W2, H2);
   const text = 'わたしの まほうのおかしの国 🏰 なかま' + r.got + '/12 ✨ #おかしの国TD';
-  const url = 'https://marie50924-dev.github.io/tower-defense/';
+  const url = 'https://okashi-no-kuni.github.io/';
   try{
     const blob = await new Promise(res => c.toBlob(res, 'image/png'));
     const file = new File([blob], 'sweet-kingdom.png', { type:'image/png' });
