@@ -2738,33 +2738,46 @@ function charThumb(ch, size){
 /* 似顔絵の立体感。
    図鑑の子は1体ずつ形がちがうので、かたちごとに描きかえるのではなく、
    えがき終わった絵の上から 光・かげ・つやを かぶせている。
-   source-atop なので、絵があるところにだけ のって 背景はぬれない */
+   これで どんな形の子でも 同じ当たりかたの光になる。
+
+   かげは「かけ算（multiply）」でのせるのがミソ。白い色を うすくかぶせて
+   暗くすると 色まで あせてしまうが、かけ算なら 色がこいまま ふかくなる。
+   かけ算は絵の外にもはみ出すので、さいごに もとの形で切りぬいている */
 function portraitShade(g, S){
-  const M = S/2, TAU = 6.2832;
+  const M = S/2, TAU = 6.2832, cv = g.canvas;
+  // いまの絵をとっておく（さいごの切りぬきに使う）
+  const mask = document.createElement('canvas');
+  mask.width = cv.width; mask.height = cv.height;
+  mask.getContext('2d').drawImage(cv, 0, 0);
+
+  // ① かげ。左上は白（そのまま）、外にいくほど こい色をかけて ふかくする
   g.save();
-  g.globalCompositeOperation = 'source-atop';
-  // 左上からの光
-  const lg = g.createRadialGradient(M-S*0.19, M-S*0.23, 0, M-S*0.05, M-S*0.05, S*0.56);
-  lg.addColorStop(0,'rgba(255,255,255,.66)');
-  lg.addColorStop(0.42,'rgba(255,255,255,.17)');
+  g.globalCompositeOperation = 'multiply';
+  const mg = g.createRadialGradient(M-S*0.17, M-S*0.21, S*0.03, M-S*0.02, M-S*0.02, S*0.56);
+  mg.addColorStop(0,   '#ffffff');
+  mg.addColorStop(0.4, '#f2e7f0');
+  mg.addColorStop(0.76,'#cbb0c8');
+  mg.addColorStop(1,   '#9b7d9b');
+  g.fillStyle = mg; g.fillRect(0,0,S,S);
+  g.restore();
+
+  // ② 光と つや。ひかえめにして、色をあせさせない
+  g.save();
+  const lg = g.createRadialGradient(M-S*0.19, M-S*0.23, 0, M-S*0.05, M-S*0.05, S*0.5);
+  lg.addColorStop(0,'rgba(255,255,255,.4)');
+  lg.addColorStop(0.45,'rgba(255,255,255,.08)');
   lg.addColorStop(1,'rgba(255,255,255,0)');
   g.fillStyle = lg; g.fillRect(0,0,S,S);
-  // 外にいくほど暗く。これで まるみが出る
-  const dg = g.createRadialGradient(M, M, S*0.13, M, M, S*0.54);
-  dg.addColorStop(0,'rgba(74,38,66,0)');
-  dg.addColorStop(0.62,'rgba(74,38,66,.14)');
-  dg.addColorStop(1,'rgba(74,38,66,.52)');
-  g.fillStyle = dg; g.fillRect(0,0,S,S);
   // 下からの照りかえし
   const bg = g.createRadialGradient(M+S*0.15, M+S*0.22, 0, M+S*0.09, M+S*0.15, S*0.4);
-  bg.addColorStop(0,'rgba(255,255,255,.46)');
+  bg.addColorStop(0,'rgba(255,255,255,.32)');
   bg.addColorStop(1,'rgba(255,255,255,0)');
   g.fillStyle = bg; g.fillRect(0,0,S,S);
   // つや。ぼんやりした光の中に つよい芯
   g.save();
   g.translate(M-S*0.13, M-S*0.18); g.rotate(-0.55); g.scale(1,0.52);
   const hg = g.createRadialGradient(0,0,0, 0,0,S*0.16);
-  hg.addColorStop(0,'rgba(255,255,255,.8)');
+  hg.addColorStop(0,'rgba(255,255,255,.85)');
   hg.addColorStop(0.5,'rgba(255,255,255,.24)');
   hg.addColorStop(1,'rgba(255,255,255,0)');
   g.fillStyle = hg;
@@ -2773,17 +2786,13 @@ function portraitShade(g, S){
   g.fillStyle = 'rgba(255,255,255,.95)';
   g.beginPath(); g.ellipse(M-S*0.155, M-S*0.2, S*0.046, S*0.024, -0.55, 0, TAU); g.fill();
   g.restore();
-}
 
-/* まだ出会っていないでんせつの、うすむらさきの影 */
-function silhouetteThumb(pid, size){
-  const c = charThumb({ pid }, size);
-  const g = c.getContext('2d');
+  // ③ もとの形で切りぬく。かけ算と光が 絵の外にも のっているため
+  g.save();
+  g.globalCompositeOperation = 'destination-in';
   g.setTransform(1,0,0,1,0,0);
-  g.globalCompositeOperation = 'source-in';
-  g.fillStyle = '#c3b3d6';
-  g.fillRect(0, 0, c.width, c.height);
-  return c;
+  g.drawImage(mask, 0, 0);
+  g.restore();
 }
 
 function drawPortrait(g, id, S){
