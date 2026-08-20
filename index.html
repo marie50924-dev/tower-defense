@@ -64,7 +64,7 @@
   .tw:active{transform:scale(.94)}
   .tw.sel{border-color:var(--pink);background:#fff;box-shadow:0 0 0 3px rgba(255,143,196,.28)}
   .tw.poor{opacity:.42}
-  .tw .ic{font-size:21px;line-height:1.2}
+  .tw .ic{font-size:24px;line-height:1.2}
   .tw .nm{font-size:10.5px}
   .tw .cs{font-size:11px;color:var(--pink-d)}
 
@@ -106,7 +106,7 @@
     box-shadow:0 4px 0 var(--pink-d), 0 6px 16px rgba(224,95,158,.3);cursor:pointer;
   }
   .btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--pink-d)}
-  .btn.sm{flex:0 0 50px;font-size:13px;background:linear-gradient(180deg,#c9b6ff,#a586f5);box-shadow:0 4px 0 #7d5fd0}
+  .btn.sm{flex:0 0 50px;font-size:15.5px;background:linear-gradient(180deg,#c9b6ff,#a586f5);box-shadow:0 4px 0 #7d5fd0}
   .btn.sm:active{box-shadow:0 1px 0 #7d5fd0}
   .btn:disabled{opacity:.45}
 
@@ -273,7 +273,7 @@
     <button class="btn sm" id="btnSnd">♪</button>
   </div>
 
-  <div id="pwRow"><button class="mini" id="btnPw">🔑 あいことば・きせかえ</button></div>
+  <div id="pwRow"><button class="mini" id="btnPw"><span style="font-size:15px;line-height:.8">🔑</span> あいことば・きせかえ</button></div>
 
   <div id="tip">ウェーブは自動でやってくる！ボタンで「はやよび」すると⭐ボーナス✨<br>たたかいかたは ❓ を見てね</div>
 
@@ -1813,7 +1813,7 @@ function buildSkillBar(){
     const b = document.createElement('button');
     b.className = 'sk';
     b.dataset.ch = ch;
-    b.append(charThumb({ pid:ch }, 30));
+    b.append(charThumb({ pid:ch }, 34));
     b.insertAdjacentHTML('beforeend',
       '<div class="skN">' + s.name + '</div><div class="skC"></div>' +
       '<div class="skCd" style="display:none"></div>');
@@ -1842,7 +1842,7 @@ function buildSkillBar(){
     const b = document.createElement('button');
     b.className = 'sk empty';
     b.disabled = true;
-    b.innerHTML = '<div style="font-size:16px;line-height:30px">＋</div><div class="skN">ずかんではる</div>';
+    b.innerHTML = '<div style="font-size:19px;line-height:34px">＋</div><div class="skN">ずかんではる</div>';
     skillBar.append(b);
   }
   syncSkills();
