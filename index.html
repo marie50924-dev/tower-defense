@@ -323,13 +323,13 @@ const maxLv = () => rec.bw >= 100 ? 5 : rec.bw >= 60 ? 4 : 3;
    敵の設定
    ========================================================== */
 const ENEMIES = {
-  slime:   { name:'スライム',   hp:28,  spd:1.15, gold:5,   r:0.30, color:'#c9a7ff', dark:'#9a72e0' },
-  fast:    { name:'ぴょん',     hp:20,  spd:2.20, gold:7,   r:0.26, color:'#ffa8c8', dark:'#e06f9c' },
-  tank:    { name:'もちもち',   hp:115, spd:0.62, gold:15,  r:0.38, color:'#8fe3c4', dark:'#4fb392' },
-  crystal: { name:'クリスタル', hp:80,  spd:0.95, gold:14,  r:0.32, color:'#bfe8ff', dark:'#6fa8d8', armor:6 },
-  bat:     { name:'こうもり',   hp:60,  spd:1.85, gold:14,  r:0.27, color:'#d8c6ff', dark:'#8f6fd8' },
-  golem:   { name:'ゴーレム',   hp:420, spd:0.45, gold:45,  r:0.44, color:'#c09068', dark:'#7a5030', armor:4 },
-  boss:    { name:'ボス',       hp:700, spd:0.50, gold:120, r:0.50, color:'#ffb36e', dark:'#dd8028' },
+  slime:   { name:'ぷりんぼう', hp:28,  spd:1.15, gold:5,   r:0.30, color:'#c9a7ff', dark:'#9a72e0' },
+  fast:    { name:'あいすぼう', hp:20,  spd:2.20, gold:7,   r:0.26, color:'#ffa8c8', dark:'#e06f9c' },
+  tank:    { name:'まかろん',   hp:115, spd:0.62, gold:15,  r:0.38, color:'#8fe3c4', dark:'#4fb392' },
+  crystal: { name:'かきごおり', hp:80,  spd:0.95, gold:14,  r:0.32, color:'#bfe8ff', dark:'#6fa8d8', armor:6 },
+  bat:     { name:'よるクッキー', hp:60,  spd:1.85, gold:14,  r:0.27, color:'#d8c6ff', dark:'#8f6fd8' },
+  golem:   { name:'どすんケーキ', hp:420, spd:0.45, gold:45,  r:0.44, color:'#c09068', dark:'#7a5030', armor:4 },
+  boss:    { name:'ケーキだいおう', hp:700, spd:0.50, gold:120, r:0.50, color:'#ffb36e', dark:'#dd8028' },
 };
 
 function waveList(n){
@@ -463,8 +463,9 @@ const CHARS = [
 
 /* ずかん用のよみもの。おかし（タワー）は置くと、てきはたおすと登録される */
 const ENEMY_TITLES = {
-  slime:'ぷにぷにおばけ', fast:'いたずらうさぎ', tank:'おもたいおもち',
-  crystal:'こおりのよろい', bat:'よるのつばさ', golem:'チョコのきょじん', boss:'おうかんのボス',
+  slime:'ぷるぷるの いたずらっこ', fast:'ぼうつきで すばしっこい', tank:'かたくて おもたい',
+  crystal:'こおりのよろい', bat:'つばさで とんでくる', golem:'2だんの おもたいやつ',
+  boss:'おかしの国を ねらうボス',
 };
 const DEX_TOWERS  = ORDER.map(k => ({ id:'tw_'+k, name:TOWERS[k].name, title:TOWERS[k].desc }));
 const DEX_ENEMIES = Object.keys(ENEMIES).map(k => ({ id:'en_'+k, name:ENEMIES[k].name, title:ENEMY_TITLES[k] }));
@@ -1246,7 +1247,7 @@ function update(dt){
     const e = enemies[i], E = ENEMIES[e.k];
     if (e.slow > 0) e.slow -= dt;
     if (e.stun > 0) e.stun -= dt;                    // まもりのたての足止め
-    // ボスはスライムをしょうかんしてくる（数がふえすぎたら休む）
+    // ボスは ぷりんぼうを しょうかんしてくる（数がふえすぎたら休む）
     if (e.k === 'boss'){
       e.sum = (e.sum === undefined ? 3 : e.sum) - dt;
       if (e.sum <= 0 && enemies.length < 60){
@@ -1693,7 +1694,7 @@ const SKILLS = [
   { ch:'prince', name:'はた',       base:90,  cd:30, needEnemy:false, color:'#ff8f8f', desc:'10びょう ⭐2ばい。かせぎどきに' },
   { ch:'apple',  name:'いやし',     base:60,  cd:12, needEnemy:false, color:'#ff5a5a', desc:'ハート+2。かるくて安い回復' },
   { ch:'queen',  name:'いのり',     base:130, cd:45, needEnemy:false, color:'#dcebf8', desc:'ほかのワザのじゅんびを完了させる' },
-  { ch:'king',   name:'ごうれい',   base:150, cd:30, needEnemy:false, color:'#ffe27a', desc:'8びょう こうげき2ばい。ボスやゴーレムに' },
+  { ch:'king',   name:'ごうれい',   base:150, cd:30, needEnemy:false, color:'#ffe27a', desc:'8びょう こうげき2ばい。ボスや どすんケーキに' },
   { ch:'rpurin', name:'おくりもの', base:100, cd:35, needEnemy:false, color:'#c9a7ff', desc:'プレゼントを2こもらう' },
 ];
 let skCd = {}, skTick = -1;
@@ -2304,7 +2305,7 @@ $('btnPw').innerHTML = keySvg(23, INLINE) + ' あいことば・きせかえ';
 const helpOv = $('helpOv'), helpBody = $('helpBody'), btnHelp = $('btnHelp'), helpClose = $('helpClose');
 const TOWER_TIPS = {
   candy: 'れんしゃがはやい きほんのおかし。どこにでも',
-  ice:   'あてた敵をおそくする。はやい敵（ぴょん・こうもり）の通り道に',
+  ice:   'あてた敵をおそくする。はやい敵（あいすぼう・よるクッキー）の通り道に',
   choco: 'まわりをまとめて攻撃。むれ・ぶあついアーマーもちに',
   star:  'とおくまでとどく一撃。道のまんなかに置くと大かつやく',
 };
@@ -2319,9 +2320,9 @@ function buildHelp(){
     '</ul><p style="margin-top:4px">置いたおかしをタップ →「つよくする」でレベルアップ。' +
     'さいしょはLv3まで。<b>ベストW60でLv4、W100でLv5</b>がかいほうされて、つぎのプレイからずっと使えるよ</p></div>';
   h += '<div class="hSec"><h3>👾 てきのヒント</h3><ul>' +
-    '<li>🛡 <b>クリスタル・ゴーレム</b>：アーマーでダメージを減らす → 一発が大きい チョコ・スターで</li>' +
-    '<li>💨 <b>ぴょん・こうもり</b>：とてもはやい → アイスやスローでおそくして</li>' +
-    '<li>👑 <b>ボス</b>：スライムを<b>しょうかん</b>してくる！ワザでいっきにたおそう</li></ul></div>';
+    '<li>🛡 <b>かきごおり・どすんケーキ</b>：アーマーでダメージを減らす → 一発が大きい チョコ・スターで</li>' +
+    '<li>💨 <b>あいすぼう・よるクッキー</b>：とてもはやい → アイスやスローでおそくして</li>' +
+    '<li>👑 <b>ケーキだいおう</b>：ぷりんぼうを<b>しょうかん</b>してくる！ワザでいっきにたおそう</li></ul></div>';
   h += '<div class="hSec"><h3>✨ なかまワザのつかいかた</h3>' +
     '<p>👑ずかんで なかまをタップ → ワザバーに<b>はる</b>（7こまで）。バーをタップで発動、<b>1こへる</b>よ。' +
     'バーがいっぱいのときは、いちばん左のなかまが ずかんにもどって<b>こうたい</b>。' +
@@ -2998,19 +2999,43 @@ function drawPortrait(g, id, S){
   const face = (x,y,r,mood) => {
     g.fillStyle = 'rgba(255,120,165,.4)';
     for (const s of [-1,1]){ g.beginPath(); g.arc(x+s*r*0.5, y+r*0.18, r*0.16, 0, TAU); g.fill(); }
-    if (mood === 'angry'){
+    // まゆ。おこりは きつく、いじわるは ゆるく つりあげる
+    if (mood === 'angry' || mood === 'naughty'){
+      const k = mood === 'angry' ? 1 : 0.6;
       g.strokeStyle = '#4a3348'; g.lineWidth = r*0.08; g.lineCap = 'round';
       for (const s of [-1,1]){
-        g.beginPath(); g.moveTo(x+s*r*0.44, y-r*0.42); g.lineTo(x+s*r*0.15, y-r*0.29); g.stroke();
+        g.beginPath();
+        g.moveTo(x+s*r*0.44, y-r*(0.36+0.06*k));
+        g.lineTo(x+s*r*0.15, y-r*(0.34-0.05*k));
+        g.stroke();
       }
     }
     g.fillStyle = '#503a52';
     for (const s of [-1,1]){ g.beginPath(); g.ellipse(x+s*r*0.26, y-r*0.05, r*0.09, r*0.13, 0, 0, TAU); g.fill(); }
     g.fillStyle = '#fff';
     for (const s of [-1,1]){ g.beginPath(); g.arc(x+s*r*0.22, y-r*0.1, r*0.045, 0, TAU); g.fill(); }
+    // わるいこは 目のうえに まぶたをかぶせて ほそめる
+    if (mood === 'angry' || mood === 'naughty'){
+      g.fillStyle = '#503a52';
+      for (const s of [-1,1]){
+        g.beginPath();
+        g.ellipse(x+s*r*0.26, y-r*(mood === 'angry' ? 0.15 : 0.13), r*0.15, r*0.06, s*0.35, 0, TAU);
+        g.fill();
+      }
+    }
     g.strokeStyle = '#503a52'; g.lineWidth = r*0.06; g.lineCap = 'round';
     if (mood === 'angry'){
       g.beginPath(); g.arc(x, y+r*0.38, r*0.13, Math.PI*1.15, Math.PI*1.85); g.stroke();
+    } else if (mood === 'naughty'){
+      // にやり＋ちいさなキバ
+      g.beginPath();
+      g.moveTo(x-r*0.18, y+r*0.18);
+      g.quadraticCurveTo(x, y+r*0.34, x+r*0.21, y+r*0.11);
+      g.stroke();
+      g.fillStyle = '#fff';
+      g.beginPath();
+      g.moveTo(x+r*0.04, y+r*0.2); g.lineTo(x+r*0.15, y+r*0.16); g.lineTo(x+r*0.09, y+r*0.31);
+      g.closePath(); g.fill();
     } else {
       g.beginPath(); g.arc(x, y+r*0.16, r*0.13, Math.PI*0.15, Math.PI*0.85); g.stroke();
     }
@@ -3056,7 +3081,7 @@ function drawPortrait(g, id, S){
     g.save(); g.translate(M, M);
     enemyBody(g, key, R, E.color, E.dark, true, 0);
     g.restore();
-    face(M, M + R*ENEMY_FACE[key][1], R*ENEMY_FACE[key][0], angry ? 'angry' : '');
+    face(M, M + R*ENEMY_FACE[key][1], R*ENEMY_FACE[key][0], angry ? 'angry' : 'naughty');
   } else if (id === 'whale'){
     /* ---- ほしのクジラ ---- */
     const y = M + S*0.02;
@@ -3878,12 +3903,14 @@ function drawFace(R, ph, mood){
     ctx.beginPath(); ctx.arc(s*R*0.52, R*0.2, R*0.24, 0, 6.3); ctx.fill();
   }
 
-  if (mood === 'angry'){
+  // まゆ。おこりは きつく、いじわるは ゆるく つりあげる
+  if (mood === 'angry' || mood === 'naughty'){
+    const k = mood === 'angry' ? 1 : 0.6;
     ctx.strokeStyle = '#4a3348'; ctx.lineWidth = R*0.09; ctx.lineCap = 'round';
     for (const s of [-1,1]){
       ctx.beginPath();
-      ctx.moveTo(s*R*0.44, -R*0.4);
-      ctx.lineTo(s*R*0.15, -R*0.27);
+      ctx.moveTo(s*R*0.44, -R*(0.34 + 0.06*k));
+      ctx.lineTo(s*R*0.15, -R*(0.32 - 0.05*k));
       ctx.stroke();
     }
   }
@@ -3902,6 +3929,13 @@ function drawFace(R, ph, mood){
       ctx.moveTo(s*R*0.41, -R*0.15);
       ctx.lineTo(s*R*0.49, -R*0.22);
       ctx.stroke();
+      // わるいこは 目のうえに まぶたをかぶせて ほそめる
+      if (mood === 'angry' || mood === 'naughty'){
+        ctx.fillStyle = '#503a52';
+        ctx.beginPath();
+        ctx.ellipse(s*R*0.28, -R*(mood === 'angry' ? 0.15 : 0.13), R*0.17, R*0.07, s*0.35, 0, 6.3);
+        ctx.fill();
+      }
     }
   } else {
     ctx.strokeStyle = '#503a52'; ctx.lineWidth = R*0.07; ctx.lineCap = 'round';
@@ -3915,6 +3949,16 @@ function drawFace(R, ph, mood){
   ctx.strokeStyle = '#503a52'; ctx.lineWidth = R*0.07; ctx.lineCap = 'round';
   if (mood === 'angry'){
     ctx.beginPath(); ctx.arc(0, R*0.4, R*0.15, Math.PI*1.15, Math.PI*1.85); ctx.stroke();
+  } else if (mood === 'naughty'){
+    // にやり。かたっぽうだけ上がった口に、ちいさなキバ
+    ctx.beginPath();
+    ctx.moveTo(-R*0.19, R*0.19);
+    ctx.quadraticCurveTo(0, R*0.36, R*0.22, R*0.12);
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(R*0.04, R*0.21); ctx.lineTo(R*0.16, R*0.17); ctx.lineTo(R*0.1, R*0.32);
+    ctx.closePath(); ctx.fill();
   } else {
     ctx.beginPath(); ctx.arc(0, R*0.17, R*0.15, Math.PI*0.15, Math.PI*0.85); ctx.stroke();
   }
@@ -4048,7 +4092,7 @@ function drawEnemy(e){
   // 顔
   const ef = ENEMY_FACE[e.k];
   ctx.save(); ctx.translate(0, R*ef[1]);
-  drawFace(R*ef[0], e.ph, (e.k === 'boss' || e.k === 'golem') ? 'angry' : 'smile');
+  drawFace(R*ef[0], e.ph, (e.k === 'boss' || e.k === 'golem') ? 'angry' : 'naughty');
   ctx.restore();
 
   // こおり状態
