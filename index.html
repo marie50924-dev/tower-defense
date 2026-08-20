@@ -2755,22 +2755,22 @@ function portraitShade(g, S){
   g.globalCompositeOperation = 'multiply';
   const mg = g.createRadialGradient(M-S*0.17, M-S*0.21, S*0.03, M-S*0.02, M-S*0.02, S*0.56);
   mg.addColorStop(0,   '#ffffff');
-  mg.addColorStop(0.4, '#f2e7f0');
-  mg.addColorStop(0.76,'#cbb0c8');
-  mg.addColorStop(1,   '#9b7d9b');
+  mg.addColorStop(0.2, '#eddfeb');
+  mg.addColorStop(0.55,'#bd9aba');
+  mg.addColorStop(1,   '#6f5273');
   g.fillStyle = mg; g.fillRect(0,0,S,S);
   g.restore();
 
   // ② 光と つや。ひかえめにして、色をあせさせない
   g.save();
   const lg = g.createRadialGradient(M-S*0.19, M-S*0.23, 0, M-S*0.05, M-S*0.05, S*0.5);
-  lg.addColorStop(0,'rgba(255,255,255,.4)');
-  lg.addColorStop(0.45,'rgba(255,255,255,.08)');
+  lg.addColorStop(0,'rgba(255,255,255,.3)');
+  lg.addColorStop(0.45,'rgba(255,255,255,.06)');
   lg.addColorStop(1,'rgba(255,255,255,0)');
   g.fillStyle = lg; g.fillRect(0,0,S,S);
   // 下からの照りかえし
   const bg = g.createRadialGradient(M+S*0.15, M+S*0.22, 0, M+S*0.09, M+S*0.15, S*0.4);
-  bg.addColorStop(0,'rgba(255,255,255,.32)');
+  bg.addColorStop(0,'rgba(255,255,255,.24)');
   bg.addColorStop(1,'rgba(255,255,255,0)');
   g.fillStyle = bg; g.fillRect(0,0,S,S);
   // つや。ぼんやりした光の中に つよい芯
