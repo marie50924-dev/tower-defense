@@ -3042,46 +3042,12 @@ function drawPortrait(g, id, S){
     rrect(M-R*0.95, M+R*0.82, R*1.9, R*0.28, R*0.14); g.fill();
     g.strokeStyle = 'rgba(160,120,160,.35)'; g.lineWidth = 1.2;
     rrect(M-R*0.95, M+R*0.6, R*1.9, R*0.5, R*0.25); g.stroke();
-    ball(M, M, R, T.color, T.dark);
-    if (key === 'candy'){
-      g.fillStyle = '#fff'; g.fillRect(M-R*0.05, M-R*1.35, R*0.1, R*0.4);
-      g.fillStyle = T.color;
-      g.beginPath(); g.arc(M, M-R*1.45, R*0.36, 0, TAU); g.fill();
-      g.strokeStyle = '#fff'; g.lineWidth = R*0.09;
-      g.beginPath(); g.arc(M, M-R*1.45, R*0.18, 0, 4.6); g.stroke();
-      g.strokeStyle = T.dark; g.lineWidth = R*0.05;
-      g.beginPath(); g.arc(M, M-R*1.45, R*0.36, 0, TAU); g.stroke();
-    } else if (key === 'ice'){
-      g.fillStyle = '#eaf8ff'; g.strokeStyle = '#8fd0f0'; g.lineWidth = R*0.05;
-      for (const [dx,h] of [[-0.34,0.34],[0,0.52],[0.34,0.34]]){
-        g.beginPath();
-        g.moveTo(M+dx*R, M-R*(1.0+h));
-        g.lineTo(M+dx*R+R*0.15, M-R*0.95);
-        g.lineTo(M+dx*R, M-R*0.8);
-        g.lineTo(M+dx*R-R*0.15, M-R*0.95);
-        g.closePath(); g.fill(); g.stroke();
-      }
-    } else if (key === 'choco'){
-      g.save(); g.translate(M, M-R*1.15); g.rotate(-0.2);
-      g.fillStyle = '#6b3f1f';
-      rrect(-R*0.42, -R*0.24, R*0.84, R*0.48, R*0.08); g.fill();
-      g.fillStyle = 'rgba(255,255,255,.25)';
-      for (let i=0;i<3;i++) for (let j=0;j<2;j++)
-        g.fillRect(-R*0.36+i*R*0.26, -R*0.18+j*R*0.22, R*0.2, R*0.16);
-      g.restore();
-      g.fillStyle = '#ff6f9c';
-      g.beginPath(); g.arc(M+R*0.4, M-R*1.42, R*0.13, 0, TAU); g.fill();
-    } else {
-      g.fillStyle = '#ffe27a'; g.strokeStyle = '#e0a52e'; g.lineWidth = R*0.06;
-      g.beginPath();
-      for (let i=0;i<5;i++){
-        const a = -Math.PI/2 + i*TAU/5, b = a + Math.PI/5;
-        g.lineTo(M+Math.cos(a)*R*0.42, M-R*1.25+Math.sin(a)*R*0.42);
-        g.lineTo(M+Math.cos(b)*R*0.18, M-R*1.25+Math.sin(b)*R*0.18);
-      }
-      g.closePath(); g.fill(); g.stroke();
-    }
-    face(M, M, R*0.85);
+    // 盤面とおなじ おかしの形（sweetBody）をつかう。
+    // 図鑑は あとから portraitShade が光をのせるので flat でぬる
+    g.save(); g.translate(M, M);
+    sweetBody(g, key, R, T.color, T.dark, true);
+    g.restore();
+    face(M, M, R*SWEET_FACE[key]);
   } else if (id.slice(0,3) === 'en_'){
     /* ---- てき ---- */
     const key = id.slice(3), E = ENEMIES[key];
@@ -3663,6 +3629,125 @@ function softShadow(x, y, R, a){
   ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
   ctx.restore();
 }
+/* ==========================================================
+   おかしの形。まるい玉ではなく、そのおかしの形そのものをえがく。
+   盤面（ctx）と 図鑑・ショップ（g）で 同じ形をつかいたいので、
+   えがくキャンバスを c でうけとる。
+   flat のときは単色でぬる（図鑑は あとから portraitShade が光をのせるため、
+   ここでグラデを焼きこむと 二重になって白とびする）
+   ========================================================== */
+/* 形ごとに 顔をのせられる広さがちがうので、顔の大きさをここで決める */
+const SWEET_FACE = { candy:0.92, ice:0.86, choco:0.86, star:0.74 };
+function sweetBody(c, kind, R, color, dark, flat){
+  const TAU = 6.2832;
+  // 地の色。左上から光があたっているグラデ（flat のときは単色）
+  const paint = () => {
+    if (flat) return color;
+    const g = c.createRadialGradient(-R*0.38,-R*0.48,R*0.03, -R*0.05,-R*0.05,R*1.35);
+    g.addColorStop(0,'#ffffff'); g.addColorStop(0.07,'#ffffff');
+    g.addColorStop(0.36,color); g.addColorStop(0.9,dark); g.addColorStop(1,dark);
+    return g;
+  };
+  const rr = (x,y,w,h,rad) => {
+    const k = Math.min(rad, w/2, h/2);
+    c.beginPath();
+    c.moveTo(x+k,y);
+    c.arcTo(x+w,y,x+w,y+h,k); c.arcTo(x+w,y+h,x,y+h,k);
+    c.arcTo(x,y+h,x,y,k);     c.arcTo(x,y,x+w,y,k);
+    c.closePath();
+  };
+
+  if (kind === 'candy'){
+    // つつみキャンディ：左右にひろがる つつみのひだ
+    c.fillStyle = dark;
+    for (const s of [-1,1]){
+      c.beginPath();
+      c.moveTo(s*R*0.6, 0);
+      c.lineTo(s*R*1.5, -R*0.7);
+      c.lineTo(s*R*1.2, 0);
+      c.lineTo(s*R*1.5, R*0.7);
+      c.closePath(); c.fill();
+    }
+    c.fillStyle = color;
+    for (const s of [-1,1]){
+      c.beginPath();
+      c.moveTo(s*R*0.6, 0);
+      c.lineTo(s*R*1.36, -R*0.5);
+      c.lineTo(s*R*1.12, 0);
+      c.lineTo(s*R*1.36, R*0.5);
+      c.closePath(); c.fill();
+    }
+    // あめ玉の本体
+    c.fillStyle = paint();
+    c.beginPath(); c.arc(0,0,R,0,TAU); c.fill();
+    // うずまき（顔のじゃまにならないよう うすく）
+    c.save();
+    c.beginPath(); c.arc(0,0,R*0.97,0,TAU); c.clip();
+    c.strokeStyle = 'rgba(255,255,255,.4)'; c.lineWidth = R*0.15; c.lineCap = 'round';
+    c.beginPath();
+    for (let i=0;i<22;i++){ const a=i*0.44, q=i*R*0.037; c.lineTo(Math.cos(a)*q, Math.sin(a)*q); }
+    c.stroke();
+    c.restore();
+
+  } else if (kind === 'ice'){
+    // アイスクリーム：したがコーン、うえがアイスのたま
+    c.fillStyle = '#e5b075';
+    c.beginPath();
+    c.moveTo(-R*0.78, R*0.5); c.lineTo(R*0.78, R*0.5);
+    c.quadraticCurveTo(R*0.2, R*1.5, 0, R*1.62);
+    c.quadraticCurveTo(-R*0.2, R*1.5, -R*0.78, R*0.5);
+    c.closePath(); c.fill();
+    c.strokeStyle = 'rgba(150,95,45,.32)'; c.lineWidth = R*0.055;
+    for (const d of [-0.45,0,0.45]){
+      c.beginPath(); c.moveTo(d*R, R*0.55); c.lineTo(d*R*0.2, R*1.5); c.stroke();
+    }
+    for (let i=1;i<=2;i++){
+      const y = R*(0.5 + i*0.36), w = R*0.78*(1 - i*0.3);
+      c.beginPath(); c.moveTo(-w, y); c.lineTo(w, y); c.stroke();
+    }
+    // アイスのたま（ここに顔がのる）。したがすこし たれている
+    c.fillStyle = paint();
+    c.beginPath();
+    c.arc(0, 0, R, Math.PI*0.98, Math.PI*0.02);
+    c.quadraticCurveTo(R*0.9, R*0.72, R*0.42, R*0.66);
+    c.quadraticCurveTo(R*0.12, R*0.9, -R*0.18, R*0.62);
+    c.quadraticCurveTo(-R*0.6, R*0.86, -R*0.98, R*0.16);
+    c.closePath(); c.fill();
+
+  } else if (kind === 'choco'){
+    // チョコレートのいた。すこしかたむけて 立てかけてある
+    c.save(); c.rotate(-0.1);
+    c.fillStyle = paint();
+    rr(-R*0.92, -R*1.12, R*1.84, R*2.16, R*0.2); c.fill();
+    // わりめ
+    c.strokeStyle = 'rgba(86,50,22,.42)'; c.lineWidth = R*0.075; c.lineCap = 'round';
+    c.beginPath();
+    c.moveTo(0, -R*1.0); c.lineTo(0, R*0.96);
+    for (const y of [-R*0.4, R*0.28]){ c.moveTo(-R*0.8, y); c.lineTo(R*0.8, y); }
+    c.stroke();
+    // かじったあとは destination-out だと背景まで消えてしまうので置かない。
+    // かわりに 右上の角を すこし明るくして いたの厚みを見せる
+    c.fillStyle = 'rgba(255,255,255,.22)';
+    rr(-R*0.92, -R*1.12, R*1.84, R*0.34, R*0.16); c.fill();
+    c.restore();
+
+  } else {
+    // ほしのクッキー
+    c.fillStyle = paint();
+    c.beginPath();
+    for (let i=0;i<5;i++){
+      const a = -Math.PI/2 + i*TAU/5, b = a + Math.PI/5;
+      c.lineTo(Math.cos(a)*R*1.55, Math.sin(a)*R*1.55);
+      c.lineTo(Math.cos(b)*R*0.66, Math.sin(b)*R*0.66);
+    }
+    c.closePath(); c.fill();
+    // さとうのつぶ
+    c.fillStyle = 'rgba(255,255,255,.6)';
+    for (const [x,y] of [[-0.5,-0.55],[0.55,-0.4],[0.1,0.62],[-0.6,0.4]]){
+      c.beginPath(); c.arc(x*R, y*R, R*0.075, 0, TAU); c.fill();
+    }
+  }
+}
 function glossyBall(R, color, dark){
   ctx.fillStyle = ballGrad(R, color, dark);
   ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
@@ -3796,72 +3881,10 @@ function drawTower(t){
   }
 
   // 体と顔
-  glossyBall(R, T.color, T.dark);
-  drawFace(R, t.ph, 'smile');
+  sweetBody(ctx, t.k, R, T.color, T.dark, false);
+  drawFace(R*SWEET_FACE[t.k], t.ph, 'smile');
 
-  // 頭のかざり（レベルで大きくなる。5段階でも大きくなりすぎない係数）
-  ctx.save(); ctx.translate(0, -R*1.05);
-  ctx.scale(1 + (t.lv-1)*0.13, 1 + (t.lv-1)*0.13);
-  if (t.k === 'candy'){
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(-R*0.045, -R*0.12, R*0.09, R*0.4);
-    const lg = ctx.createRadialGradient(-R*0.12,-R*0.42,0, 0,-R*0.3,R*0.44);
-    lg.addColorStop(0,'#fff'); lg.addColorStop(1,T.color);
-    ctx.fillStyle = lg;
-    ctx.beginPath(); ctx.arc(0,-R*0.3,R*0.38,0,6.3); ctx.fill();
-    ctx.strokeStyle = T.dark; ctx.lineWidth = R*0.085; ctx.lineCap = 'round';
-    ctx.beginPath();
-    for (let i=0;i<26;i++){
-      const a = i*0.42, rr = i*R*0.0125;
-      ctx.lineTo(Math.cos(a)*rr, -R*0.3 + Math.sin(a)*rr);
-    }
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(224,95,158,.5)'; ctx.lineWidth = R*0.05;
-    ctx.beginPath(); ctx.arc(0,-R*0.3,R*0.38,0,6.3); ctx.stroke();
-  } else if (t.k === 'ice'){
-    ctx.fillStyle = '#eaf8ff';
-    ctx.strokeStyle = '#8fd0f0'; ctx.lineWidth = R*0.05;
-    for (const [dx,h] of [[-0.34,0.34],[0,0.52],[0.34,0.34]]){
-      ctx.beginPath();
-      ctx.moveTo(dx*R, -R*(h+0.08));
-      ctx.lineTo(dx*R + R*0.15, -R*0.04);
-      ctx.lineTo(dx*R, R*0.1);
-      ctx.lineTo(dx*R - R*0.15, -R*0.04);
-      ctx.closePath(); ctx.fill(); ctx.stroke();
-    }
-    sparkle(R*0.34, -R*0.55, R*0.09, time*3, '#ffffff');
-  } else if (t.k === 'choco'){
-    ctx.rotate(-0.22);
-    ctx.fillStyle = '#6b3f1f';
-    roundRect(-R*0.42,-R*0.28,R*0.84,R*0.52,R*0.08); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.22)';
-    for (let i=0;i<3;i++) for (let j=0;j<2;j++)
-      ctx.fillRect(-R*0.38+i*R*0.28, -R*0.24+j*R*0.24, R*0.22, R*0.18);
-    ctx.strokeStyle = 'rgba(255,255,255,.5)'; ctx.lineWidth = R*0.05;
-    roundRect(-R*0.42,-R*0.28,R*0.84,R*0.52,R*0.08); ctx.stroke();
-    // いちごをのせる
-    ctx.rotate(0.22);
-    ctx.fillStyle = '#ff6f9c';
-    ctx.beginPath(); ctx.arc(R*0.34, -R*0.42, R*0.14, 0, 6.3); ctx.fill();
-    ctx.fillStyle = '#7fce7f';
-    ctx.beginPath(); ctx.ellipse(R*0.34, -R*0.55, R*0.08, R*0.045, 0, 0, 6.3); ctx.fill();
-  } else {
-    const glow = ctx.createRadialGradient(0,-R*0.18,0, 0,-R*0.18,R*0.62);
-    glow.addColorStop(0,'rgba(255,240,150,.9)');
-    glow.addColorStop(1,'rgba(255,240,150,0)');
-    ctx.fillStyle = glow;
-    ctx.beginPath(); ctx.arc(0,-R*0.18,R*0.62,0,6.3); ctx.fill();
-    ctx.fillStyle = '#ffe27a'; ctx.strokeStyle = '#e0a52e'; ctx.lineWidth = R*0.06;
-    ctx.beginPath();
-    for (let i=0;i<5;i++){
-      const a = -Math.PI/2 + i*2*Math.PI/5;
-      const b = a + Math.PI/5;
-      ctx.lineTo(Math.cos(a)*R*0.42, -R*0.18 + Math.sin(a)*R*0.42);
-      ctx.lineTo(Math.cos(b)*R*0.18, -R*0.18 + Math.sin(b)*R*0.18);
-    }
-    ctx.closePath(); ctx.fill(); ctx.stroke();
-    sparkle(-R*0.42, -R*0.5, R*0.08, time*4, '#fff');
-  }
+  // 体そのものが おかしの形なので、頭のかざりは置かない
   ctx.restore();
 
   // むねのリボン（Lv4からきんいろ）
