@@ -2211,9 +2211,11 @@ const crownSvg = (n, st) => {
 const noteSvg = (n, st) => {
   const i = 'nt' + (++icoN);
   return svgTag(n, st,
+    // ボタンが むらさきなので、ピンクのままだと 背景に沈む。
+    // 白〜クリーム寄りにして、かげだけピンクにのこす
     '<defs><linearGradient id="' + i + '" x1="0" y1="0" x2=".7" y2="1">' +
-      '<stop offset="0" stop-color="#ffc2e0"/><stop offset=".38" stop-color="#ff8fc4"/>' +
-      '<stop offset="1" stop-color="#d4508a"/></linearGradient></defs>' +
+      '<stop offset="0" stop-color="#ffffff"/><stop offset=".45" stop-color="#fff3f9"/>' +
+      '<stop offset="1" stop-color="#ff9ecb"/></linearGradient></defs>' +
     shadowEl(10.6, 5.4) +
     // はた
     '<path d="M13.9 4.4 q4.8 2 4.2 5.8 q-.3 1.6 -1.6 2.7 q1-2.9 -2.6-4.9 z" fill="url(#' + i + ')"/>' +
@@ -2222,8 +2224,8 @@ const noteSvg = (n, st) => {
     // たま
     '<ellipse cx="9.5" cy="17.1" rx="4.1" ry="3.1" transform="rotate(-20 9.5 17.1)" fill="url(#' + i + ')"/>' +
     // つや
-    '<ellipse cx="8.1" cy="15.8" rx="1.6" ry=".85" transform="rotate(-20 8.1 15.8)" fill="#fff" opacity=".48"/>' +
-    '<rect x="12.9" y="5.2" width=".7" height="7.4" rx=".35" fill="#fff" opacity=".38"/>');
+    '<ellipse cx="8.1" cy="15.8" rx="1.6" ry=".85" transform="rotate(-20 8.1 15.8)" fill="#fff" opacity=".7"/>' +
+    '<rect x="12.9" y="5.2" width=".7" height="7.4" rx=".35" fill="#fff" opacity=".55"/>');
 };
 /* ボタンは大きめ、文の中はすこし小さめ。
    マイナスの余白を入れて、絵を大きくしても まわりの高さが のびないようにしてある */
