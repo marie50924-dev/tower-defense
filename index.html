@@ -1070,8 +1070,9 @@ function endBonus(){
     syncHUD();
     saveRun();                                        // ためた💗をすぐ保存して、とじても消えないように
     // おうじさまとおひめさまが お祝いにかけつける
+    // 2人とも ふきだしを出すので、かさならないよう 間をひろめにとる
     paraders.push({ pid:'prince', x:-CELL*1.2, y:ROWS*CELL - CELL*0.85, vx:CELL*2.1, ph:0,   msg:'やったね！' });
-    paraders.push({ pid:'apple',  x:-CELL*3.0, y:ROWS*CELL - CELL*0.85, vx:CELL*2.1, ph:2.2, msg:'💗をプレゼントします' });
+    paraders.push({ pid:'apple',  x:-CELL*5.0, y:ROWS*CELL - CELL*0.85, vx:CELL*2.1, ph:2.2, msg:'💗をプレゼントします' });
     floatTx(COLS*CELL/2, ROWS*CELL*0.4, 'パーフェクト！💗+1', '#ff6f9c');
     celebrate({ rays: 2.5, conf: 90, rings: true, fanfare: 1 });
   }
@@ -1093,9 +1094,11 @@ const CHEERS = ['やったね！','すごーい！','さすが✨','おめでと
 function parade(all){
   const got = dexList().filter(o => o.cat === 'ch' && (all || dex[o.id])).map(o => o.pid);
   got.slice(0, 8).forEach((pid, i) => {
+    // ふきだしは3体おきだけ。ぜんいんに出すと 横にならんで つぶし合って読めない。
+    // のこりの子は だまって歩く（にぎやかさは そのままで、文字だけ読みやすくなる）
     paraders.push({ pid, x: -CELL*(1.2 + i*1.4), y: ROWS*CELL - CELL*0.85,
                     vx: CELL*2.4, ph: Math.random()*6.3,
-                    msg: CHEERS[(Math.random()*CHEERS.length)|0] });
+                    msg: (i % 3 === 0) ? CHEERS[(Math.random()*CHEERS.length)|0] : '' });
   });
 }
 /* ボス撃破などで、ひとりだけぴょこっと出てくる */
