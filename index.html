@@ -2765,18 +2765,21 @@ function drawPortrait(g, id, S){
     // 照りかえしと ふちのまわりこみ
     g.save(); g.clip();
     const bg = g.createRadialGradient(x+r*0.5, y+r*0.62, r*0.02, x+r*0.32, y+r*0.42, r*0.92);
-    bg.addColorStop(0,'rgba(255,255,255,.52)');
-    bg.addColorStop(0.4,'rgba(255,255,255,.17)');
+    bg.addColorStop(0,'rgba(255,255,255,.72)');
+    bg.addColorStop(0.4,'rgba(255,255,255,.24)');
     bg.addColorStop(1,'rgba(255,255,255,0)');
     g.fillStyle = bg; g.fillRect(x-r*1.7, y-r*1.7, r*3.4, r*3.4);
-    const tg = g.createRadialGradient(x, y, r*0.74, x, y, r);
-    tg.addColorStop(0,'rgba(86,48,78,0)');
-    tg.addColorStop(1,'rgba(86,48,78,.16)');
+    const tg = g.createRadialGradient(x, y, r*0.5, x, y, r);
+    tg.addColorStop(0,'rgba(74,38,66,0)');
+    tg.addColorStop(0.7,'rgba(74,38,66,.16)');
+    tg.addColorStop(1,'rgba(74,38,66,.42)');
     g.fillStyle = tg; g.fillRect(x-r*1.7, y-r*1.7, r*3.4, r*3.4);
+    const og = g.createRadialGradient(x, y+r*1.0, 0, x, y+r*1.0, r*0.9);
+    og.addColorStop(0,'rgba(58,26,50,.34)');
+    og.addColorStop(1,'rgba(58,26,50,0)');
+    g.fillStyle = og; g.fillRect(x-r*1.7, y-r*1.7, r*3.4, r*3.4);
     g.restore();
-    // ふちどりは うすく細く
-    g.globalAlpha = .34; g.strokeStyle = dark; g.lineWidth = r*0.055;
-    g.beginPath(); g.arc(x,y,r*0.975,0,TAU); g.stroke(); g.globalAlpha = 1;
+    // ふちどりは引かない（盤面のおかしとそろえる）
     // つや（やわらかい光 ＋ つよい芯 ＋ 反対がわの点）
     g.save();
     g.translate(x-r*0.3, y-r*0.44); g.rotate(-0.55); g.scale(1,0.6);
@@ -2787,8 +2790,8 @@ function drawPortrait(g, id, S){
     g.fillStyle = hg;
     g.beginPath(); g.arc(0,0,r*0.44,0,TAU); g.fill();
     g.restore();
-    g.fillStyle = 'rgba(255,255,255,.85)';
-    g.beginPath(); g.ellipse(x-r*0.36, y-r*0.52, r*0.15, r*0.075, -0.55, 0, TAU); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.98)';
+    g.beginPath(); g.ellipse(x-r*0.38, y-r*0.54, r*0.105, r*0.055, -0.55, 0, TAU); g.fill();
     g.fillStyle = 'rgba(255,255,255,.45)';
     g.beginPath(); g.arc(x+r*0.44, y-r*0.24, r*0.075, 0, TAU); g.fill();
   };
@@ -3416,14 +3419,20 @@ function ballGrad(R, color, dark){
 function shade3d(R){
   ctx.save(); ctx.clip();
   const bg = ctx.createRadialGradient(R*0.5,R*0.62,R*0.02, R*0.32,R*0.42,R*0.92);
-  bg.addColorStop(0,'rgba(255,255,255,.52)');
-  bg.addColorStop(0.4,'rgba(255,255,255,.17)');
+  bg.addColorStop(0,'rgba(255,255,255,.72)');
+  bg.addColorStop(0.4,'rgba(255,255,255,.24)');
   bg.addColorStop(1,'rgba(255,255,255,0)');
   ctx.fillStyle = bg; ctx.fillRect(-R*1.7,-R*1.7,R*3.4,R*3.4);
-  const tg = ctx.createRadialGradient(0,0,R*0.74, 0,0,R);
-  tg.addColorStop(0,'rgba(86,48,78,0)');
-  tg.addColorStop(1,'rgba(86,48,78,.16)');
+  const tg = ctx.createRadialGradient(0,0,R*0.5, 0,0,R);
+  tg.addColorStop(0,'rgba(74,38,66,0)');
+  tg.addColorStop(0.7,'rgba(74,38,66,.16)');
+  tg.addColorStop(1,'rgba(74,38,66,.42)');
   ctx.fillStyle = tg; ctx.fillRect(-R*1.7,-R*1.7,R*3.4,R*3.4);
+  // 接地のかげ。地面とふれるあたりを暗くすると、おいてある感じが強くなる
+  const og = ctx.createRadialGradient(0,R*1.0,0, 0,R*1.0,R*0.9);
+  og.addColorStop(0,'rgba(58,26,50,.34)');
+  og.addColorStop(1,'rgba(58,26,50,0)');
+  ctx.fillStyle = og; ctx.fillRect(-R*1.7,-R*1.7,R*3.4,R*3.4);
   ctx.restore();
 }
 /* つや。ぼんやりした光の中に つよい芯があると、つやのある球に見える */
@@ -3437,8 +3446,8 @@ function ballGloss(R){
   ctx.fillStyle = hg;
   ctx.beginPath(); ctx.arc(0,0,R*0.44,0,6.3); ctx.fill();
   ctx.restore();
-  ctx.fillStyle = 'rgba(255,255,255,.85)';
-  ctx.beginPath(); ctx.ellipse(-R*0.36,-R*0.52,R*0.15,R*0.075,-0.55,0,6.3); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.98)';
+  ctx.beginPath(); ctx.ellipse(-R*0.38,-R*0.54,R*0.105,R*0.055,-0.55,0,6.3); ctx.fill();
   ctx.fillStyle = 'rgba(255,255,255,.45)';
   ctx.beginPath(); ctx.arc(R*0.44,-R*0.24,R*0.075,0,6.3); ctx.fill();
 }
@@ -3458,11 +3467,7 @@ function glossyBall(R, color, dark){
   ctx.fillStyle = ballGrad(R, color, dark);
   ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
   shade3d(R);
-  // ふちどりは うすく細く。こくすると シールみたいに平たく見える
-  ctx.globalAlpha = .34;
-  ctx.strokeStyle = dark; ctx.lineWidth = R*0.055;
-  ctx.beginPath(); ctx.arc(0,0,R*0.975,0,6.3); ctx.stroke();
-  ctx.globalAlpha = 1;
+  // ふちどりは引かない。線があると とたんに イラスト寄り・平たく見える
   ballGloss(R);
 }
 
@@ -3552,7 +3557,7 @@ function drawTower(t){
   }
 
   // 影（ゆれても地面に残る）
-  softShadow(x, y + R*1.0, R*0.95, .34);
+  softShadow(x, y + R*1.02, R*0.8, .5);
 
   ctx.save(); ctx.translate(x, y + bob); ctx.scale(pop, pop);
 
@@ -3698,7 +3703,7 @@ function drawEnemy(e){
   ctx.save(); ctx.translate(p.x, p.y);
 
   // 角丸のからだ（おもち・ゴーレム）だと、影が横にはみ出して見えるので ひかえめの幅に
-  softShadow(0, R*0.95, R*0.66, .22);
+  softShadow(0, R*0.97, R*0.62, .36);
 
   ctx.scale(1+sq, 1-sq);
 
@@ -3716,7 +3721,7 @@ function drawEnemy(e){
     ctx.quadraticCurveTo(-R*0.95, R*0.5, -R*0.92, -R*0.08);
     ctx.closePath(); ctx.fill();
     shade3d(R);
-    ctx.globalAlpha = .34; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.055;
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     ctx.stroke(); ctx.globalAlpha = 1;
   } else if (e.k === 'fast'){
     // うさぎ耳がゆれる
@@ -3726,7 +3731,7 @@ function drawEnemy(e){
       ctx.rotate(s*(0.28 + Math.sin(e.wob)*0.14));
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.ellipse(0, -R*0.32, R*0.2, R*0.56, 0, 0, 6.3); ctx.fill();
-      ctx.globalAlpha = .34; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.045;
+      ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.035;
       ctx.beginPath(); ctx.ellipse(0, -R*0.32, R*0.2, R*0.56, 0, 0, 6.3); ctx.stroke();
       ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(255,175,205,.85)';
@@ -3736,14 +3741,14 @@ function drawEnemy(e){
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
     shade3d(R);
-    ctx.globalAlpha = .34; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.055;
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.stroke(); ctx.globalAlpha = 1;
   } else if (e.k === 'tank'){
     // おもちのようなまるしかく
     ctx.fillStyle = g;
     roundRect(-R, -R*0.85, R*2, R*1.72, R*0.6); ctx.fill();
     shade3d(R);
-    ctx.globalAlpha = .34; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.055;
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     roundRect(-R, -R*0.85, R*2, R*1.72, R*0.6); ctx.stroke();
     ctx.globalAlpha = 1;
   } else if (e.k === 'crystal'){
@@ -3762,7 +3767,7 @@ function drawEnemy(e){
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
     shade3d(R);
-    ctx.globalAlpha = .34; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.055;
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.stroke(); ctx.globalAlpha = 1;
   } else if (e.k === 'bat'){
     // ぱたぱたのはね
@@ -3782,7 +3787,7 @@ function drawEnemy(e){
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
     shade3d(R);
-    ctx.globalAlpha = .34; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.055;
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.stroke(); ctx.globalAlpha = 1;
     // とがったみみ
     ctx.fillStyle = E.dark;
@@ -3798,7 +3803,7 @@ function drawEnemy(e){
     ctx.fillStyle = g;
     roundRect(-R, -R*0.95, R*2, R*1.85, R*0.5); ctx.fill();
     shade3d(R);
-    ctx.globalAlpha = .34; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.055;
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     roundRect(-R, -R*0.95, R*2, R*1.85, R*0.5); ctx.stroke();
     ctx.globalAlpha = 1;
     // あたまからたれるチョコ
@@ -3811,7 +3816,7 @@ function drawEnemy(e){
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
     shade3d(R);
-    ctx.globalAlpha = .38; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.06;
+    ctx.globalAlpha = .12; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.045;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.stroke(); ctx.globalAlpha = 1;
     // ボスのおうかん
     ctx.save(); ctx.translate(0, -R*1.0);
