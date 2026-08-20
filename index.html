@@ -538,6 +538,7 @@ let continueUsed = false;     // このプレイで「つづきから」を使�
 let lifeTimer = null;         // 回復までのカウントダウン表示
 let flyer = null, flyT = 12;  // そらをとぶでんせつ（sil=影のときは予告）
 let bonus = null;             // ボーナスウェーブ（おかしキャッチ）の状態
+let bonusWait = 0;            // クリアのお祝いを見せてから ボーナスを始めるまでの秒数
 
 let pathCells = new Set(), pathPts = [], segLen = [], pathLen = 0;
 
@@ -705,7 +706,7 @@ function reset(){
   for (const k in skCd) skCd[k] = 0;
   for (const k in buffs) buffs[k] = 0;
   gifts = []; paraders = []; celebT = 0; wflash = 0;
-  phoenixUsed = false; flyer = null; flyT = 10; bonus = null;
+  phoenixUsed = false; flyer = null; flyT = 10; bonus = null; bonusWait = 0;
   continueUsed = false;
   if (lifeTimer){ clearInterval(lifeTimer); lifeTimer = null; }
   ovBtn.disabled = false;
@@ -987,7 +988,8 @@ function celebrate(o){
 
 /* ==========================================================
    ボーナスウェーブ（空からおかしが降ってくる！ぜんぶタップで💗+1）
-   20ウェーブごとに開く。1こでも取りのがしたら その場で「ざんねん〜」でおしまい。
+   20ウェーブごと、ステージクリアのお祝いのあとに開く。
+   1こでも取りのがしたら その場で「ざんねん〜」でおしまい。
    ウェーブ数にはカウントしない。落ちる速さはゲーム速度に関係なく一定
    ========================================================== */
 const BONUS_EMO = ['🍬','🍩','🍪','🧁','🍓','🍭','🍰','🍮'];
@@ -1001,11 +1003,20 @@ function startBonus(){
   setTimeout(()=>beep(930,.15,'triangle',.06),130);
 }
 function bonusUpdate(dt){
-  if (!bonus) return;
   // ずかんなどを見ているあいだは止めてあげる
-  if (ov.classList.contains('on') || colOv.classList.contains('on') ||
+  const busy = ov.classList.contains('on') || colOv.classList.contains('on') ||
       helpOv.classList.contains('on') || kingOv.classList.contains('on') ||
-      pwOv.classList.contains('on')) return;
+      pwOv.classList.contains('on');
+  // よやくしたボーナスは、クリアのお祝いのパレードを見せてから始める。
+  // ここは実時間で動くので、2x・5xにしても ま の長さは変わらない
+  if (!bonus){
+    if (bonusWait > 0 && !busy && !running && !over && !pendingComplete){
+      bonusWait -= dt;
+      if (bonusWait <= 0){ bonusWait = 0; startBonus(); }
+    }
+    return;
+  }
+  if (busy) return;
   // 「ざんねん〜」を見せているあいだは、おかしを動かさずに待つ
   if (bonus.fail){
     bonus.failT -= dt;
@@ -1150,7 +1161,7 @@ function update(dt){
 
   // つぎのウェーブへのカウントダウン（画面を見ているときだけ進む。
   // はやよびすると のこり秒数ぶんボーナス⭐がもらえる）
-  if (!running && !over && wave > 0 && nextT > 0 && !bonus &&
+  if (!running && !over && wave > 0 && nextT > 0 && !bonus && bonusWait <= 0 &&
       !ov.classList.contains('on') && !colOv.classList.contains('on') &&
       !helpOv.classList.contains('on') && !kingOv.classList.contains('on') &&
       !pwOv.classList.contains('on')){
@@ -1303,9 +1314,13 @@ function update(dt){
     if (wave % STAGE_WAVES === 0) stageClear();
     else checkLegends();
     // ボーナスウェーブは20ウェーブごと（ウェーブ数にはカウントしない）。
-    // ステージクリアが20の倍数なので、かさならないよう あいだの10・30・50…で開く
-    if (!ov.classList.contains('on') && !pendingComplete && wave % 20 === 10)
-      startBonus();
+    // クリアのお祝いと同じ回なので、ここでは よやくだけして、
+    // お祝いの画面がとじてパレードを見せてから始める（下のまちうけ処理）
+    if (wave % 20 === 0){
+      bonusWait = 2.4;
+      btnWave.disabled = true;                       // まちのあいだ はやよびで飛ばされないように
+      btnWave.innerHTML = '🎁 このあと<br>ボーナスタイム！';
+    }
     saveRun();   // ここまでの進行をオートセーブ
   }
 }
@@ -2154,7 +2169,7 @@ function buildHelp(){
     '<li>はやよびボーナスで⭐をかせいで、どんどん強化する</li>' +
     '<li>ワザは<b>ここぞ</b>でつかう。ボス・ラッシュ・ハートのピンチに</li>' +
     '<li>20ウェーブごとのクリアで なかまとハートがもらえるよ</li>' +
-    '<li><b>20ウェーブごと</b>に<b>🎁ボーナスウェーブ</b>！ふってくるおかしを ' +
+    '<li><b>20ウェーブごと</b>のクリアのあとに<b>🎁ボーナスウェーブ</b>！ふってくるおかしを ' +
     'ぜんぶタップすると💗+1。1こでも おとしたら そこでおしまい</li>' +
     '<li>もらった💗は <b>20をこえて ためられる</b>よ（99こまで）</li>' +
     '<li>進行はじどうセーブ。💗がなくなっても、<b>' + REGEN_MIN + 'ふんごとに💗が1こずつ</b>もどるよ（さいだい' + maxHearts() + '）。1こでもあれば そのウェーブから再開できる</li>' +
