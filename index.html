@@ -112,9 +112,6 @@
   .btn.sm{flex:0 0 50px;font-size:17.5px;line-height:1.03;
     display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#c9b6ff,#a586f5);box-shadow:0 4px 0 #7d5fd0}
   .btn.sm:active{box-shadow:0 1px 0 #7d5fd0}
-  /* ♪ は絵文字なので、font-size で大きくする。
-     line-height をつめて、ボタンの高さは ほかとそろえたまま */
-  #btnSnd{font-size:25px;line-height:.72}
   .btn:disabled{opacity:.45}
 
   /* ---------- overlay ---------- */
@@ -275,9 +272,9 @@
   <div id="ctrl">
     <button class="btn" id="btnWave">つぎのウェーブ ▶</button>
     <button class="btn sm" id="btnSpd">1x</button>
-    <button class="btn sm" id="btnCol">👑</button>
+    <button class="btn sm" id="btnCol" aria-label="これくしょん"></button>
     <button class="btn sm" id="btnHelp" aria-label="たたかいかたガイド"><span class="bookIc big"></span></button>
-    <button class="btn sm" id="btnSnd">♪</button>
+    <button class="btn sm" id="btnSnd" aria-label="おと"></button>
   </div>
 
   <div id="pwRow"><button class="mini" id="btnPw"><span style="font-size:17px;line-height:.7">🔑</span> あいことば・きせかえ</button></div>
@@ -2152,41 +2149,91 @@ $('colShare').onclick = shareScore;   // 図鑑からもいつでもシェアで
 
 /* すこし開いた本。絵文字の📕はとじていて、📖は開きすぎなので じぶんで描く。
    ページが手前にひらいて、中の紙が すこし見えている ぐらいの角度 */
-/* とじた本。おかしの子たちと同じ描きかたで、
-   グラデで丸みを出し、つやと 地面の影を入れてある。
-   グラデの id は 3か所にはめても かぶらないよう 通し番号にしている */
-let bookN = 0;
+/* ボタンのマーク（本・王冠・音符）。
+   3つとも おかしの子たちと同じ描きかたでそろえてある。
+   グラデで丸みを出し、つやと 地面の影を入れる。
+   グラデの id は 何度はめても かぶらないよう 通し番号にしている */
+let icoN = 0;
+const svgTag = (n, st, body) =>
+  '<svg viewBox="0 0 24 24" width="' + n + '" height="' + n + '" style="' + st + '">' + body + '</svg>';
+const shadowEl = (cx, rx) =>
+  '<ellipse cx="' + cx + '" cy="21" rx="' + rx + '" ry="1.3" fill="#7a5a78" opacity=".22"/>';
+
+/* とじた本 */
 const bookSvg = (n, st) => {
-  const i = 'bk' + (++bookN);
-  return '<svg viewBox="0 0 24 24" width="' + n + '" height="' + n + '" style="' + st + '">' +
-  '<defs>' +
-    '<linearGradient id="' + i + 'c" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0" stop-color="#ffc2e0"/><stop offset=".38" stop-color="#ff8fc4"/>' +
-      '<stop offset="1" stop-color="#d4508a"/></linearGradient>' +
-    '<linearGradient id="' + i + 'p" x1="0" y1="0" x2="1" y2="1">' +
-      '<stop offset="0" stop-color="#fffdf8"/><stop offset="1" stop-color="#f0dcc6"/></linearGradient>' +
-  '</defs>' +
-  // 地面の影
-  '<ellipse cx="12.4" cy="21" rx="7.2" ry="1.4" fill="#7a5a78" opacity=".22"/>' +
-  // 紙のたば（右にすこしはみ出す）
-  '<path d="M8.4 3.8 h9.1 q1.2 0 1.2 1.2 v13.6 q0 1.2 -1.2 1.2 h-9.1 z" fill="url(#' + i + 'p)"/>' +
-  '<path d="M17.2 6.2 h1.2 M17.2 8.8 h1.2 M17.2 11.4 h1.2 M17.2 14 h1.2 M17.2 16.6 h1.2" ' +
-    'stroke="#e0cdb8" stroke-width=".5" stroke-linecap="round"/>' +
-  // 表紙
-  '<path d="M5.8 3 h10.4 q1.4 0 1.4 1.4 v14.2 q0 1.4 -1.4 1.4 h-10.4 z" fill="url(#' + i + 'c)"/>' +
-  // 背（左のこい帯）
-  '<path d="M5.8 3 q-1 0 -1 1 v14.9 q0 1.1 1 1.1 h1.8 v-17 z" fill="#c1487f"/>' +
-  // ふちのまわりこみ（右下をすこし暗くして 丸みを出す）
-  '<path d="M15.6 3 h.6 q1.4 0 1.4 1.4 v14.2 q0 1.4 -1.4 1.4 h-.6 z" fill="#7a2450" opacity=".16"/>' +
-  // つや
-  '<path d="M9.4 4.7 q3.1 -.7 5.3 .4 l-.9 2.1 q-2.1 -1 -4.9 -.4 z" fill="#fff" opacity=".42"/>' +
-  '<circle cx="9.2" cy="8.6" r=".55" fill="#fff" opacity=".3"/>' +
-  '</svg>';
+  const i = 'bk' + (++icoN);
+  return svgTag(n, st,
+    '<defs>' +
+      '<linearGradient id="' + i + 'c" x1="0" y1="0" x2="1" y2="1">' +
+        '<stop offset="0" stop-color="#ffc2e0"/><stop offset=".38" stop-color="#ff8fc4"/>' +
+        '<stop offset="1" stop-color="#d4508a"/></linearGradient>' +
+      '<linearGradient id="' + i + 'p" x1="0" y1="0" x2="1" y2="1">' +
+        '<stop offset="0" stop-color="#fffdf8"/><stop offset="1" stop-color="#f0dcc6"/></linearGradient>' +
+    '</defs>' +
+    shadowEl(12.4, 7.2) +
+    // 紙のたば（右にすこしはみ出させて 厚みを出す）
+    '<path d="M8.4 3.8 h9.1 q1.2 0 1.2 1.2 v13.6 q0 1.2 -1.2 1.2 h-9.1 z" fill="url(#' + i + 'p)"/>' +
+    '<path d="M17.2 6.2 h1.2 M17.2 8.8 h1.2 M17.2 11.4 h1.2 M17.2 14 h1.2 M17.2 16.6 h1.2" ' +
+      'stroke="#e0cdb8" stroke-width=".5" stroke-linecap="round"/>' +
+    '<path d="M5.8 3 h10.4 q1.4 0 1.4 1.4 v14.2 q0 1.4 -1.4 1.4 h-10.4 z" fill="url(#' + i + 'c)"/>' +
+    '<path d="M5.8 3 q-1 0 -1 1 v14.9 q0 1.1 1 1.1 h1.8 v-17 z" fill="#c1487f"/>' +
+    '<path d="M15.6 3 h.6 q1.4 0 1.4 1.4 v14.2 q0 1.4 -1.4 1.4 h-.6 z" fill="#7a2450" opacity=".16"/>' +
+    '<path d="M9.4 4.7 q3.1 -.7 5.3 .4 l-.9 2.1 q-2.1 -1 -4.9 -.4 z" fill="#fff" opacity=".42"/>' +
+    '<circle cx="9.2" cy="8.6" r=".55" fill="#fff" opacity=".3"/>');
 };
+
+/* 王冠。ゲームの中でボスがかぶっているものと同じ形にしてある */
+const crownSvg = (n, st) => {
+  const i = 'cr' + (++icoN);
+  return svgTag(n, st,
+    '<defs><linearGradient id="' + i + '" x1="0" y1="0" x2=".55" y2="1">' +
+      '<stop offset="0" stop-color="#fff2c8"/><stop offset=".38" stop-color="#ffd76e"/>' +
+      '<stop offset="1" stop-color="#cf8e14"/></linearGradient></defs>' +
+    shadowEl(12, 7) +
+    '<path d="M4.4 18.2 L4.4 8.4 L8.8 12.4 L12 6.6 L15.2 12.4 L19.6 8.4 L19.6 18.2 Z" fill="url(#' + i + ')"/>' +
+    // 帯
+    '<path d="M4.5 17.4 h15 q1 0 1 1 v1.4 q0 1 -1 1 h-15 q-1 0 -1 -1 v-1.4 q0 -1 1 -1 z" fill="#e9a923"/>' +
+    '<path d="M4.5 17.4 h15 q1 0 1 1 v.5 h-17 v-.5 q0 -1 1 -1 z" fill="#ffe9a8" opacity=".55"/>' +
+    // 宝石
+    '<circle cx="8.3" cy="19.1" r="1" fill="#ff8fc4"/>' +
+    '<circle cx="12" cy="19.1" r="1.1" fill="#8fe3c4"/>' +
+    '<circle cx="15.7" cy="19.1" r="1" fill="#c9a7ff"/>' +
+    // とがりの玉
+    '<circle cx="4.4" cy="7.6" r="1.2" fill="#ffe9a8"/>' +
+    '<circle cx="12" cy="5.8" r="1.35" fill="#fff3cf"/>' +
+    '<circle cx="19.6" cy="7.6" r="1.2" fill="#ffe9a8"/>' +
+    // つや
+    '<path d="M5.9 9.6 L7.5 11.1 L6.9 16.6 L5.9 16.6 Z" fill="#fff" opacity=".4"/>' +
+    '<path d="M11.4 9.4 L12 8.4 L12.6 9.4 L12.2 12 L11.8 12 Z" fill="#fff" opacity=".35"/>');
+};
+
+/* 音符（8分音符） */
+const noteSvg = (n, st) => {
+  const i = 'nt' + (++icoN);
+  return svgTag(n, st,
+    '<defs><linearGradient id="' + i + '" x1="0" y1="0" x2=".7" y2="1">' +
+      '<stop offset="0" stop-color="#ffc2e0"/><stop offset=".38" stop-color="#ff8fc4"/>' +
+      '<stop offset="1" stop-color="#d4508a"/></linearGradient></defs>' +
+    shadowEl(10.6, 5.4) +
+    // はた
+    '<path d="M13.9 4.4 q4.8 2 4.2 5.8 q-.3 1.6 -1.6 2.7 q1-2.9 -2.6-4.9 z" fill="url(#' + i + ')"/>' +
+    // ぼう
+    '<rect x="12.6" y="4.2" width="1.9" height="12.6" rx=".95" fill="url(#' + i + ')"/>' +
+    // たま
+    '<ellipse cx="9.5" cy="17.1" rx="4.1" ry="3.1" transform="rotate(-20 9.5 17.1)" fill="url(#' + i + ')"/>' +
+    // つや
+    '<ellipse cx="8.1" cy="15.8" rx="1.6" ry=".85" transform="rotate(-20 8.1 15.8)" fill="#fff" opacity=".48"/>' +
+    '<rect x="12.9" y="5.2" width=".7" height="7.4" rx=".35" fill="#fff" opacity=".38"/>');
+};
+/* ボタンは大きめ、文の中はすこし小さめ。
+   マイナスの余白を入れて、絵を大きくしても まわりの高さが のびないようにしてある */
+const ICO_BTN = 'display:block;margin:-4px auto';
 for (const el of document.querySelectorAll('.bookIc'))
   el.innerHTML = el.classList.contains('big')
-    ? bookSvg(25, 'display:block;margin:-4px auto')
+    ? bookSvg(25, ICO_BTN)
     : bookSvg(21, 'display:inline-block;vertical-align:middle;margin:-8px 0');
+btnCol.innerHTML = crownSvg(25, ICO_BTN);
+btnSnd.innerHTML = noteSvg(25, ICO_BTN);
 
 /* ==========================================================
    たたかいかたガイド（本のボタン）
