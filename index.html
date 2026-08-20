@@ -64,9 +64,11 @@
   .tw:active{transform:scale(.94)}
   .tw.sel{border-color:var(--pink);background:#fff;box-shadow:0 0 0 3px rgba(255,143,196,.28)}
   .tw.poor{opacity:.42}
-  .tw .ic{font-size:27px;line-height:1.2}
-  /* 飴の絵はまわりのあきが多くて、同じ大きさだと小さく見えるので すこし足す */
-  .tw[data-k="candy"] .ic{font-size:29px}
+  /* 絵の枠は高さを決めうちにして、まんなかにおく。
+     こうしておくと 絵ごとに大きさを変えても、下の名前とねだんの位置がずれない */
+  .tw .ic{font-size:27px;height:33px;display:flex;align-items:center;justify-content:center}
+  /* 飴の絵はまわりのあきが多くて、同じ大きさだと丸い部分が小さく見えるので足す */
+  .tw[data-k="candy"] .ic{font-size:33px}
   .tw .nm{font-size:10.5px}
   .tw .cs{font-size:11px;color:var(--pink-d)}
 
