@@ -477,6 +477,14 @@ const LEGENDS = [
 ];
 const hasLg = id => !!dex['lg_' + id];
 const maxHearts = () => 20 + (hasLg('whale') ? 2 : 0);
+/* ごほうびでもらう💗は上限をこえてためておける。ためすぎないように99でとめる */
+const HEART_STOCK_MAX = 99;
+/* ふつうの回復はいつもの上限まで。すでにためた💗は絶対にへらさない */
+const healHearts = n => { hearts = Math.max(hearts, Math.min(maxHearts(), hearts + n)); };
+/* 2回目からの「つづきから」はライフ制：30分やすむと💗30もどってくる */
+const LIFE_WAIT_MS = 30*60*1000, LIFE_REFILL = 30;
+function lifeReadyAt(){ try{ return +localStorage.getItem('sweetTD.lifeAt') || 0; }catch(e){ return 0; } }
+function setLifeReadyAt(t){ try{ t ? localStorage.setItem('sweetTD.lifeAt', String(t)) : localStorage.removeItem('sweetTD.lifeAt'); }catch(e){} }
 
 /* ==========================================================
    DOM
@@ -503,6 +511,8 @@ let nextT = 0, wvTick = -1;   // つぎのウェーブまでのカウントダ�
 let celebT = 0, wflash = 0;   // お祝いの光芒と白フラッシュ
 let paraders = [];            // 応援パレード中のなかま
 let phoenixUsed = false;      // ふしちょうのごかご（1プレイ1回）
+let continueUsed = false;     // このプレイで「つづきから」を使ったか（2回目からはライフ制）
+let lifeTimer = null;         // 回復までのカウントダウン表示
 let flyer = null, flyT = 12;  // そらをとぶでんせつ（sil=影のときは予告）
 let bonus = null;             // ボーナスウェーブ（おかしキャッチ）の状態
 
@@ -673,6 +683,9 @@ function reset(){
   for (const k in buffs) buffs[k] = 0;
   gifts = []; paraders = []; celebT = 0; wflash = 0;
   phoenixUsed = false; flyer = null; flyT = 10; bonus = null;
+  continueUsed = false;
+  if (lifeTimer){ clearInterval(lifeTimer); lifeTimer = null; }
+  ovBtn.disabled = false;
   buildSkillBar();
   syncHUD(); buildShop(); closeInfo();
   ov.classList.remove('on');
@@ -724,7 +737,7 @@ function syncShop(){
     el.classList.toggle('poor', stars < T.cost);
     // ねだんのよこに、いま盤面においている数（置く・売るでかわる）。
     // 0個のときは薄くして、持っているものだけ目に入るように
-    const n = towers.filter(t => t.k === el.dataset.k).length;
+    const n = towers.filter(t => t.k === el.dataset.k && !t.pre).length;
     const tc = el.querySelector('.twC');
     tc.textContent = '・×' + n;
     tc.style.opacity = n > 0 ? '' : '.35';
@@ -976,7 +989,7 @@ function bonusUpdate(dt){
       bonus.spT = 0.55;                       // 出てくる間かく（毎回同じ）
       bonus.spawnLeft--;
       bonus.items.push({ x: CELL*(0.8 + Math.random()*(COLS-1.6)), y: -CELL*0.4,
-                         vy: H/3.8,           // 上から下まで約3.8秒（毎回同じ）
+                         vy: H/3.2,           // 上から下まで約3.2秒（毎回同じ）
                          em: BONUS_EMO[(Math.random()*BONUS_EMO.length)|0],
                          ph: Math.random()*6.3 });
     }
@@ -997,8 +1010,9 @@ function endBonus(){
   bonus = null;
   btnWave.innerHTML = 'つぎのウェーブ ▶';    // カウントダウン表示がすぐ引きつぐ
   if (perfect){
-    hearts = Math.min(maxHearts(), hearts + 3);
+    hearts = Math.min(HEART_STOCK_MAX, hearts + 3);   // ごほうびはいつもの上限をこえてためられる
     syncHUD();
+    saveRun();                                        // ためた💗をすぐ保存して、とじても消えないように
     // おうじさまとおひめさまが お祝いにかけつける
     paraders.push({ pid:'prince', x:-CELL*1.2, y:ROWS*CELL - CELL*0.85, vx:CELL*2.1, ph:0,   msg:'やったね！' });
     paraders.push({ pid:'apple',  x:-CELL*3.0, y:ROWS*CELL - CELL*0.85, vx:CELL*2.1, ph:2.2, msg:'💗をプレゼントします' });
@@ -1328,8 +1342,16 @@ function gameOver(){
     '<br><span style="opacity:.7">たおしたかず：' + rec.kills + '　ランキング：じょうい' + rankPct() + '%くらい（めやす）</span><br>' +
     'もういちど ちょうせんしてみよう ✨';
   saveRun(Math.max(0, wave - 1));   // たおれたウェーブをやりなおせる状態で保存
-  ovBtn.textContent = 'つづきから ▶（💗10）';
-  ovBtn.onclick = () => continueRun();
+  ovBtn.disabled = false;
+  if (!continueUsed){
+    ovBtn.textContent = 'つづきから ▶（💗10）';
+    ovBtn.onclick = () => continueRun(10);
+  } else {
+    // 2回目からはライフ制：30分やすむと💗30もどってくる
+    if (!lifeReadyAt()) setLifeReadyAt(Date.now() + LIFE_WAIT_MS);
+    ovB.innerHTML += '<br><span style="opacity:.75">たくさんたたかったから ひとやすみ。<br>30ぷんまつと 💗30で つづきができるよ</span>';
+    armLifeButton(false);
+  }
   ovAlt.textContent = 'さいしょから やりなおす';
   ovAlt.style.display = '';
   ovAlt.onclick = () => { clearRun(); reset(); };
@@ -1371,7 +1393,7 @@ function unlock(id){
 /* ステージクリア（20ウェーブ）ごとのごほうび。なかまを1人むかえて、次のステージへ */
 function stageClear(){
   const stageNo = wave / STAGE_WAVES;
-  hearts = Math.min(maxHearts(), hearts + 3 + (hasCh('apple') ? 3 : 0));   // ごほうびにハートを回復
+  healHearts(3 + (hasCh('apple') ? 3 : 0));   // ごほうびにハートを回復（ためた💗はへらさない）
   const ch = CHARS.find(c => !dex['ch_'+c.id]);
   if (ch){
     unlock('ch_' + ch.id);
@@ -1670,7 +1692,7 @@ function useSkill(s){
     floatTx(W/2, H*0.4, 'ぷるぷるスロー！', '#4faf5f');
     beep(420,.25,'sine',.05,.7);
   } else if (s.ch === 'donut'){
-    hearts = Math.min(maxHearts(), hearts + 4);
+    healHearts(4);
     floatTx(W/2, H*0.4, 'ハートかいふく💗', '#ff6f9c');
     for (let i=0;i<16;i++) mote(W/2 + (Math.random()-0.5)*W*0.5, H*0.55, '#ffb0cf');
     beep(700,.15,'triangle',.06);
@@ -1702,7 +1724,7 @@ function useSkill(s){
     floatTx(W/2, H*0.4, 'いちごのはた！ ⭐2ばい！', '#e0a52e');
     beep(700,.12,'triangle',.05); setTimeout(()=>beep(930,.16,'triangle',.05),120);
   } else if (s.ch === 'apple'){
-    hearts = Math.min(maxHearts(), hearts + 2);
+    healHearts(2);
     floatTx(W/2, H*0.4, 'りんごのいやし💗+2', '#ff6f9c');
     for (let i=0;i<10;i++) mote(W/2 + (Math.random()-0.5)*W*0.4, H*0.55, '#ffb0cf');
     beep(700,.14,'triangle',.05);
@@ -1801,11 +1823,53 @@ function saveRun(w){
   try{
     localStorage.setItem('sweetTD.run', JSON.stringify({
       w: (w !== undefined ? w : wave), st: stars, hp: hearts,
-      tw: towers.map(t => ({ k:t.k, c:t.c, r:t.r, lv:t.lv })),
+      cu: continueUsed ? 1 : 0,
+      tw: towers.map(t => {
+        const o = { k:t.k, c:t.c, r:t.r, lv:t.lv };
+        if (t.pre) o.p = 1;   // つづきから前のおかし
+        return o;
+      }),
     }));
   }catch(e){}
 }
-function clearRun(){ try{ localStorage.removeItem('sweetTD.run'); }catch(e){} }
+function clearRun(){ try{ localStorage.removeItem('sweetTD.run'); }catch(e){} setLifeReadyAt(0); }
+/* 回復までのカウントダウン。時間がきたらボタンが「つづきから」にかわる */
+function armLifeButton(fromBoot){
+  if (lifeTimer){ clearInterval(lifeTimer); lifeTimer = null; }
+  const tick = () => {
+    const left = lifeReadyAt() - Date.now();
+    if (left <= 0){
+      if (lifeTimer){ clearInterval(lifeTimer); lifeTimer = null; }
+      ovBtn.disabled = false;
+      ovBtn.textContent = 'つづきから ▶（💗' + LIFE_REFILL + '）';
+      ovBtn.onclick = () => { setLifeReadyAt(0); continueRun(LIFE_REFILL, fromBoot); };
+    } else {
+      ovBtn.disabled = true;
+      const sec = Math.ceil(left/1000);
+      ovBtn.textContent = '💗かいふくまで あと ' + Math.floor(sec/60) + ':' + String(sec%60).padStart(2,'0');
+    }
+  };
+  tick();
+  if (lifeReadyAt() - Date.now() > 0) lifeTimer = setInterval(tick, 1000);
+}
+/* 起動時：回復まちの途中なら、そのつづきの画面を出す */
+function checkLife(){
+  if (!lifeReadyAt()) return;
+  let rn = null;
+  try{ rn = JSON.parse(localStorage.getItem('sweetTD.run') || 'null'); }catch(e){}
+  if (!rn){ setLifeReadyAt(0); return; }   // 進行セーブがないなら回復まちも意味がない
+  over = true; running = false; continueUsed = true;
+  hearts = 0; syncHUD();   // 回復まちのあいだは💗0のまま見せる
+  ovT.textContent = 'おかしの国は おやすみ中';
+  ovB.innerHTML = 'ウェーブ <b>' + wave + '</b> から つづきができるよ。<br>' +
+    '<span style="opacity:.75">30ぷんまつと 💗30 もどってくるよ</span>';
+  ovShare.style.display = 'none';
+  ovAlt.textContent = 'さいしょから やりなおす';
+  ovAlt.style.display = '';
+  ovAlt.onclick = () => { clearRun(); reset(); };
+  ov.classList.add('on');
+  armLifeButton(true);
+}
 /* 起動時：セーブがあれば、そのウェーブから再開する */
 function tryResume(){
   let rn = null;
@@ -1813,20 +1877,26 @@ function tryResume(){
   if (!rn || !rn.w || rn.w < 1) return;
   wave = rn.w;
   stars = Math.max(0, rn.st | 0);
-  hearts = Math.min(maxHearts(), Math.max(1, rn.hp | 0));
+  hearts = Math.min(HEART_STOCK_MAX, Math.max(1, rn.hp | 0));   // ためた💗もそのまま引きつぐ
   towers = (rn.tw || [])
     .filter(t => TOWERS[t.k] && !pathCells.has(key(t.c, t.r)))
-    .map(t => ({ k:t.k, c:t.c, r:t.r, lv:Math.min(5, Math.max(1, t.lv|0)),
+    .map(t => ({ k:t.k, c:t.c, r:t.r, lv:Math.min(5, Math.max(1, t.lv|0)), pre: !!t.p,
                  cd:0, ang:-Math.PI/2, pulse:0, ph:Math.random()*6.3 }));
+  continueUsed = !!rn.cu;
   floatTx(COLS*CELL/2, ROWS*CELL/2, 'つづきから さいかい！', '#b98ae0');
   syncHUD();
 }
-/* ゲームオーバーからの「つづきから」：たおれたウェーブを💗10で再挑戦 */
-function continueRun(){
+/* ゲームオーバーからの「つづきから」：1回目は💗10ですぐ、2回目からは30分まって💗30
+   keepWave は起動時の再開用（保存の時点でウェーブがもどしてあるので、二重にもどさない） */
+function continueRun(refill, keepWave){
   over = false; running = false;
   enemies = []; shots = []; spawnQ = []; gifts = [];
-  wave = Math.max(0, wave - 1);
-  hearts = Math.min(10, maxHearts());
+  // 盤面のおかしはそのまま残すが、ショップの「×いくつ」は0からかぞえなおす
+  for (const t of towers) t.pre = true;
+  if (!keepWave) wave = Math.max(0, wave - 1);
+  hearts = Math.min(HEART_STOCK_MAX, refill || 10);
+  continueUsed = true;
+  ovBtn.disabled = false;
   phoenixUsed = false; nextT = 0;
   for (const k in skCd) skCd[k] = 0;
   for (const k in buffs) buffs[k] = 0;
@@ -2043,7 +2113,8 @@ function buildHelp(){
     '<li>ワザは<b>ここぞ</b>でつかう。ボス・ラッシュ・ハートのピンチに</li>' +
     '<li>20ウェーブごとのクリアで なかまとハートがもらえるよ</li>' +
     '<li>ときどき<b>🎁ボーナスウェーブ</b>！ふってくるおかしを ぜんぶタップすると💗+3</li>' +
-    '<li>進行はじどうセーブ。💗がなくなっても<b>つづきから</b>そのウェーブに再挑戦できるよ</li>' +
+    '<li>もらった💗は <b>20をこえて ためられる</b>よ（99こまで）</li>' +
+    '<li>進行はじどうセーブ。💗がなくなっても<b>つづきから</b>再挑戦できるよ。2かいめからは <b>30ぷんやすむと💗30</b>でふっかつ</li>' +
     '<li>うわさでは、<b>ウェーブ60</b>で でんせつのなかまに会えるらしい…✨</li></ul></div>';
   h += '<div class="hSec"><h3>🔑 あいことば</h3>' +
     '<p>とくべつな「あいことば」を手に入れたら、メイン画面の<b>「🔑あいことば・きせかえ」</b>ボタンから入れてね。限定テーマがとどくよ🎁</p></div>';
@@ -3878,6 +3949,7 @@ reset();
 resize();
 tryResume();      // とちゅうのセーブがあれば、そのウェーブから再開
 checkLogin();     // きょうはじめての起動ならプレゼントを渡す
+checkLife();      // 💗の回復まちの途中なら、その画面にもどす
 requestAnimationFrame(loop);
 
 })();
