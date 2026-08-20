@@ -986,16 +986,17 @@ function celebrate(o){
 }
 
 /* ==========================================================
-   ボーナスウェーブ（空からおかしが降ってくる！ぜんぶタップで💗+3）
+   ボーナスウェーブ（空からおかしが降ってくる！ぜんぶタップで💗+1）
+   20ウェーブごとに開く。1こでも取りのがしたら その場で「ざんねん〜」でおしまい。
    ウェーブ数にはカウントしない。落ちる速さはゲーム速度に関係なく一定
    ========================================================== */
 const BONUS_EMO = ['🍬','🍩','🍪','🧁','🍓','🍭','🍰','🍮'];
 function startBonus(){
-  bonus = { spawnLeft: 30, total: 30, spT: 0.4, items: [], got: 0, missed: 0 };
+  bonus = { spawnLeft: 30, total: 30, spT: 0.4, items: [], got: 0 };
   btnWave.disabled = true;
   btnWave.innerHTML = '🎁 ボーナスタイム！<br>おかしを タップ！';
   floatTx(COLS*CELL/2, ROWS*CELL*0.35, '🎁 ボーナスウェーブ！', '#ff8fc4');
-  floatTx(COLS*CELL/2, ROWS*CELL*0.45, 'ふってくるおかしを ぜんぶタップ！', '#b98ae0');
+  floatTx(COLS*CELL/2, ROWS*CELL*0.45, 'ぜんぶタップ！ひとつも おとさないでね', '#b98ae0');
   beep(700,.12,'triangle',.06);
   setTimeout(()=>beep(930,.15,'triangle',.06),130);
 }
@@ -1005,6 +1006,12 @@ function bonusUpdate(dt){
   if (ov.classList.contains('on') || colOv.classList.contains('on') ||
       helpOv.classList.contains('on') || kingOv.classList.contains('on') ||
       pwOv.classList.contains('on')) return;
+  // 「ざんねん〜」を見せているあいだは、おかしを動かさずに待つ
+  if (bonus.fail){
+    bonus.failT -= dt;
+    if (bonus.failT <= 0) endBonus();
+    return;
+  }
   const H = ROWS*CELL;
   if (bonus.spawnLeft > 0){
     bonus.spT -= dt;
@@ -1021,31 +1028,39 @@ function bonusUpdate(dt){
     const it = bonus.items[i];
     it.y += it.vy*dt; it.ph += dt*4;
     if (it.y > H + CELL*0.4){
-      bonus.items.splice(i,1); bonus.missed++;
-      floatTx(it.x, H - CELL*0.5, 'あっ…', '#b98ae0');
+      bonus.items.splice(i,1);
+      failBonus(it.x, H - CELL*0.5);   // 1こでも おとしたら そこでおしまい
+      return;
     }
   }
   if (bonus.spawnLeft === 0 && !bonus.items.length) endBonus();
 }
+/* 1こでも取りのがしたら、のこりは出さずに「ざんねん〜」画面へ切りかえる */
+function failBonus(x, y){
+  bonus.fail = true;
+  bonus.failT = 2.2;          // この秒数だけ見せてから ステージにもどる
+  bonus.spawnLeft = 0;
+  bonus.items.length = 0;     // 落ちかけのおかしも消して、あとからタップできないように
+  btnWave.innerHTML = '💧 ざんねん〜';
+  floatTx(x, y, 'あっ…', '#b98ae0');
+  beep(430,.18,'sine',.05,.7);
+  setTimeout(()=>beep(330,.26,'sine',.05,.7),170);
+}
 function endBonus(){
   const perfect = bonus.got >= bonus.total;
-  const gotN = bonus.got;
   bonus = null;
   btnWave.innerHTML = 'つぎのウェーブ ▶';    // カウントダウン表示がすぐ引きつぐ
   if (perfect){
-    hearts = Math.min(HEART_STOCK_MAX, hearts + 3);   // ごほうびはいつもの上限をこえてためられる
+    hearts = Math.min(HEART_STOCK_MAX, hearts + 1);   // ごほうびはいつもの上限をこえてためられる
     syncHUD();
     saveRun();                                        // ためた💗をすぐ保存して、とじても消えないように
     // おうじさまとおひめさまが お祝いにかけつける
     paraders.push({ pid:'prince', x:-CELL*1.2, y:ROWS*CELL - CELL*0.85, vx:CELL*2.1, ph:0,   msg:'やったね！' });
     paraders.push({ pid:'apple',  x:-CELL*3.0, y:ROWS*CELL - CELL*0.85, vx:CELL*2.1, ph:2.2, msg:'💗をプレゼントします' });
-    floatTx(COLS*CELL/2, ROWS*CELL*0.4, 'パーフェクト！💗+3', '#ff6f9c');
+    floatTx(COLS*CELL/2, ROWS*CELL*0.4, 'パーフェクト！💗+1', '#ff6f9c');
     celebrate({ rays: 2.5, conf: 90, rings: true, fanfare: 1 });
-  } else {
-    floatTx(COLS*CELL/2, ROWS*CELL*0.38, 'おしかったね！', '#b98ae0');
-    floatTx(COLS*CELL/2, ROWS*CELL*0.48, 'あとすこしだった…（' + gotN + 'こゲット）', '#b98ae0');
-    beep(420,.2,'sine',.05,.7);
   }
+  // しっぱいのときは「ざんねん〜」画面で もう伝えているので、ここでは何も出さない
 }
 
 /* ---------- なかまの応援パレード ---------- */
@@ -1287,9 +1302,9 @@ function update(dt){
     if (wave % 10 === 0 && wave % STAGE_WAVES !== 0) celebrate({ conf: 30, fanfare: 1 });
     if (wave % STAGE_WAVES === 0) stageClear();
     else checkLegends();
-    // ときどきボーナスウェーブ（ウェーブ数にはカウントしない）
-    if (!ov.classList.contains('on') && !pendingComplete &&
-        wave >= 2 && wave % STAGE_WAVES !== 0 && Math.random() < 0.2)
+    // ボーナスウェーブは20ウェーブごと（ウェーブ数にはカウントしない）。
+    // ステージクリアが20の倍数なので、かさならないよう あいだの10・30・50…で開く
+    if (!ov.classList.contains('on') && !pendingComplete && wave % 20 === 10)
       startBonus();
     saveRun();   // ここまでの進行をオートセーブ
   }
@@ -2139,7 +2154,8 @@ function buildHelp(){
     '<li>はやよびボーナスで⭐をかせいで、どんどん強化する</li>' +
     '<li>ワザは<b>ここぞ</b>でつかう。ボス・ラッシュ・ハートのピンチに</li>' +
     '<li>20ウェーブごとのクリアで なかまとハートがもらえるよ</li>' +
-    '<li>ときどき<b>🎁ボーナスウェーブ</b>！ふってくるおかしを ぜんぶタップすると💗+3</li>' +
+    '<li><b>20ウェーブごと</b>に<b>🎁ボーナスウェーブ</b>！ふってくるおかしを ' +
+    'ぜんぶタップすると💗+1。1こでも おとしたら そこでおしまい</li>' +
     '<li>もらった💗は <b>20をこえて ためられる</b>よ（99こまで）</li>' +
     '<li>進行はじどうセーブ。💗がなくなっても、<b>' + REGEN_MIN + 'ふんごとに💗が1こずつ</b>もどるよ（さいだい' + maxHearts() + '）。1こでもあれば そのウェーブから再開できる</li>' +
     '<li>うわさでは、<b>ウェーブ60</b>で でんせつのなかまに会えるらしい…✨</li></ul></div>';
@@ -3851,21 +3867,49 @@ function render(){
     }
     ctx.globalAlpha = 1;
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    for (const it of bonus.items){
-      ctx.save(); ctx.translate(it.x, it.y);
-      ctx.rotate(Math.sin(it.ph)*0.25);
-      ctx.font = (CELL*0.72) + 'px sans-serif';
-      ctx.fillText(it.em, 0, 0);
+    if (bonus.fail){
+      // 「ざんねん〜」画面。おかしは消えていて、まんなかのカードだけが残る
+      const bw = Math.min(W2*0.84, CELL*5.4), bh = CELL*2.7;
+      const bx = (W2-bw)/2, by = H2*0.33;
+      ctx.fillStyle = 'rgba(120,90,120,.18)';                 // 影は紫がかった半とうめい
+      roundRect(bx, by + CELL*0.12, bw, bh, CELL*0.44); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.96)';
+      roundRect(bx, by, bw, bh, CELL*0.44); ctx.fill();
+      ctx.strokeStyle = '#ffd3e8'; ctx.lineWidth = CELL*0.07;
+      roundRect(bx, by, bw, bh, CELL*0.44); ctx.stroke();
+      // ぷるぷるさせて、止まって見えないようにする
+      ctx.save();
+      ctx.translate(W2/2, by + bh*0.36);
+      ctx.rotate(Math.sin(time*7)*0.04);
+      const sc = 1 + Math.sin(time*9)*0.03;
+      ctx.scale(sc, 2 - sc);
+      ctx.font = "800 " + (CELL*0.66) + "px 'Hiragino Maru Gothic ProN',sans-serif";
+      ctx.lineWidth = CELL*0.18; ctx.strokeStyle = '#ffffff'; ctx.lineJoin = 'round';
+      ctx.strokeText('ざんねん〜', 0, 0);
+      ctx.fillStyle = '#e05f9e';
+      ctx.fillText('ざんねん〜', 0, 0);
       ctx.restore();
-      sparkle(it.x + CELL*0.34, it.y - CELL*0.3, CELL*0.07, it.ph*2, '#ffffff');
+      ctx.font = "700 " + (CELL*0.3) + "px 'Hiragino Maru Gothic ProN',sans-serif";
+      ctx.fillStyle = '#b98ae0';
+      ctx.fillText('おかしを おとしちゃった…', W2/2, by + bh*0.68);
+      ctx.fillText('ゲット ' + bonus.got + 'こ', W2/2, by + bh*0.88);
+    } else {
+      for (const it of bonus.items){
+        ctx.save(); ctx.translate(it.x, it.y);
+        ctx.rotate(Math.sin(it.ph)*0.25);
+        ctx.font = (CELL*0.72) + 'px sans-serif';
+        ctx.fillText(it.em, 0, 0);
+        ctx.restore();
+        sparkle(it.x + CELL*0.34, it.y - CELL*0.3, CELL*0.07, it.ph*2, '#ffffff');
+      }
+      const left = bonus.spawnLeft + bonus.items.length;
+      const txt = '🎁 のこり ' + left + 'こ';
+      ctx.font = "800 " + (CELL*0.4) + "px 'Hiragino Maru Gothic ProN',sans-serif";
+      ctx.lineWidth = CELL*0.12; ctx.strokeStyle = '#ffffff'; ctx.lineJoin = 'round';
+      ctx.strokeText(txt, COLS*CELL/2, CELL*1.2);
+      ctx.fillStyle = '#e05f9e';
+      ctx.fillText(txt, COLS*CELL/2, CELL*1.2);
     }
-    const left = bonus.spawnLeft + bonus.items.length;
-    const txt = '🎁 のこり ' + left + 'こ';
-    ctx.font = "800 " + (CELL*0.4) + "px 'Hiragino Maru Gothic ProN',sans-serif";
-    ctx.lineWidth = CELL*0.12; ctx.strokeStyle = '#ffffff'; ctx.lineJoin = 'round';
-    ctx.strokeText(txt, COLS*CELL/2, CELL*1.2);
-    ctx.fillStyle = '#e05f9e';
-    ctx.fillText(txt, COLS*CELL/2, CELL*1.2);
   }
 
   // 応援パレード（なかまがふきだしつきで行進）
