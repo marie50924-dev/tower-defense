@@ -1343,15 +1343,10 @@ function gameOver(){
     'もういちど ちょうせんしてみよう ✨';
   saveRun(Math.max(0, wave - 1));   // たおれたウェーブをやりなおせる状態で保存
   ovBtn.disabled = false;
-  if (!continueUsed){
-    ovBtn.textContent = 'つづきから ▶（💗10）';
-    ovBtn.onclick = () => continueRun(10);
-  } else {
-    // 2回目からはライフ制：30分やすむと💗30もどってくる
-    if (!lifeReadyAt()) setLifeReadyAt(Date.now() + LIFE_WAIT_MS);
-    ovB.innerHTML += '<br><span style="opacity:.75">たくさんたたかったから ひとやすみ。<br>30ぷんまつと 💗30で つづきができるよ</span>';
-    armLifeButton(false);
-  }
+  // 💗をつかいきったら、いつも30分やすみのライフ制。30ぷんまつと💗30でそのウェーブから再開
+  if (!lifeReadyAt()) setLifeReadyAt(Date.now() + LIFE_WAIT_MS);
+  ovB.innerHTML += '<br><span style="opacity:.75">たくさんたたかったから ひとやすみ。<br>30ぷんまつと 💗' + LIFE_REFILL + 'で つづきができるよ</span>';
+  armLifeButton(false);
   ovAlt.textContent = 'さいしょから やりなおす';
   ovAlt.style.display = '';
   ovAlt.onclick = () => { clearRun(); reset(); };
@@ -2114,7 +2109,7 @@ function buildHelp(){
     '<li>20ウェーブごとのクリアで なかまとハートがもらえるよ</li>' +
     '<li>ときどき<b>🎁ボーナスウェーブ</b>！ふってくるおかしを ぜんぶタップすると💗+3</li>' +
     '<li>もらった💗は <b>20をこえて ためられる</b>よ（99こまで）</li>' +
-    '<li>進行はじどうセーブ。💗がなくなっても<b>つづきから</b>再挑戦できるよ。2かいめからは <b>30ぷんやすむと💗30</b>でふっかつ</li>' +
+    '<li>進行はじどうセーブ。💗がなくなったら <b>30ぷんやすむと💗30</b>で、そのウェーブから再挑戦できるよ</li>' +
     '<li>うわさでは、<b>ウェーブ60</b>で でんせつのなかまに会えるらしい…✨</li></ul></div>';
   h += '<div class="hSec"><h3>🔑 あいことば</h3>' +
     '<p>とくべつな「あいことば」を手に入れたら、メイン画面の<b>「🔑あいことば・きせかえ」</b>ボタンから入れてね。限定テーマがとどくよ🎁</p></div>';
