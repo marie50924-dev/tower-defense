@@ -11,6 +11,7 @@
     --pink-d:#e05f9e;
     --lav:#c9a7ff;
     --mint:#8fe3c4;
+    --aqua:#2e9fc9;   /* いま持っている数につかう水色。白の上でも読めるこさにしてある */
     --cream:#fff6e9;
     --ink:#6b4a63;
     --card:rgba(255,255,255,.72);
@@ -59,11 +60,15 @@
     background:rgba(255,255,255,.6);cursor:pointer;text-align:center;line-height:1.15;
     transition:transform .1s, border-color .1s;
   }
-  .twC{color:#b98ae0}
+  .twC{color:var(--aqua);font-weight:800}
   .tw:active{transform:scale(.94)}
   .tw.sel{border-color:var(--pink);background:#fff;box-shadow:0 0 0 3px rgba(255,143,196,.28)}
   .tw.poor{opacity:.42}
-  .tw .ic{font-size:21px;line-height:1.2}
+  /* 絵の枠は高さを決めうちにして、まんなかにおく。
+     こうしておくと 絵ごとに大きさを変えても、下の名前とねだんの位置がずれない */
+  .tw .ic{font-size:27px;height:33px;display:flex;align-items:center;justify-content:center}
+  /* 飴の絵はまわりのあきが多くて、同じ大きさだと丸い部分が小さく見えるので足す */
+  .tw[data-k="candy"] .ic{font-size:33px}
   .tw .nm{font-size:10.5px}
   .tw .cs{font-size:11px;color:var(--pink-d)}
 
@@ -105,7 +110,7 @@
     box-shadow:0 4px 0 var(--pink-d), 0 6px 16px rgba(224,95,158,.3);cursor:pointer;
   }
   .btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--pink-d)}
-  .btn.sm{flex:0 0 50px;font-size:13px;background:linear-gradient(180deg,#c9b6ff,#a586f5);box-shadow:0 4px 0 #7d5fd0}
+  .btn.sm{flex:0 0 50px;font-size:17.5px;line-height:1.03;background:linear-gradient(180deg,#c9b6ff,#a586f5);box-shadow:0 4px 0 #7d5fd0}
   .btn.sm:active{box-shadow:0 1px 0 #7d5fd0}
   .btn:disabled{opacity:.45}
 
@@ -272,7 +277,7 @@
     <button class="btn sm" id="btnSnd">♪</button>
   </div>
 
-  <div id="pwRow"><button class="mini" id="btnPw">🔑 あいことば・きせかえ</button></div>
+  <div id="pwRow"><button class="mini" id="btnPw"><span style="font-size:17px;line-height:.7">🔑</span> あいことば・きせかえ</button></div>
 
   <div id="tip">ウェーブは自動でやってくる！ボタンで「はやよび」すると⭐ボーナス✨<br>たたかいかたは ❓ を見てね</div>
 
@@ -759,12 +764,10 @@ function syncShop(){
     const T = TOWERS[el.dataset.k];
     el.classList.toggle('sel', selTool === el.dataset.k);
     el.classList.toggle('poor', stars < T.cost);
-    // ねだんのよこに、いま盤面においている数（置く・売るでかわる）。
-    // 0個のときは薄くして、持っているものだけ目に入るように
-    const n = towers.filter(t => t.k === el.dataset.k && !t.pre).length;
-    const tc = el.querySelector('.twC');
-    tc.textContent = '・×' + n;
-    tc.style.opacity = n > 0 ? '' : '.35';
+    // ねだんのよこに、いま持っている数（盤面においてある数）。置く・売るでかわる。
+    // つづきからで再開したあとも、のこっているおかしはそのまま数える
+    const n = towers.filter(t => t.k === el.dataset.k).length;
+    el.querySelector('.twC').textContent = '・×' + n;
   }
 }
 
@@ -1814,7 +1817,7 @@ function buildSkillBar(){
     const b = document.createElement('button');
     b.className = 'sk';
     b.dataset.ch = ch;
-    b.append(charThumb({ pid:ch }, 30));
+    b.append(charThumb({ pid:ch }, 38));
     b.insertAdjacentHTML('beforeend',
       '<div class="skN">' + s.name + '</div><div class="skC"></div>' +
       '<div class="skCd" style="display:none"></div>');
@@ -1843,7 +1846,7 @@ function buildSkillBar(){
     const b = document.createElement('button');
     b.className = 'sk empty';
     b.disabled = true;
-    b.innerHTML = '<div style="font-size:16px;line-height:30px">＋</div><div class="skN">ずかんではる</div>';
+    b.innerHTML = '<div style="font-size:21px;line-height:38px">＋</div><div class="skN">ずかんではる</div>';
     skillBar.append(b);
   }
   syncSkills();
@@ -1873,9 +1876,7 @@ function saveRun(w){
       w: (w !== undefined ? w : wave), st: stars, hp: hearts,
       cu: continueUsed ? 1 : 0,
       tw: towers.map(t => {
-        const o = { k:t.k, c:t.c, r:t.r, lv:t.lv };
-        if (t.pre) o.p = 1;   // つづきから前のおかし
-        return o;
+        return { k:t.k, c:t.c, r:t.r, lv:t.lv };
       }),
     }));
   }catch(e){}
@@ -1936,7 +1937,7 @@ function tryResume(){
   hearts = Math.min(HEART_STOCK_MAX, Math.max(0, rn.hp | 0));   // ためた💗も、やすみ中の💗もそのまま引きつぐ
   towers = (rn.tw || [])
     .filter(t => TOWERS[t.k] && !pathCells.has(key(t.c, t.r)))
-    .map(t => ({ k:t.k, c:t.c, r:t.r, lv:Math.min(5, Math.max(1, t.lv|0)), pre: !!t.p,
+    .map(t => ({ k:t.k, c:t.c, r:t.r, lv:Math.min(5, Math.max(1, t.lv|0)),
                  cd:0, ang:-Math.PI/2, pulse:0, ph:Math.random()*6.3 }));
   continueUsed = !!rn.cu;
   floatTx(COLS*CELL/2, ROWS*CELL/2, 'つづきから さいかい！', '#b98ae0');
@@ -1947,8 +1948,6 @@ function tryResume(){
 function continueRun(refill, keepWave){
   over = false; running = false;
   enemies = []; shots = []; spawnQ = []; gifts = [];
-  // 盤面のおかしはそのまま残すが、ショップの「×いくつ」は0からかぞえなおす
-  for (const t of towers) t.pre = true;
   if (!keepWave) wave = Math.max(0, wave - 1);
   hearts = Math.min(HEART_STOCK_MAX, refill || 1);
   continueUsed = true;
@@ -2732,18 +2731,68 @@ function charThumb(ch, size){
   const g = c.getContext('2d');
   g.setTransform(dpr,0,0,dpr,0,0);
   drawPortrait(g, ch.pid || ch.id, size);
+  portraitShade(g, size);   // えがき終わった絵に あとから光をあてて立体にする
   return c;
 }
 
-/* まだ出会っていないでんせつの、うすむらさきの影 */
-function silhouetteThumb(pid, size){
-  const c = charThumb({ pid }, size);
-  const g = c.getContext('2d');
+/* 似顔絵の立体感。
+   図鑑の子は1体ずつ形がちがうので、かたちごとに描きかえるのではなく、
+   えがき終わった絵の上から 光・かげ・つやを かぶせている。
+   これで どんな形の子でも 同じ当たりかたの光になる。
+
+   かげは「かけ算（multiply）」でのせるのがミソ。白い色を うすくかぶせて
+   暗くすると 色まで あせてしまうが、かけ算なら 色がこいまま ふかくなる。
+   かけ算は絵の外にもはみ出すので、さいごに もとの形で切りぬいている */
+function portraitShade(g, S){
+  const M = S/2, TAU = 6.2832, cv = g.canvas;
+  // いまの絵をとっておく（さいごの切りぬきに使う）
+  const mask = document.createElement('canvas');
+  mask.width = cv.width; mask.height = cv.height;
+  mask.getContext('2d').drawImage(cv, 0, 0);
+
+  // ① かげ。左上は白（そのまま）、外にいくほど こい色をかけて ふかくする
+  g.save();
+  g.globalCompositeOperation = 'multiply';
+  const mg = g.createRadialGradient(M-S*0.17, M-S*0.21, S*0.03, M-S*0.02, M-S*0.02, S*0.56);
+  mg.addColorStop(0,   '#ffffff');
+  mg.addColorStop(0.3, '#f0e4ee');
+  mg.addColorStop(0.66,'#c6a7c3');
+  mg.addColorStop(1,   '#8a6d8d');
+  g.fillStyle = mg; g.fillRect(0,0,S,S);
+  g.restore();
+
+  // ② 光と つや。ひかえめにして、色をあせさせない
+  g.save();
+  const lg = g.createRadialGradient(M-S*0.19, M-S*0.23, 0, M-S*0.05, M-S*0.05, S*0.5);
+  lg.addColorStop(0,'rgba(255,255,255,.35)');
+  lg.addColorStop(0.45,'rgba(255,255,255,.07)');
+  lg.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle = lg; g.fillRect(0,0,S,S);
+  // 下からの照りかえし
+  const bg = g.createRadialGradient(M+S*0.15, M+S*0.22, 0, M+S*0.09, M+S*0.15, S*0.4);
+  bg.addColorStop(0,'rgba(255,255,255,.28)');
+  bg.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle = bg; g.fillRect(0,0,S,S);
+  // つや。ぼんやりした光の中に つよい芯
+  g.save();
+  g.translate(M-S*0.13, M-S*0.18); g.rotate(-0.55); g.scale(1,0.52);
+  const hg = g.createRadialGradient(0,0,0, 0,0,S*0.16);
+  hg.addColorStop(0,'rgba(255,255,255,.85)');
+  hg.addColorStop(0.5,'rgba(255,255,255,.24)');
+  hg.addColorStop(1,'rgba(255,255,255,0)');
+  g.fillStyle = hg;
+  g.beginPath(); g.arc(0,0,S*0.16,0,TAU); g.fill();
+  g.restore();
+  g.fillStyle = 'rgba(255,255,255,.95)';
+  g.beginPath(); g.ellipse(M-S*0.155, M-S*0.2, S*0.046, S*0.024, -0.55, 0, TAU); g.fill();
+  g.restore();
+
+  // ③ もとの形で切りぬく。かけ算と光が 絵の外にも のっているため
+  g.save();
+  g.globalCompositeOperation = 'destination-in';
   g.setTransform(1,0,0,1,0,0);
-  g.globalCompositeOperation = 'source-in';
-  g.fillStyle = '#c3b3d6';
-  g.fillRect(0, 0, c.width, c.height);
-  return c;
+  g.drawImage(mask, 0, 0);
+  g.restore();
 }
 
 function drawPortrait(g, id, S){
@@ -2756,13 +2805,14 @@ function drawPortrait(g, id, S){
     g.arcTo(x,y+h,x,y,k);     g.arcTo(x,y,x+w,y,k);
     g.closePath();
   };
+  /* まるい体。ここでは 単色でぬるだけにしておく。
+     立体感は portraitShade があとから ぜんぶの子に まとめてのせる。
+     ここでグラデを焼きこむと、この子たちだけ立体感が強くなって
+     他の形の子と差がついてしまう（dark はもう使わないが、
+     呼びだし側をぜんぶ書きかえないで済むよう 引数はのこしてある） */
   const ball = (x,y,r,col,dark) => {
-    const gr = g.createRadialGradient(x-r*0.35, y-r*0.45, r*0.1, x, y, r*1.12);
-    gr.addColorStop(0,'#fff'); gr.addColorStop(0.35,col); gr.addColorStop(1,dark);
-    g.fillStyle = gr;
+    g.fillStyle = col;
     g.beginPath(); g.arc(x,y,r,0,TAU); g.fill();
-    g.globalAlpha = .7; g.strokeStyle = dark; g.lineWidth = r*0.08;
-    g.beginPath(); g.arc(x,y,r,0,TAU); g.stroke(); g.globalAlpha = 1;
   };
   const face = (x,y,r,mood) => {
     g.fillStyle = 'rgba(255,120,165,.4)';
@@ -3368,21 +3418,76 @@ function blinkK(ph){
 }
 
 /* つやつやのまるい体（ラジアルグラデ＋りんかく＋ハイライト） */
-function glossyBall(R, color, dark){
-  const g = ctx.createRadialGradient(-R*0.35,-R*0.45,R*0.1, 0,0,R*1.12);
+/* ---------- 立体感の共通部品 ----------
+   タワー・敵・図鑑で同じ見え方にそろえるため、ここにまとめてある。
+   ひかりは いつも左上から当たっているものとして描く */
+
+/* 地の色。白い芯 → 色 → かげ のグラデーション */
+function ballGrad(R, color, dark){
+  const g = ctx.createRadialGradient(-R*0.38,-R*0.48,R*0.03, -R*0.05,-R*0.05,R*1.25);
   g.addColorStop(0,'#ffffff');
-  g.addColorStop(0.32,color);
+  g.addColorStop(0.07,'#ffffff');
+  g.addColorStop(0.36,color);
+  g.addColorStop(0.9,dark);
   g.addColorStop(1,dark);
-  ctx.fillStyle = g;
+  return g;
+}
+/* いま描いたかたちの中に、照りかえしと ふちのまわりこみを重ねる。
+   fill() のすぐあとに呼ぶ（パスはのこっているので そのまま clip できる）。
+   右下のふちが明るくなるのが きいていて、これがあると 平たいシールに見えなくなる */
+function shade3d(R){
+  ctx.save(); ctx.clip();
+  const bg = ctx.createRadialGradient(R*0.5,R*0.62,R*0.02, R*0.32,R*0.42,R*0.92);
+  bg.addColorStop(0,'rgba(255,255,255,.72)');
+  bg.addColorStop(0.4,'rgba(255,255,255,.24)');
+  bg.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle = bg; ctx.fillRect(-R*1.7,-R*1.7,R*3.4,R*3.4);
+  const tg = ctx.createRadialGradient(0,0,R*0.5, 0,0,R);
+  tg.addColorStop(0,'rgba(74,38,66,0)');
+  tg.addColorStop(0.7,'rgba(74,38,66,.16)');
+  tg.addColorStop(1,'rgba(74,38,66,.42)');
+  ctx.fillStyle = tg; ctx.fillRect(-R*1.7,-R*1.7,R*3.4,R*3.4);
+  // 接地のかげ。地面とふれるあたりを暗くすると、おいてある感じが強くなる
+  const og = ctx.createRadialGradient(0,R*1.0,0, 0,R*1.0,R*0.9);
+  og.addColorStop(0,'rgba(58,26,50,.34)');
+  og.addColorStop(1,'rgba(58,26,50,0)');
+  ctx.fillStyle = og; ctx.fillRect(-R*1.7,-R*1.7,R*3.4,R*3.4);
+  ctx.restore();
+}
+/* つや。ぼんやりした光の中に つよい芯があると、つやのある球に見える */
+function ballGloss(R){
+  ctx.save();
+  ctx.translate(-R*0.3,-R*0.44); ctx.rotate(-0.55); ctx.scale(1,0.6);
+  const hg = ctx.createRadialGradient(0,0,0, 0,0,R*0.44);
+  hg.addColorStop(0,'rgba(255,255,255,.62)');
+  hg.addColorStop(0.5,'rgba(255,255,255,.2)');
+  hg.addColorStop(1,'rgba(255,255,255,0)');
+  ctx.fillStyle = hg;
+  ctx.beginPath(); ctx.arc(0,0,R*0.44,0,6.3); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = 'rgba(255,255,255,.98)';
+  ctx.beginPath(); ctx.ellipse(-R*0.38,-R*0.54,R*0.105,R*0.055,-0.55,0,6.3); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,.45)';
+  ctx.beginPath(); ctx.arc(R*0.44,-R*0.24,R*0.075,0,6.3); ctx.fill();
+}
+/* 地面におちる影。ふちをぼかすと、地面においてある感じが出る */
+function softShadow(x, y, R, a){
+  ctx.save();
+  ctx.translate(x, y); ctx.scale(1, 0.31);
+  const sg = ctx.createRadialGradient(0,0,0, 0,0,R);
+  sg.addColorStop(0,'rgba(120,90,120,'+a+')');
+  sg.addColorStop(0.5,'rgba(120,90,120,'+(a*0.5)+')');
+  sg.addColorStop(1,'rgba(120,90,120,0)');
+  ctx.fillStyle = sg;
   ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
-  ctx.globalAlpha = .75;
-  ctx.strokeStyle = dark; ctx.lineWidth = R*0.08;
-  ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.stroke();
-  ctx.globalAlpha = 1;
-  ctx.fillStyle = 'rgba(255,255,255,.55)';
-  ctx.beginPath(); ctx.ellipse(-R*0.32,-R*0.45,R*0.3,R*0.15,-0.55,0,6.3); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,.35)';
-  ctx.beginPath(); ctx.arc(R*0.42,-R*0.3,R*0.07,0,6.3); ctx.fill();
+  ctx.restore();
+}
+function glossyBall(R, color, dark){
+  ctx.fillStyle = ballGrad(R, color, dark);
+  ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
+  shade3d(R);
+  // ふちどりは引かない。線があると とたんに イラスト寄り・平たく見える
+  ballGloss(R);
 }
 
 /* 顔（まばたき・二重ハイライトの目・まつげ・グラデほっぺ） */
@@ -3471,8 +3576,7 @@ function drawTower(t){
   }
 
   // 影（ゆれても地面に残る）
-  ctx.fillStyle = 'rgba(120,90,120,.18)';
-  ctx.beginPath(); ctx.ellipse(x, y + R*1.0, R*0.85, R*0.28, 0, 0, 6.3); ctx.fill();
+  softShadow(x, y + R*1.02, R*0.8, .5);
 
   ctx.save(); ctx.translate(x, y + bob); ctx.scale(pop, pop);
 
@@ -3617,13 +3721,12 @@ function drawEnemy(e){
 
   ctx.save(); ctx.translate(p.x, p.y);
 
-  ctx.fillStyle = 'rgba(120,90,120,.16)';
-  ctx.beginPath(); ctx.ellipse(0, R*0.92, R*0.8, R*0.24, 0, 0, 6.3); ctx.fill();
+  // 角丸のからだ（おもち・ゴーレム）だと、影が横にはみ出して見えるので ひかえめの幅に
+  softShadow(0, R*0.97, R*0.62, .36);
 
   ctx.scale(1+sq, 1-sq);
 
-  const g = ctx.createRadialGradient(-R*0.3,-R*0.4,R*0.1, 0,0,R*1.15);
-  g.addColorStop(0,'#ffffff'); g.addColorStop(0.35,E.color); g.addColorStop(1,E.dark);
+  const g = ballGrad(R, E.color, E.dark);
 
   if (e.k === 'slime'){
     // すそがぷにぷに波打つスライム
@@ -3636,7 +3739,8 @@ function drawEnemy(e){
     ctx.quadraticCurveTo(-R*0.28, R*0.78-w, -R*0.55, R*0.6+w);
     ctx.quadraticCurveTo(-R*0.95, R*0.5, -R*0.92, -R*0.08);
     ctx.closePath(); ctx.fill();
-    ctx.globalAlpha = .7; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.07;
+    shade3d(R);
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     ctx.stroke(); ctx.globalAlpha = 1;
   } else if (e.k === 'fast'){
     // うさぎ耳がゆれる
@@ -3646,7 +3750,7 @@ function drawEnemy(e){
       ctx.rotate(s*(0.28 + Math.sin(e.wob)*0.14));
       ctx.fillStyle = g;
       ctx.beginPath(); ctx.ellipse(0, -R*0.32, R*0.2, R*0.56, 0, 0, 6.3); ctx.fill();
-      ctx.globalAlpha = .7; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.055;
+      ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.035;
       ctx.beginPath(); ctx.ellipse(0, -R*0.32, R*0.2, R*0.56, 0, 0, 6.3); ctx.stroke();
       ctx.globalAlpha = 1;
       ctx.fillStyle = 'rgba(255,175,205,.85)';
@@ -3655,13 +3759,15 @@ function drawEnemy(e){
     }
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
-    ctx.globalAlpha = .7; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.07;
+    shade3d(R);
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.stroke(); ctx.globalAlpha = 1;
   } else if (e.k === 'tank'){
     // おもちのようなまるしかく
     ctx.fillStyle = g;
     roundRect(-R, -R*0.85, R*2, R*1.72, R*0.6); ctx.fill();
-    ctx.globalAlpha = .7; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.07;
+    shade3d(R);
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     roundRect(-R, -R*0.85, R*2, R*1.72, R*0.6); ctx.stroke();
     ctx.globalAlpha = 1;
   } else if (e.k === 'crystal'){
@@ -3679,7 +3785,8 @@ function drawEnemy(e){
     }
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
-    ctx.globalAlpha = .7; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.07;
+    shade3d(R);
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.stroke(); ctx.globalAlpha = 1;
   } else if (e.k === 'bat'){
     // ぱたぱたのはね
@@ -3698,7 +3805,8 @@ function drawEnemy(e){
     }
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
-    ctx.globalAlpha = .7; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.07;
+    shade3d(R);
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.stroke(); ctx.globalAlpha = 1;
     // とがったみみ
     ctx.fillStyle = E.dark;
@@ -3713,7 +3821,8 @@ function drawEnemy(e){
     // とろけたチョコの大きなゴーレム
     ctx.fillStyle = g;
     roundRect(-R, -R*0.95, R*2, R*1.85, R*0.5); ctx.fill();
-    ctx.globalAlpha = .7; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.07;
+    shade3d(R);
+    ctx.globalAlpha = .1; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.04;
     roundRect(-R, -R*0.95, R*2, R*1.85, R*0.5); ctx.stroke();
     ctx.globalAlpha = 1;
     // あたまからたれるチョコ
@@ -3725,7 +3834,8 @@ function drawEnemy(e){
   } else {
     ctx.fillStyle = g;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.fill();
-    ctx.globalAlpha = .8; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.08;
+    shade3d(R);
+    ctx.globalAlpha = .12; ctx.strokeStyle = E.dark; ctx.lineWidth = R*0.045;
     ctx.beginPath(); ctx.arc(0,0,R,0,6.3); ctx.stroke(); ctx.globalAlpha = 1;
     // ボスのおうかん
     ctx.save(); ctx.translate(0, -R*1.0);
@@ -3740,8 +3850,7 @@ function drawEnemy(e){
   }
 
   // つや
-  ctx.fillStyle = 'rgba(255,255,255,.5)';
-  ctx.beginPath(); ctx.ellipse(-R*0.3,-R*0.44,R*0.28,R*0.13,-0.5,0,6.3); ctx.fill();
+  ballGloss(R);
 
   // 顔
   drawFace(R*0.95, e.ph, (e.k === 'boss' || e.k === 'golem') ? 'angry' : 'smile');
