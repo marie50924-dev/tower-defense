@@ -481,8 +481,9 @@ const maxHearts = () => 20 + (hasLg('whale') ? 2 : 0);
 const HEART_STOCK_MAX = 99;
 /* ふつうの回復はいつもの上限まで。すでにためた💗は絶対にへらさない */
 const healHearts = n => { hearts = Math.max(hearts, Math.min(maxHearts(), hearts + n)); };
-/* 2回目からの「つづきから」はライフ制：30分やすむと💗30もどってくる */
-const LIFE_WAIT_MS = 30*60*1000, LIFE_REFILL = 30;
+/* 💗をつかいきったらライフ制：LIFE_WAIT_MIN分やすむと💗LIFE_REFILLもどってくる
+   まち時間はここの数字だけ変えればOK（画面の「〇ぷん」表示も自動で連動する） */
+const LIFE_WAIT_MIN = 20, LIFE_WAIT_MS = LIFE_WAIT_MIN*60*1000, LIFE_REFILL = 30;
 function lifeReadyAt(){ try{ return +localStorage.getItem('sweetTD.lifeAt') || 0; }catch(e){ return 0; } }
 function setLifeReadyAt(t){ try{ t ? localStorage.setItem('sweetTD.lifeAt', String(t)) : localStorage.removeItem('sweetTD.lifeAt'); }catch(e){} }
 
@@ -1343,9 +1344,9 @@ function gameOver(){
     'もういちど ちょうせんしてみよう ✨';
   saveRun(Math.max(0, wave - 1));   // たおれたウェーブをやりなおせる状態で保存
   ovBtn.disabled = false;
-  // 💗をつかいきったら、いつも30分やすみのライフ制。30ぷんまつと💗30でそのウェーブから再開
+  // 💗をつかいきったら、いつもライフ制。LIFE_WAIT_MIN分まつと💗LIFE_REFILLでそのウェーブから再開
   if (!lifeReadyAt()) setLifeReadyAt(Date.now() + LIFE_WAIT_MS);
-  ovB.innerHTML += '<br><span style="opacity:.75">たくさんたたかったから ひとやすみ。<br>30ぷんまつと 💗' + LIFE_REFILL + 'で つづきができるよ</span>';
+  ovB.innerHTML += '<br><span style="opacity:.75">たくさんたたかったから ひとやすみ。<br>' + LIFE_WAIT_MIN + 'ぷんまつと 💗' + LIFE_REFILL + 'で つづきができるよ</span>';
   armLifeButton(false);
   ovAlt.textContent = 'さいしょから やりなおす';
   ovAlt.style.display = '';
@@ -1857,7 +1858,7 @@ function checkLife(){
   hearts = 0; syncHUD();   // 回復まちのあいだは💗0のまま見せる
   ovT.textContent = 'おかしの国は おやすみ中';
   ovB.innerHTML = 'ウェーブ <b>' + wave + '</b> から つづきができるよ。<br>' +
-    '<span style="opacity:.75">30ぷんまつと 💗30 もどってくるよ</span>';
+    '<span style="opacity:.75">' + LIFE_WAIT_MIN + 'ぷんまつと 💗' + LIFE_REFILL + ' もどってくるよ</span>';
   ovShare.style.display = 'none';
   ovAlt.textContent = 'さいしょから やりなおす';
   ovAlt.style.display = '';
@@ -1881,7 +1882,7 @@ function tryResume(){
   floatTx(COLS*CELL/2, ROWS*CELL/2, 'つづきから さいかい！', '#b98ae0');
   syncHUD();
 }
-/* ゲームオーバーからの「つづきから」：1回目は💗10ですぐ、2回目からは30分まって💗30
+/* ゲームオーバーからの「つづきから」：💗をつかいきったら LIFE_WAIT_MIN分まって 💗LIFE_REFILL で再開
    keepWave は起動時の再開用（保存の時点でウェーブがもどしてあるので、二重にもどさない） */
 function continueRun(refill, keepWave){
   over = false; running = false;
@@ -2109,7 +2110,7 @@ function buildHelp(){
     '<li>20ウェーブごとのクリアで なかまとハートがもらえるよ</li>' +
     '<li>ときどき<b>🎁ボーナスウェーブ</b>！ふってくるおかしを ぜんぶタップすると💗+3</li>' +
     '<li>もらった💗は <b>20をこえて ためられる</b>よ（99こまで）</li>' +
-    '<li>進行はじどうセーブ。💗がなくなったら <b>30ぷんやすむと💗30</b>で、そのウェーブから再挑戦できるよ</li>' +
+    '<li>進行はじどうセーブ。💗がなくなったら <b>' + LIFE_WAIT_MIN + 'ぷんやすむと💗' + LIFE_REFILL + '</b>で、そのウェーブから再挑戦できるよ</li>' +
     '<li>うわさでは、<b>ウェーブ60</b>で でんせつのなかまに会えるらしい…✨</li></ul></div>';
   h += '<div class="hSec"><h3>🔑 あいことば</h3>' +
     '<p>とくべつな「あいことば」を手に入れたら、メイン画面の<b>「🔑あいことば・きせかえ」</b>ボタンから入れてね。限定テーマがとどくよ🎁</p></div>';
