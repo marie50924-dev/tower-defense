@@ -2745,18 +2745,19 @@ function portraitShade(g, S){
   g.globalCompositeOperation = 'source-atop';
   // 左上からの光
   const lg = g.createRadialGradient(M-S*0.19, M-S*0.23, 0, M-S*0.05, M-S*0.05, S*0.56);
-  lg.addColorStop(0,'rgba(255,255,255,.44)');
-  lg.addColorStop(0.42,'rgba(255,255,255,.1)');
+  lg.addColorStop(0,'rgba(255,255,255,.66)');
+  lg.addColorStop(0.42,'rgba(255,255,255,.17)');
   lg.addColorStop(1,'rgba(255,255,255,0)');
   g.fillStyle = lg; g.fillRect(0,0,S,S);
   // 外にいくほど暗く。これで まるみが出る
-  const dg = g.createRadialGradient(M, M, S*0.2, M, M, S*0.52);
+  const dg = g.createRadialGradient(M, M, S*0.13, M, M, S*0.54);
   dg.addColorStop(0,'rgba(74,38,66,0)');
-  dg.addColorStop(1,'rgba(74,38,66,.38)');
+  dg.addColorStop(0.62,'rgba(74,38,66,.14)');
+  dg.addColorStop(1,'rgba(74,38,66,.52)');
   g.fillStyle = dg; g.fillRect(0,0,S,S);
   // 下からの照りかえし
   const bg = g.createRadialGradient(M+S*0.15, M+S*0.22, 0, M+S*0.09, M+S*0.15, S*0.4);
-  bg.addColorStop(0,'rgba(255,255,255,.34)');
+  bg.addColorStop(0,'rgba(255,255,255,.46)');
   bg.addColorStop(1,'rgba(255,255,255,0)');
   g.fillStyle = bg; g.fillRect(0,0,S,S);
   // つや。ぼんやりした光の中に つよい芯
@@ -2795,13 +2796,13 @@ function drawPortrait(g, id, S){
     g.arcTo(x,y+h,x,y,k);     g.arcTo(x,y,x+w,y,k);
     g.closePath();
   };
-  /* まるい体。光と かげは portraitShade があとから ぜんぶ まとめてのせるので、
-     ここでは 地の色のグラデだけにしておく（二重にかけると白とびする） */
+  /* まるい体。ここでは 単色でぬるだけにしておく。
+     立体感は portraitShade があとから ぜんぶの子に まとめてのせる。
+     ここでグラデを焼きこむと、この子たちだけ立体感が強くなって
+     他の形の子と差がついてしまう（dark はもう使わないが、
+     呼びだし側をぜんぶ書きかえないで済むよう 引数はのこしてある） */
   const ball = (x,y,r,col,dark) => {
-    const gr = g.createRadialGradient(x-r*0.34, y-r*0.42, r*0.04, x-r*0.05, y-r*0.05, r*1.2);
-    gr.addColorStop(0,'#fff'); gr.addColorStop(0.28,col);
-    gr.addColorStop(0.86,dark); gr.addColorStop(1,dark);
-    g.fillStyle = gr;
+    g.fillStyle = col;
     g.beginPath(); g.arc(x,y,r,0,TAU); g.fill();
   };
   const face = (x,y,r,mood) => {
