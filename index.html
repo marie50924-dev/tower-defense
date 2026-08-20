@@ -227,7 +227,7 @@
     </div>
     <div id="helpOv">
       <div id="colHeadH" style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pink-d)">
-        <div style="flex:1">📕 たたかいかたガイド</div>
+        <div style="flex:1"><span class="bookIc"></span> たたかいかたガイド</div>
         <button class="mini gray" id="helpClose">とじる</button>
       </div>
       <div id="helpBody"></div>
@@ -272,13 +272,13 @@
     <button class="btn" id="btnWave">つぎのウェーブ ▶</button>
     <button class="btn sm" id="btnSpd">1x</button>
     <button class="btn sm" id="btnCol">👑</button>
-    <button class="btn sm" id="btnHelp">📕</button>
+    <button class="btn sm" id="btnHelp" aria-label="たたかいかたガイド"><span class="bookIc big"></span></button>
     <button class="btn sm" id="btnSnd">♪</button>
   </div>
 
   <div id="pwRow"><button class="mini" id="btnPw"><span style="font-size:17px;line-height:.7">🔑</span> あいことば・きせかえ</button></div>
 
-  <div id="tip">ウェーブは自動でやってくる！ボタンで「はやよび」すると⭐ボーナス✨<br>たたかいかたは 📕 を見てね</div>
+  <div id="tip">ウェーブは自動でやってくる！ボタンで「はやよび」すると⭐ボーナス✨<br>たたかいかたは <span class="bookIc"></span> を見てね</div>
 
 </div>
 
@@ -2134,8 +2134,46 @@ async function shareScore(){
 ovShare.onclick = shareScore;
 $('colShare').onclick = shareScore;   // 図鑑からもいつでもシェアできる
 
+/* すこし開いた本。絵文字の📕はとじていて、📖は開きすぎなので じぶんで描く。
+   ページが手前にひらいて、中の紙が すこし見えている ぐらいの角度 */
+/* とじた本。おかしの子たちと同じ描きかたで、
+   グラデで丸みを出し、つやと 地面の影を入れてある。
+   グラデの id は 3か所にはめても かぶらないよう 通し番号にしている */
+let bookN = 0;
+const bookSvg = (n, st) => {
+  const i = 'bk' + (++bookN);
+  return '<svg viewBox="0 0 24 24" width="' + n + '" height="' + n + '" style="' + st + '">' +
+  '<defs>' +
+    '<linearGradient id="' + i + 'c" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#ffc2e0"/><stop offset=".38" stop-color="#ff8fc4"/>' +
+      '<stop offset="1" stop-color="#d4508a"/></linearGradient>' +
+    '<linearGradient id="' + i + 'p" x1="0" y1="0" x2="1" y2="1">' +
+      '<stop offset="0" stop-color="#fffdf8"/><stop offset="1" stop-color="#f0dcc6"/></linearGradient>' +
+  '</defs>' +
+  // 地面の影
+  '<ellipse cx="12.4" cy="21" rx="7.2" ry="1.4" fill="#7a5a78" opacity=".22"/>' +
+  // 紙のたば（右にすこしはみ出す）
+  '<path d="M8.4 3.8 h9.1 q1.2 0 1.2 1.2 v13.6 q0 1.2 -1.2 1.2 h-9.1 z" fill="url(#' + i + 'p)"/>' +
+  '<path d="M17.2 6.2 h1.2 M17.2 8.8 h1.2 M17.2 11.4 h1.2 M17.2 14 h1.2 M17.2 16.6 h1.2" ' +
+    'stroke="#e0cdb8" stroke-width=".5" stroke-linecap="round"/>' +
+  // 表紙
+  '<path d="M5.8 3 h10.4 q1.4 0 1.4 1.4 v14.2 q0 1.4 -1.4 1.4 h-10.4 z" fill="url(#' + i + 'c)"/>' +
+  // 背（左のこい帯）
+  '<path d="M5.8 3 q-1 0 -1 1 v14.9 q0 1.1 1 1.1 h1.8 v-17 z" fill="#c1487f"/>' +
+  // ふちのまわりこみ（右下をすこし暗くして 丸みを出す）
+  '<path d="M15.6 3 h.6 q1.4 0 1.4 1.4 v14.2 q0 1.4 -1.4 1.4 h-.6 z" fill="#7a2450" opacity=".16"/>' +
+  // つや
+  '<path d="M9.4 4.7 q3.1 -.7 5.3 .4 l-.9 2.1 q-2.1 -1 -4.9 -.4 z" fill="#fff" opacity=".42"/>' +
+  '<circle cx="9.2" cy="8.6" r=".55" fill="#fff" opacity=".3"/>' +
+  '</svg>';
+};
+for (const el of document.querySelectorAll('.bookIc'))
+  el.innerHTML = el.classList.contains('big')
+    ? bookSvg(25, 'display:block;margin:-4px auto')
+    : bookSvg(21, 'display:inline-block;vertical-align:middle;margin:-8px 0');
+
 /* ==========================================================
-   たたかいかたガイド（📕ボタン）
+   たたかいかたガイド（本のボタン）
    ========================================================== */
 const helpOv = $('helpOv'), helpBody = $('helpBody'), btnHelp = $('btnHelp'), helpClose = $('helpClose');
 const TOWER_TIPS = {
