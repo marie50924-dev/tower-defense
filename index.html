@@ -2815,19 +2815,40 @@ function drawPortrait(g, id, S){
     g.fillStyle = col;
     g.beginPath(); g.arc(x,y,r,0,TAU); g.fill();
   };
+  /* 顔。盤面のおかしと同じ作りこみにしてある
+     （グラデのほっぺ・白目・大小2つのハイライト・まつげ）。
+     図鑑を開いたとき、盤面で見ている子と同じ顔に見えるように */
   const face = (x,y,r,mood) => {
-    g.fillStyle = 'rgba(255,120,165,.4)';
-    for (const s of [-1,1]){ g.beginPath(); g.arc(x+s*r*0.5, y+r*0.18, r*0.16, 0, TAU); g.fill(); }
+    // ほっぺ。ふちがぼけていると やわらかい
+    for (const s of [-1,1]){
+      const ch = g.createRadialGradient(x+s*r*0.5, y+r*0.19, 0, x+s*r*0.5, y+r*0.19, r*0.23);
+      ch.addColorStop(0,'rgba(255,120,165,.5)');
+      ch.addColorStop(1,'rgba(255,120,165,0)');
+      g.fillStyle = ch;
+      g.beginPath(); g.arc(x+s*r*0.5, y+r*0.19, r*0.23, 0, TAU); g.fill();
+    }
     if (mood === 'angry'){
       g.strokeStyle = '#4a3348'; g.lineWidth = r*0.08; g.lineCap = 'round';
       for (const s of [-1,1]){
         g.beginPath(); g.moveTo(x+s*r*0.44, y-r*0.42); g.lineTo(x+s*r*0.15, y-r*0.29); g.stroke();
       }
     }
-    g.fillStyle = '#503a52';
-    for (const s of [-1,1]){ g.beginPath(); g.ellipse(x+s*r*0.26, y-r*0.05, r*0.09, r*0.13, 0, 0, TAU); g.fill(); }
-    g.fillStyle = '#fff';
-    for (const s of [-1,1]){ g.beginPath(); g.arc(x+s*r*0.22, y-r*0.1, r*0.045, 0, TAU); g.fill(); }
+    for (const s of [-1,1]){
+      // 白目 → ひとみ → ハイライト大小 の順にかさねると、目にうるおいが出る
+      g.fillStyle = '#fff';
+      g.beginPath(); g.ellipse(x+s*r*0.27, y-r*0.05, r*0.145, r*0.185, 0, 0, TAU); g.fill();
+      g.fillStyle = '#503a52';
+      g.beginPath(); g.ellipse(x+s*r*0.27, y-r*0.03, r*0.1, r*0.14, 0, 0, TAU); g.fill();
+      g.fillStyle = '#fff';
+      g.beginPath(); g.arc(x+s*r*0.23, y-r*0.1, r*0.048, 0, TAU); g.fill();
+      g.beginPath(); g.arc(x+s*r*0.32, y+r*0.02, r*0.024, 0, TAU); g.fill();
+      // まつげ
+      g.strokeStyle = '#503a52'; g.lineWidth = r*0.042; g.lineCap = 'round';
+      g.beginPath();
+      g.moveTo(x+s*r*0.40, y-r*0.16);
+      g.lineTo(x+s*r*0.48, y-r*0.23);
+      g.stroke();
+    }
     g.strokeStyle = '#503a52'; g.lineWidth = r*0.06; g.lineCap = 'round';
     if (mood === 'angry'){
       g.beginPath(); g.arc(x, y+r*0.38, r*0.13, Math.PI*1.15, Math.PI*1.85); g.stroke();
