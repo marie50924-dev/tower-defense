@@ -109,8 +109,12 @@
     box-shadow:0 4px 0 var(--pink-d), 0 6px 16px rgba(224,95,158,.3);cursor:pointer;
   }
   .btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--pink-d)}
-  .btn.sm{flex:0 0 50px;font-size:17.5px;line-height:1.03;background:linear-gradient(180deg,#c9b6ff,#a586f5);box-shadow:0 4px 0 #7d5fd0}
+  .btn.sm{flex:0 0 50px;font-size:17.5px;line-height:1.03;
+    display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#c9b6ff,#a586f5);box-shadow:0 4px 0 #7d5fd0}
   .btn.sm:active{box-shadow:0 1px 0 #7d5fd0}
+  /* ♪ は絵文字なので、font-size で大きくする。
+     line-height をつめて、ボタンの高さは ほかとそろえたまま */
+  #btnSnd{font-size:25px;line-height:.72}
   .btn:disabled{opacity:.45}
 
   /* ---------- overlay ---------- */
@@ -608,6 +612,18 @@ function posAt(d){
    サウンド
    ========================================================== */
 let actx = null, sndOn = true;
+/* iPhoneでは、画面をさわる前に音の箱（AudioContext）を作ると
+   とまったまま（suspended）になって、あとから鳴らなくなることがある。
+   さわるたびに 起こしなおして、確実に音が出るようにしておく。
+   すでに動いていれば なにもしないので、毎回よんでも重くない */
+function wakeAudio(){
+  try{
+    if (!actx) actx = new (window.AudioContext||window.webkitAudioContext)();
+    if (actx.state !== 'running') actx.resume();
+  }catch(e){}
+}
+for (const ev of ['pointerdown','touchend'])
+  document.addEventListener(ev, wakeAudio, { capture:true, passive:true });
 function beep(f, dur, type='sine', vol=0.05, slide=1.4){
   if (!sndOn) return;
   try{
