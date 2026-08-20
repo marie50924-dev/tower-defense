@@ -65,10 +65,9 @@
   .tw.sel{border-color:var(--pink);background:#fff;box-shadow:0 0 0 3px rgba(255,143,196,.28)}
   .tw.poor{opacity:.42}
   /* 絵の枠は高さを決めうちにして、まんなかにおく。
-     こうしておくと 絵ごとに大きさを変えても、下の名前とねだんの位置がずれない */
-  .tw .ic{font-size:27px;height:33px;display:flex;align-items:center;justify-content:center}
-  /* 飴の絵はまわりのあきが多くて、同じ大きさだと丸い部分が小さく見えるので足す */
-  .tw[data-k="candy"] .ic{font-size:33px}
+     こうしておくと 中の絵の大きさを変えても、下の名前とねだんの位置がずれない */
+  .tw .ic{height:42px;display:flex;align-items:center;justify-content:center}
+  .tw .ic canvas{display:block}
   .tw .nm{font-size:10.5px}
   .tw .cs{font-size:11px;color:var(--pink-d)}
 
@@ -228,7 +227,7 @@
     </div>
     <div id="helpOv">
       <div id="colHeadH" style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pink-d)">
-        <div style="flex:1">❓ たたかいかたガイド</div>
+        <div style="flex:1">📕 たたかいかたガイド</div>
         <button class="mini gray" id="helpClose">とじる</button>
       </div>
       <div id="helpBody"></div>
@@ -273,13 +272,13 @@
     <button class="btn" id="btnWave">つぎのウェーブ ▶</button>
     <button class="btn sm" id="btnSpd">1x</button>
     <button class="btn sm" id="btnCol">👑</button>
-    <button class="btn sm" id="btnHelp">❓</button>
+    <button class="btn sm" id="btnHelp">📕</button>
     <button class="btn sm" id="btnSnd">♪</button>
   </div>
 
   <div id="pwRow"><button class="mini" id="btnPw"><span style="font-size:17px;line-height:.7">🔑</span> あいことば・きせかえ</button></div>
 
-  <div id="tip">ウェーブは自動でやってくる！ボタンで「はやよび」すると⭐ボーナス✨<br>たたかいかたは ❓ を見てね</div>
+  <div id="tip">ウェーブは自動でやってくる！ボタンで「はやよび」すると⭐ボーナス✨<br>たたかいかたは 📕 を見てね</div>
 
 </div>
 
@@ -748,8 +747,10 @@ function buildShop(){
     const d = document.createElement('div');
     d.className = 'tw';
     d.dataset.k = k;
-    d.innerHTML = `<div class="ic">${T.ic}</div><div class="nm">${T.name}</div>` +
+    // 絵は図鑑と同じ顔つきイラスト（tw_ の似顔絵）。絵文字だと図鑑と別人に見えるため
+    d.innerHTML = `<div class="ic"></div><div class="nm">${T.name}</div>` +
       `<div class="cs">⭐${T.cost}<span class="twC"></span></div>`;
+    d.querySelector('.ic').append(charThumb({ pid: 'tw_' + k }, 46));
     d.onclick = () => {
       selTower = null; closeInfo();
       selTool = (selTool === k) ? null : k;
@@ -1069,8 +1070,9 @@ function endBonus(){
     syncHUD();
     saveRun();                                        // ためた💗をすぐ保存して、とじても消えないように
     // おうじさまとおひめさまが お祝いにかけつける
+    // 2人とも ふきだしを出すので、かさならないよう 間をひろめにとる
     paraders.push({ pid:'prince', x:-CELL*1.2, y:ROWS*CELL - CELL*0.85, vx:CELL*2.1, ph:0,   msg:'やったね！' });
-    paraders.push({ pid:'apple',  x:-CELL*3.0, y:ROWS*CELL - CELL*0.85, vx:CELL*2.1, ph:2.2, msg:'💗をプレゼントします' });
+    paraders.push({ pid:'apple',  x:-CELL*5.0, y:ROWS*CELL - CELL*0.85, vx:CELL*2.1, ph:2.2, msg:'💗をプレゼントします' });
     floatTx(COLS*CELL/2, ROWS*CELL*0.4, 'パーフェクト！💗+1', '#ff6f9c');
     celebrate({ rays: 2.5, conf: 90, rings: true, fanfare: 1 });
   }
@@ -1092,9 +1094,11 @@ const CHEERS = ['やったね！','すごーい！','さすが✨','おめでと
 function parade(all){
   const got = dexList().filter(o => o.cat === 'ch' && (all || dex[o.id])).map(o => o.pid);
   got.slice(0, 8).forEach((pid, i) => {
+    // ふきだしは3体おきだけ。ぜんいんに出すと 横にならんで つぶし合って読めない。
+    // のこりの子は だまって歩く（にぎやかさは そのままで、文字だけ読みやすくなる）
     paraders.push({ pid, x: -CELL*(1.2 + i*1.4), y: ROWS*CELL - CELL*0.85,
                     vx: CELL*2.4, ph: Math.random()*6.3,
-                    msg: CHEERS[(Math.random()*CHEERS.length)|0] });
+                    msg: (i % 3 === 0) ? CHEERS[(Math.random()*CHEERS.length)|0] : '' });
   });
 }
 /* ボス撃破などで、ひとりだけぴょこっと出てくる */
@@ -2131,7 +2135,7 @@ ovShare.onclick = shareScore;
 $('colShare').onclick = shareScore;   // 図鑑からもいつでもシェアできる
 
 /* ==========================================================
-   たたかいかたガイド（❓ボタン）
+   たたかいかたガイド（📕ボタン）
    ========================================================== */
 const helpOv = $('helpOv'), helpBody = $('helpBody'), btnHelp = $('btnHelp'), helpClose = $('helpClose');
 const TOWER_TIPS = {
@@ -2814,6 +2818,8 @@ function drawPortrait(g, id, S){
     g.fillStyle = col;
     g.beginPath(); g.arc(x,y,r,0,TAU); g.fill();
   };
+  /* 顔。図鑑のカードは小さいので、点の目とシンプルなほっぺで
+     やさしい見た目にしてある（盤面のおかしはもっと作りこんだ顔） */
   const face = (x,y,r,mood) => {
     g.fillStyle = 'rgba(255,120,165,.4)';
     for (const s of [-1,1]){ g.beginPath(); g.arc(x+s*r*0.5, y+r*0.18, r*0.16, 0, TAU); g.fill(); }
