@@ -1808,6 +1808,13 @@ function buildPick(){
       '<div class="pkS">' + T.role + '<br>こうげき' + T.dmg + '・はんい' + T.range.toFixed(1) +
       (o.cells >= 4 ? '・2×2' : '') + '</div>');
     d.onclick = () => {
+      // ⭐が たりないのに えらべてしまうと、おけると おもって タップしてしまう
+      if (stars < T.cost){
+        beep(160,.09,'square',.03,.7);
+        pickHint.innerHTML = 'おほしさまが たりない…（' + o.name + 'は ⭐' + T.cost + '）<br>' +
+          'あと ⭐' + (T.cost - stars) + ' ためよう';
+        return;
+      }
       selTool = o.id; selTower = null;
       pickOv.classList.remove('on');
       syncShop(); beep(700,.08,'triangle',.04);
@@ -1967,7 +1974,13 @@ function boardTap(px, py){
   }
 
   const T = TOWERS[selTool];
-  if (stars < T.cost){ beep(160,.09,'square',.03,.7); return; }
+  if (stars < T.cost){
+    // だまって いると「タップが きいていない」と おもわれる
+    beep(160,.09,'square',.03,.7);
+    floatTx(cx(c), cy(r) - CELL*0.9,
+            'おほしさまが たりない（⭐' + T.cost + '）', '#e06f9c');
+    return;
+  }
 
   stars -= T.cost;
   towers.push({ k:selTool, c, r, lv:1, cd:0, ang:-Math.PI/2, pulse:1, ph:Math.random()*6.3 });
