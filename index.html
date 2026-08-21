@@ -1329,6 +1329,9 @@ function avBuildRows(){
       box.append(b);
     });
     r.append(box); avRows.append(r);
+    // えらんでいる ものが 右の ほうに あると 見えない。ひらいたとき 中へ よせる
+    const sel = box.querySelector('.sel');
+    if (sel) box.scrollLeft = Math.max(0, sel.offsetLeft - box.clientWidth/2 + sel.offsetWidth/2);
   }
 }
 function avBuildFriends(){
@@ -5486,14 +5489,19 @@ function buildRoster(){
    えらんだものは 1もじずつの キーで もつ。
    あいことばに して LINEで おくるので、みじかいほど よい。
    ========================================================== */
-const AV_SKIN  = ['#ffe0cc','#ffd2b0','#f0bd92','#d99b6e','#a9714b'];
-const AV_HAIRC = ['#4a3a3a','#7a5230','#c98a44','#f0d090','#ff8fc4','#c9a7ff','#8fd8ff','#fdfaff'];
-const AV_WEARC = ['#ff8fc4','#c9a7ff','#8fe3c4','#9ed8ff','#ffd76e','#fff6e9','#ffa8c8','#b0e0d0'];
-const AV_HAIR  = ['ショート','ロング','ツインテール','おだんご','ポニーテール','くるくる','みつあみ','うしろがみ'];
-const AV_EYE   = ['まる','にこ','きらきら','おすまし','うるうる'];
-const AV_MOUTH = ['にこ','ちいさい','わらい','おすまし'];
-const AV_WEAR  = ['ワンピース','パーカー','セーラー','ドレス','まほうのローブ','パジャマ'];
-const AV_ACC   = ['なし','リボン','ぼうし','めがね','かんむり','ねこみみ','ヘッドホン'];
+const AV_SKIN  = ['#fff0e4','#ffe0cc','#ffd2b0','#f0bd92','#d99b6e','#a9714b','#7d5236'];
+const AV_HAIRC = ['#4a3a3a','#2f2f3a','#7a5230','#c98a44','#f0d090','#fff0c0',
+                  '#ff8fc4','#e8506f','#c9a7ff','#8fd8ff','#8fe3c4','#fdfaff'];
+const AV_WEARC = ['#ff8fc4','#e8506f','#c9a7ff','#8f6fd8','#8fe3c4','#9ed8ff',
+                  '#ffd76e','#fff6e9','#ffa8c8','#b0e0d0','#5f7ab0','#4a4450'];
+const AV_HAIR  = ['ショート','ロング','ツインテール','おだんご','ポニーテール','くるくる','みつあみ','うしろがみ',
+                  'ぱっつん','ボブ','サイドテール','ドリル','はねっけ','アップ'];
+const AV_EYE   = ['まる','にこ','きらきら','おすまし','うるうる','ウインク','ハート','ねむい'];
+const AV_MOUTH = ['にこ','ちいさい','わらい','おすまし','べー','にっこり','ハート'];
+const AV_WEAR  = ['ワンピース','パーカー','セーラー','ドレス','まほうのローブ','パジャマ',
+                  'きもの','Tシャツ','コート','チュチュ','スポーツ','エプロン'];
+const AV_ACC   = ['なし','リボン','ぼうし','めがね','かんむり','ねこみみ','ヘッドホン',
+                  'ヘアピン','おはな','てんしのわ','うさみみ','マフラー'];
 
 const avDefault = () => ({ n:'', s:0, h:0, hc:0, e:0, m:0, w:0, wc:0, a:0 });
 
@@ -5536,11 +5544,46 @@ function drawAvatar(g, S, av){
   } else if (H === 6){                    // みつあみ
     for (const s of [-1,1]) for (let i=0;i<3;i++)
       avHairBlob(g, M + s*R*1.1, hy + R*(0.46 + i*0.56), R*0.27, R*0.32, 0);
+  } else if (H === 8){                    // ぱっつん：かたに つく まっすぐな かみ
+    g.beginPath();
+    g.moveTo(M - R*1.02, hy);
+    g.lineTo(M - R*1.02, hy + R*1.34);
+    g.quadraticCurveTo(M, hy + R*1.56, M + R*1.02, hy + R*1.34);
+    g.lineTo(M + R*1.02, hy);
+    g.closePath(); g.fill();
+  } else if (H === 9){                    // ボブ：あごの あたりで まるく
+    g.beginPath();
+    g.moveTo(M - R*1.04, hy);
+    g.bezierCurveTo(M - R*1.14, hy + R*0.8, M - R*0.8, hy + R*1.12, M, hy + R*1.14);
+    g.bezierCurveTo(M + R*0.8, hy + R*1.12, M + R*1.14, hy + R*0.8, M + R*1.04, hy);
+    g.closePath(); g.fill();
+  } else if (H === 10){                   // サイドテール：かた がわだけ
+    avHairBlob(g, M + R*1.22, hy + R*0.3, R*0.42, R*0.66, 0.34);
+    avHairBlob(g, M + R*1.42, hy + R*1.1, R*0.34, R*0.56, 0.2);
+    avHairBlob(g, M + R*1.5,  hy + R*1.78, R*0.26, R*0.4, 0.1);
+  } else if (H === 11){                   // ドリル：まきげ（まるを らせんに）
+    for (const s of [-1,1]) for (let i=0;i<4;i++){
+      const t = i/3;
+      avHairBlob(g, M + s*R*(1.1 + Math.sin(i*1.9)*0.16), hy + R*(0.4 + i*0.5),
+                 R*(0.4 - t*0.13), R*(0.4 - t*0.13), 0);
+    }
+  } else if (H === 12){                   // はねっけ：えりあしが そとへ はねる
+    for (const s of [-1,1]){
+      g.beginPath();
+      g.moveTo(M + s*R*0.7, hy + R*0.2);
+      g.quadraticCurveTo(M + s*R*1.5, hy + R*0.66, M + s*R*1.44, hy + R*1.02);
+      g.quadraticCurveTo(M + s*R*1.06, hy + R*0.7, M + s*R*0.6, hy + R*0.7);
+      g.closePath(); g.fill();
+    }
+  } else if (H === 13){                   // アップ：まとめた かみが 上に
+    avHairBlob(g, M, hy - R*1.12, R*0.58, R*0.5, 0);
+    for (const s of [-1,1])               // おくれ毛
+      avHairBlob(g, M + s*R*1.0, hy + R*0.44, R*0.2, R*0.5, s*0.16);
   }
 
   /* ---- からだ（ふく）---- */
   g.fillStyle = wear;
-  if (W === 3 || W === 4){                // ドレス・ローブ：すそが ひろがる
+  if (W === 3 || W === 4 || W === 6 || W === 9){   // ドレス・ローブ・きもの・チュチュ：すそが ひろがる
     g.beginPath();
     g.moveTo(M - R*0.52, by - R*0.8);
     g.bezierCurveTo(M - R*0.68, by + R*0.1, M - R*1.0, by + R*0.5, M - R*1.1, by + R*0.82);
@@ -5580,6 +5623,68 @@ function drawAvatar(g, S, av){
     g.save(); gRR(g, M - R*0.7, by - R*0.84, R*1.4, R*1.5, R*0.4); g.clip();
     for (let i=-1;i<=4;i++){ gRR(g, M - R*0.7, by - R*0.6 + i*R*0.3, R*1.4, R*0.13, R*0.065); g.fill(); }
     g.restore();
+  } else if (W === 6){                    // きもの：あわせと おび
+    g.fillStyle = 'rgba(255,255,255,.85)';
+    g.beginPath();                        // えりの あわせ
+    g.moveTo(M - R*0.44, by - R*0.72); g.lineTo(M, by - R*0.1);
+    g.lineTo(M + R*0.44, by - R*0.72); g.lineTo(M + R*0.2, by - R*0.8);
+    g.lineTo(M, by - R*0.36); g.lineTo(M - R*0.2, by - R*0.8);
+    g.closePath(); g.fill();
+    g.fillStyle = '#e8506f';              // おび
+    gRR(g, M - R*0.62, by - R*0.06, R*1.24, R*0.3, R*0.08); g.fill();
+    g.fillStyle = '#ffd76e';              // おびじめ
+    gRR(g, M - R*0.62, by + R*0.06, R*1.24, R*0.08, R*0.04); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.4)';  // すそもよう
+    for (const [dx,dy] of [[-0.5,0.6],[0.1,0.76],[0.56,0.58]]){
+      g.beginPath(); g.arc(M + R*dx, by + R*dy, R*0.11, 0, GTAU); g.fill();
+    }
+  } else if (W === 7){                    // Tシャツ：むねに ほし
+    g.fillStyle = 'rgba(255,255,255,.9)';
+    gspark(g, M, by - R*0.2, R*0.3, 0.5, 'rgba(255,255,255,.95)');
+    g.fillStyle = 'rgba(120,90,120,.16)';  // そでの きれめ
+    for (const s2 of [-1,1]){
+      gRR(g, M + s2*R*0.58 - R*0.05, by - R*0.7, R*0.1, R*0.44, R*0.05); g.fill();
+    }
+  } else if (W === 8){                    // コート：まえあきと ボタン
+    g.strokeStyle = 'rgba(120,90,120,.3)'; g.lineWidth = R*0.05;
+    g.beginPath(); g.moveTo(M, by - R*0.8); g.lineTo(M, by + R*0.62); g.stroke();
+    g.fillStyle = 'rgba(255,255,255,.85)';
+    for (let i=0;i<3;i++){
+      g.beginPath(); g.arc(M + R*0.14, by - R*0.5 + i*R*0.38, R*0.08, 0, GTAU); g.fill();
+    }
+    g.fillStyle = 'rgba(255,255,255,.55)';  // おおきな えり
+    g.beginPath();
+    g.moveTo(M - R*0.6, by - R*0.84); g.lineTo(M, by - R*0.3); g.lineTo(M + R*0.6, by - R*0.84);
+    g.closePath(); g.fill();
+  } else if (W === 9){                    // チュチュ：ふわふわの すそ
+    g.fillStyle = 'rgba(255,255,255,.55)';
+    for (let i=-3;i<=3;i++){
+      g.beginPath();
+      g.ellipse(M + R*i*0.3, by + R*0.72, R*0.28, R*0.2, 0, 0, GTAU); g.fill();
+    }
+    g.fillStyle = 'rgba(255,255,255,.9)';   // むねの リボン
+    g.beginPath(); g.arc(M, by - R*0.34, R*0.11, 0, GTAU); g.fill();
+  } else if (W === 10){                   // スポーツ：そでの ライン
+    g.fillStyle = 'rgba(255,255,255,.85)';
+    for (const s2 of [-1,1]){
+      gRR(g, M + s2*R*0.56 - R*0.04, by - R*0.72, R*0.08, R*0.9, R*0.04); g.fill();
+    }
+    gRR(g, M - R*0.7, by + R*0.14, R*1.4, R*0.1, R*0.05); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.5)';
+    g.beginPath(); g.arc(M, by - R*0.42, R*0.14, 0, GTAU); g.fill();
+  } else if (W === 11){                   // エプロン
+    g.fillStyle = 'rgba(255,255,255,.9)';
+    g.beginPath();
+    g.moveTo(M - R*0.3, by - R*0.74); g.lineTo(M + R*0.3, by - R*0.74);
+    g.lineTo(M + R*0.36, by - R*0.1); g.lineTo(M + R*0.5, by + R*0.62);
+    g.lineTo(M - R*0.5, by + R*0.62); g.lineTo(M - R*0.36, by - R*0.1);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(120,90,120,.22)'; g.lineWidth = R*0.05;
+    g.beginPath(); g.moveTo(M - R*0.5, by - R*0.08); g.lineTo(M + R*0.5, by - R*0.08); g.stroke();
+    g.fillStyle = '#ff8fa8';               // こしの リボン
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.ellipse(M + s2*R*0.16, by - R*0.08, R*0.12, R*0.08, s2*0.4, 0, GTAU); g.fill();
+    }
   }
   /* うで */
   g.fillStyle = wear;
@@ -5625,6 +5730,8 @@ function drawAvatar(g, S, av){
   } else if (H === 3){                    // おだんご
     avHairBlob(g, M, hy - R*0.16, R*1.06, R*0.88, 0);
     avHairBlob(g, M, hy - R*1.16, R*0.44, R*0.42, 0);
+  } else if (H === 11){                   // ドリル：てっぺんも ふんわり
+    avHairBlob(g, M, hy - R*0.2, R*1.08, R*0.94, 0);
   } else {
     avHairBlob(g, M, hy - R*0.14, R*1.06, R*0.9, 0);
   }
@@ -5634,11 +5741,22 @@ function drawAvatar(g, S, av){
   /* ひたいの まえがみ。かおの 上がわに ゆるく かける */
   g.fillStyle = hair;
   g.beginPath();
-  g.moveTo(M - R*0.86, hy - R*0.2);
-  g.quadraticCurveTo(M - R*0.5, hy + R*0.24, M - R*0.16, hy - R*0.06);
-  g.quadraticCurveTo(M + R*0.2, hy + R*0.3, M + R*0.56, hy - R*0.1);
-  g.quadraticCurveTo(M + R*0.78, hy + R*0.1, M + R*0.86, hy - R*0.2);
-  g.lineTo(M + R*0.86, hy - R*0.7); g.lineTo(M - R*0.86, hy - R*0.7);
+  if (H === 8 || H === 9){                // ぱっつん・ボブ：まっすぐ そろえた まえがみ
+    g.moveTo(M - R*0.88, hy - R*0.06);
+    g.quadraticCurveTo(M, hy + R*0.06, M + R*0.88, hy - R*0.06);
+    g.lineTo(M + R*0.88, hy - R*0.7); g.lineTo(M - R*0.88, hy - R*0.7);
+  } else if (H === 13){                   // アップ：ひたいを ひろく 見せる
+    g.moveTo(M - R*0.86, hy - R*0.3);
+    g.quadraticCurveTo(M - R*0.2, hy + R*0.06, M + R*0.5, hy - R*0.34);
+    g.quadraticCurveTo(M + R*0.76, hy - R*0.2, M + R*0.86, hy - R*0.4);
+    g.lineTo(M + R*0.86, hy - R*0.7); g.lineTo(M - R*0.86, hy - R*0.7);
+  } else {
+    g.moveTo(M - R*0.86, hy - R*0.2);
+    g.quadraticCurveTo(M - R*0.5, hy + R*0.24, M - R*0.16, hy - R*0.06);
+    g.quadraticCurveTo(M + R*0.2, hy + R*0.3, M + R*0.56, hy - R*0.1);
+    g.quadraticCurveTo(M + R*0.78, hy + R*0.1, M + R*0.86, hy - R*0.2);
+    g.lineTo(M + R*0.86, hy - R*0.7); g.lineTo(M - R*0.86, hy - R*0.7);
+  }
   g.closePath(); g.fill();
   /* かみの つや（左上からの ひかり）*/
   g.fillStyle = 'rgba(255,255,255,.28)';
@@ -5648,20 +5766,40 @@ function drawAvatar(g, S, av){
   const fy = hy + R*0.16, ex = R*0.38, er = R*0.19;
   g.fillStyle = '#4a3a4a';
   const E = av.e % AV_EYE.length;
+  const shut = (x) => {                    // とじた目（にこ・ウインクで つかう）
+    g.strokeStyle = '#4a3a4a'; g.lineWidth = R*0.09; g.lineCap='round';
+    g.beginPath(); g.arc(x, fy + er*0.4, er*0.9, Math.PI*1.15, Math.PI*1.85); g.stroke();
+  };
   for (const s of [-1,1]){
     const x = M + s*ex;
-    if (E === 1){                          // にこ（へのじ）
-      g.strokeStyle = '#4a3a4a'; g.lineWidth = R*0.09; g.lineCap='round';
-      g.beginPath(); g.arc(x, fy + er*0.4, er*0.9, Math.PI*1.15, Math.PI*1.85); g.stroke();
-      continue;
+    if (E === 1 || (E === 5 && s > 0)){    // にこ／ウインク（右だけ とじる）
+      shut(x); continue;
     }
     if (E === 3){                          // おすまし（ほそめ）
       g.fillStyle = '#4a3a4a';
       gRR(g, x - er*0.9, fy - er*0.22, er*1.8, er*0.44, er*0.22); g.fill();
       continue;
     }
+    if (E === 6){                          // ハートの ひとみ
+      g.fillStyle = '#ff5f8a';
+      g.beginPath();
+      g.moveTo(x, fy + er*1.0);
+      g.bezierCurveTo(x - er*1.3, fy + er*0.1, x - er*0.7, fy - er*1.0, x, fy - er*0.3);
+      g.bezierCurveTo(x + er*0.7, fy - er*1.0, x + er*1.3, fy + er*0.1, x, fy + er*1.0);
+      g.closePath(); g.fill();
+      g.fillStyle = '#ffffff';
+      g.beginPath(); g.arc(x - er*0.34, fy - er*0.24, er*0.26, 0, GTAU); g.fill();
+      continue;
+    }
     g.fillStyle = '#4a3a4a';
     g.beginPath(); g.ellipse(x, fy, er*(E===4?1.0:0.86), er*(E===4?1.2:1.05), 0, 0, GTAU); g.fill();
+    if (E === 7){                          // ねむい：上まぶたを かぶせる
+      g.fillStyle = skin;
+      g.beginPath(); g.ellipse(x, fy - er*0.9, er*1.3, er*0.9, 0, 0, GTAU); g.fill();
+      g.strokeStyle = '#4a3a4a'; g.lineWidth = R*0.06; g.lineCap='round';
+      g.beginPath(); g.moveTo(x - er*0.9, fy - er*0.2); g.lineTo(x + er*0.9, fy - er*0.28); g.stroke();
+      continue;
+    }
     g.fillStyle = '#ffffff';               // ハイライト（かならず 入れる）
     g.beginPath(); g.arc(x - er*0.3, fy - er*0.36, er*0.34, 0, GTAU); g.fill();
     if (E === 2 || E === 4){
@@ -5684,7 +5822,24 @@ function drawAvatar(g, S, av){
     g.beginPath(); g.ellipse(M, my, R*0.19, R*0.15, 0, 0, GTAU); g.fill();
     g.fillStyle = '#ffd0dc';
     g.beginPath(); g.ellipse(M, my + R*0.05, R*0.11, R*0.07, 0, 0, GTAU); g.fill();
-  } else { g.beginPath(); g.moveTo(M - R*0.11, my); g.lineTo(M + R*0.11, my); g.stroke(); }
+  } else if (MO === 3){ g.beginPath(); g.moveTo(M - R*0.11, my); g.lineTo(M + R*0.11, my); g.stroke(); }
+  else if (MO === 4){                      // べー（したを 出す）
+    g.beginPath(); g.arc(M, my - R*0.06, R*0.16, 0.25, Math.PI-0.25); g.stroke();
+    g.fillStyle = '#ff8fa8';
+    g.beginPath(); g.ellipse(M + R*0.06, my + R*0.12, R*0.1, R*0.09, 0.2, 0, GTAU); g.fill();
+  } else if (MO === 5){                    // にっこり（口を あけて わらう）
+    g.fillStyle = '#c05f7a';
+    g.beginPath(); g.arc(M, my - R*0.06, R*0.2, 0.12, Math.PI-0.12); g.closePath(); g.fill();
+    g.fillStyle = '#ffffff';
+    gRR(g, M - R*0.16, my - R*0.07, R*0.32, R*0.07, R*0.03); g.fill();
+  } else {                                 // ハートの くち
+    g.fillStyle = '#ff5f8a';
+    g.beginPath();
+    g.moveTo(M, my + R*0.14);
+    g.bezierCurveTo(M - R*0.2, my - R*0.02, M - R*0.1, my - R*0.14, M, my - R*0.04);
+    g.bezierCurveTo(M + R*0.1, my - R*0.14, M + R*0.2, my - R*0.02, M, my + R*0.14);
+    g.closePath(); g.fill();
+  }
 
   /* ---- かざり ---- */
   if (A === 1){                            // リボン
@@ -5741,6 +5896,51 @@ function drawAvatar(g, S, av){
     for (const s of [-1,1]){
       gRR(g, M + s*R*1.06 - R*0.19, hy - R*0.22, R*0.38, R*0.56, R*0.16); g.fill();
     }
+  } else if (A === 7){                     // ヘアピン
+    g.fillStyle = '#ffd76e';
+    for (let i=0;i<2;i++){
+      g.save();
+      g.translate(M - R*0.56, hy - R*0.34 + i*R*0.22); g.rotate(-0.5);
+      gRR(g, -R*0.22, -R*0.045, R*0.44, R*0.09, R*0.045); g.fill();
+      g.restore();
+    }
+    g.fillStyle = '#ff8fa8';
+    g.beginPath(); g.arc(M - R*0.74, hy - R*0.3, R*0.09, 0, GTAU); g.fill();
+  } else if (A === 8){                     // おはな
+    g.fillStyle = '#ff8fa8';
+    for (let i=0;i<5;i++){
+      const a2 = i*GTAU/5 - 1.2;
+      g.beginPath();
+      g.ellipse(M + R*0.66 + Math.cos(a2)*R*0.14, hy - R*0.56 + Math.sin(a2)*R*0.14,
+                R*0.12, R*0.09, a2, 0, GTAU); g.fill();
+    }
+    g.fillStyle = '#ffd76e';
+    g.beginPath(); g.arc(M + R*0.66, hy - R*0.56, R*0.07, 0, GTAU); g.fill();
+  } else if (A === 9){                     // てんしのわ
+    g.strokeStyle = '#ffd76e'; g.lineWidth = R*0.1;
+    g.beginPath(); g.ellipse(M, hy - R*1.18, R*0.42, R*0.14, 0, 0, GTAU); g.stroke();
+    g.strokeStyle = 'rgba(255,255,255,.75)'; g.lineWidth = R*0.04;
+    g.beginPath(); g.ellipse(M, hy - R*1.2, R*0.42, R*0.14, 0, Math.PI*1.1, Math.PI*1.7); g.stroke();
+  } else if (A === 10){                    // うさみみ
+    g.fillStyle = hair;
+    for (const s of [-1,1]){
+      g.save(); g.translate(M + s*R*0.32, hy - R*0.96); g.rotate(s*0.22);
+      g.beginPath(); g.ellipse(0, 0, R*0.19, R*0.5, 0, 0, GTAU); g.fill();
+      g.fillStyle = '#ffc2d4';
+      g.beginPath(); g.ellipse(0, R*0.04, R*0.09, R*0.36, 0, 0, GTAU); g.fill();
+      g.fillStyle = hair; g.restore();
+    }
+  } else if (A === 11){                    // マフラー
+    g.fillStyle = wear;
+    gRR(g, M - R*0.42, hy + R*0.7, R*0.84, R*0.3, R*0.14); g.fill();
+    g.beginPath();
+    g.moveTo(M + R*0.2, hy + R*0.86);
+    g.quadraticCurveTo(M + R*0.56, hy + R*1.3, M + R*0.44, hy + R*1.62);
+    g.lineTo(M + R*0.16, hy + R*1.5);
+    g.quadraticCurveTo(M + R*0.24, hy + R*1.16, M + R*0.06, hy + R*0.9);
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.45)';
+    for (let i=0;i<3;i++){ gRR(g, M - R*0.42, hy + R*0.74 + i*R*0.09, R*0.84, R*0.04, R*0.02); g.fill(); }
   }
 }
 
@@ -8896,12 +9096,15 @@ window.__chk = {
                        AV_MOUTH.length, AV_WEAR.length, AV_WEARC.length, AV_ACC.length);
     const out = [];
     for (let i = 0; i < N * 3; i++)
-      out.push({ n:'見本' + i, s:i%AV_SKIN.length, h:i%AV_HAIR.length, hc:(i*3)%AV_HAIRC.length,
+      // かけ算で ずらすと 約数の ぶんだけ 出ない番号が できる（3と12なら 4つしか 出ない）。
+      // ぜんぶ とおすために、そのまま あまりを つかう
+      out.push({ n:'見本' + i, s:i%AV_SKIN.length, h:i%AV_HAIR.length, hc:i%AV_HAIRC.length,
                  e:i%AV_EYE.length, m:i%AV_MOUTH.length, w:i%AV_WEAR.length,
-                 wc:(i*5)%AV_WEARC.length, a:i%AV_ACC.length });
+                 wc:(i+3)%AV_WEARC.length, a:i%AV_ACC.length });
     return out;
   },
-  drawAvatar,
+  drawAvatar, portraitShade,
+  AV_HAIR, AV_WEAR, AV_ACC, AV_EYE, AV_MOUTH,
 };
 /* 見た目の たしかめ用。?dbg=1 のときだけ 出す。
    ふつうに あそぶときに ウェーブを とばせてしまうと じぶんベストの いみが なくなる */
