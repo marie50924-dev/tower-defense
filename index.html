@@ -1670,8 +1670,12 @@ function boardTap(px, py){
 
   stars -= T.cost;
   towers.push({ k:selTool, c, r, lv:1, cd:0, ang:-Math.PI/2, pulse:1, ph:Math.random()*6.3 });
-  if (unlock('tw_' + selTool)){
-    dex['tw_' + selTool].lv = 1; saveDex();
+  // なかまの id は そのまま（c_xxx）。'tw_' を つけると ありもしない id が
+  // ずかんに たまり、152体は 一生 とうろくされない
+  const dexId = T.avatar ? null : (T.ally ? selTool : 'tw_' + selTool);
+  if (dexId && unlock(dexId)){
+    if (!T.ally) dex[dexId].lv = 1;
+    saveDex();
     floatTx(cx(c), cy(r) - CELL*0.95, 'ずかんに とうろく！', '#b98ae0');
   }
   beep(620,.16,'triangle',.05);
@@ -5989,6 +5993,18 @@ try{
   if (old.length){ localStorage.removeItem('sweetTD.col'); saveDex(); }
 }catch(e){}
 function saveDex(){ try{ localStorage.setItem('sweetTD.dex', JSON.stringify(dex)); }catch(e){} }
+/* 前の版で 'tw_c_xxx' という ありもしない id を ためてしまっていたので かたづける。
+   ほんとうの id（c_xxx）に つけかえて、あつめた ぶんを むだにしない */
+(function fixDexIds(){
+  let dirty = false;
+  for (const k of Object.keys(dex)){
+    if (!k.startsWith('tw_c_')) continue;
+    const real = k.slice(3);
+    if (!dex[real]) dex[real] = dex[k];
+    delete dex[k]; dirty = true;
+  }
+  if (dirty) saveDex();
+})();
 function dateStr(){
   const d = new Date();
   return d.getFullYear() + '/' + String(d.getMonth()+1).padStart(2,'0') + '/' + String(d.getDate()).padStart(2,'0');
