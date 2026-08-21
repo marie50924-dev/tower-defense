@@ -5935,6 +5935,20 @@ function drawAvatar(g, S, av){
       avHairBlob(g, M + s*R*1.0, hy + R*0.44, R*0.2, R*0.5, s*0.16);
   }
 
+  /* ---- あしと くつ ----
+     ふくより 先に えがいて、ももを すその 下に もぐりこませる。
+     あとから えがくと、すその 下はしと あしの 上はしの あいだが
+     すき間に なって「ふくと あしが はなれている」ように 見える */
+  g.fillStyle = skin;
+  for (const s of [-1,1]){
+    g.beginPath();
+    g.ellipse(M + s*R*0.3, by + R*0.95, R*0.17, R*0.42, 0, 0, GTAU); g.fill();
+  }
+  g.fillStyle = '#8a6d8d';                // くつ
+  for (const s of [-1,1]){
+    g.beginPath(); g.ellipse(M + s*R*0.3, by + R*1.32, R*0.22, R*0.14, 0, 0, GTAU); g.fill();
+  }
+
   /* ---- からだ（ふく）---- */
   g.fillStyle = wear;
   if (W === 3 || W === 4 || W === 6 || W === 9){   // ドレス・ローブ・きもの・チュチュ：すそが ひろがる
@@ -6052,17 +6066,6 @@ function drawAvatar(g, S, av){
   for (const s of [-1,1]){
     g.beginPath(); g.arc(M + s*R*1.0, by + R*0.16, R*0.17, 0, GTAU); g.fill();
   }
-  /* あし（スカートの下に ちゃんと 見えるように）*/
-  g.fillStyle = skin;
-  for (const s of [-1,1]){
-    g.beginPath();
-    g.ellipse(M + s*R*0.3, by + R*1.06, R*0.16, R*0.3, 0, 0, GTAU); g.fill();
-  }
-  g.fillStyle = '#8a6d8d';                // くつ
-  for (const s of [-1,1]){
-    g.beginPath(); g.ellipse(M + s*R*0.3, by + R*1.32, R*0.22, R*0.14, 0, 0, GTAU); g.fill();
-  }
-
   /* ---- くび と あたま ---- */
   g.fillStyle = skin;
   gRR(g, M - R*0.2, hy + R*0.68, R*0.4, R*0.44, R*0.12); g.fill();
