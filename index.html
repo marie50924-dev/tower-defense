@@ -2123,6 +2123,7 @@ function hitTarget(s, p){
 /* 敵をひとり道においてスタートさせる（通常出現とボスのしょうかんで共用） */
 let spawnSeq = 0;                                     // ウェーブ内での 何ばんめか
 let friendWave = false;                               // いまが ともだちバトルか
+const nameRects = [];                                 // ともだちの なまえを おいた ばしょ
 /* ともだちが いれば、ステージの まん中で「ともだちバトル」を ひらく。
    ステージクリアの ウェーブと ぶつからないように 10の ところに おく */
 const isFriendWave = n => avFriends.length > 0 && n >= 10 && n % STAGE_WAVES === 10;
@@ -8548,10 +8549,21 @@ function drawEnemy(e){
     ctx.save();
     ctx.font = '700 ' + Math.round(CELL*0.28) + "px 'Hiragino Maru Gothic ProN',sans-serif";
     ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    const w2 = ctx.measureText(e.av.n).width / 2 + CELL*0.1;
+    const h2 = CELL*0.34;
+    // ならんで あるくと なまえが かさなって よめない。ぶつかるあいだ 上へ ずらす
+    let ny = p.y - R*1.5;
+    for (let k = 0; k < 6; k++){
+      const hit = nameRects.some(r2 =>
+        Math.abs(r2.x - p.x) < r2.w + w2 && Math.abs(r2.y - ny) < h2);
+      if (!hit) break;
+      ny -= h2;
+    }
+    nameRects.push({ x: p.x, y: ny, w: w2 });
     ctx.lineWidth = CELL*0.11; ctx.strokeStyle = 'rgba(255,255,255,.9)';
-    ctx.strokeText(e.av.n, p.x, p.y - R*1.5);
+    ctx.strokeText(e.av.n, p.x, ny);
     ctx.fillStyle = '#e05f9e';
-    ctx.fillText(e.av.n, p.x, p.y - R*1.5);
+    ctx.fillText(e.av.n, p.x, ny);
     ctx.restore();
   }
 
@@ -8614,6 +8626,7 @@ function render(){
   if (groundCv) ctx.drawImage(groundCv, 0, 0, W, H);
   drawBoardOverlay();
   for (const t of towers) drawTower(t);
+  nameRects.length = 0;                    // なまえの かさなり しらべは 1フレームごとに やりなおす
   for (const e of enemies) drawEnemy(e);
   for (const s of shots) drawShot(s);
 
@@ -8898,6 +8911,13 @@ if (location.search.includes('dbg=1')) window.__dbg = {
   setTool: k => { selTool = k; },
   towers: () => towers.map(t => ({ k:t.k, c:t.c, r:t.r, sp:tSpan(t), lv:t.lv })),
   friendWave: () => friendWave,
+  bunch: () => {   // ともだちを ぎゅっと ならべて なまえの かさなりを 見る
+    enemies = []; spawnSeq = 0; friendWave = true;
+    for (let i = 0; i < avFriends.length; i++){
+      spawnEnemy('golem', pathLen*0.42 + i*CELL*0.75);
+      spawnSeq += 2;
+    }
+  },
   enemies: () => enemies.map(e => ({ k:e.k, av:e.av ? e.av.n : null, gi:e.gi ? e.gi.name : null })),
   run: () => { running = true; },
   fill: () => {
