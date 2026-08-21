@@ -123,6 +123,32 @@
   #ovT{font-size:26px;color:var(--pink-d)}
   #ovB{font-size:13.5px;line-height:1.7;opacity:.8}
 
+  /* ---------- たまご ---------- */
+  #eggOv{position:absolute;inset:0;display:none;flex-direction:column;gap:9px;border-radius:20px;
+    background:rgba(255,244,251,.97);backdrop-filter:blur(6px);padding:12px;overflow-y:auto;z-index:5}
+  #eggOv.on{display:flex;animation:pop .3s cubic-bezier(.2,1.4,.5,1)}
+  #eggHead{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pink-d)}
+  #eggHead>div{flex:1}
+  #eggBar{display:flex;gap:6px;font-size:12px}
+  #eggBar>div{flex:1;background:rgba(255,255,255,.8);border-radius:12px;padding:7px;text-align:center}
+  #eggBar b{display:block;font-size:15px;color:var(--pink-d)}
+  #eggList{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .eg{border:2px solid #ffd9ec;border-radius:16px;padding:9px 6px;text-align:center;cursor:pointer;
+    background:rgba(255,255,255,.85);position:relative}
+  .eg.poor{opacity:.5;filter:grayscale(.55)}
+  .eg canvas{display:block;margin:0 auto}
+  .egN{font-size:11.5px;margin-top:3px}
+  .egC{font-size:12px;color:#e0a52e;font-weight:700}
+  .egX{font-size:9.5px;opacity:.6;line-height:1.35;margin-top:2px}
+  .egSw{position:absolute;top:5px;right:7px;font-size:10px;color:#b98ae0}
+  /* たて方向の flex では 中身が ちぢんで はみ出し、下の ぶんと 重なる。
+     どれも ちぢませない */
+  #eggOv>*{flex:0 0 auto}
+  #eggStage{text-align:center}
+  #eggRates{font-size:9.5px;color:#8a7a94;background:rgba(255,255,255,.6);border-radius:10px;
+    padding:7px 8px;line-height:1.7}
+  #eggRates b{color:var(--pink-d)}
+
   /* ---------- アバターづくり ---------- */
   #avOv{position:absolute;inset:0;display:none;flex-direction:column;gap:7px;border-radius:20px;
     background:rgba(255,244,251,.97);backdrop-filter:blur(6px);padding:12px;overflow-y:auto;z-index:4}
@@ -325,6 +351,17 @@
       <div id="colGrid"></div>
       <div id="colTotal"></div>
     </div>
+  </div>
+
+  <div id="eggOv">
+    <div id="eggHead">
+      <div>🥚 たまごを ひらく</div>
+      <button class="mini gray" id="eggClose">とじる</button>
+    </div>
+    <div id="eggBar"></div>
+    <div id="eggList"></div>
+    <div id="eggStage"></div>
+    <div id="eggRates"></div>
   </div>
 
   <div id="avOv">
@@ -1218,6 +1255,224 @@ function buildShop(){
 }
 
 /* ==========================================================
+   コレクションの あつめかた（たまご・かけら）
+   ------------------------------------------------------------
+   いずれ App Store で 課金を 入れるので、そこを 見すえた 形にする。
+
+   ・Apple では ゲーム内の デジタル商品は かならず In-App Purchase になる。
+     だから 買いものは 1か所（buyEgg）に まとめておき、
+     あとで「⭐をはらう」を「💎をはらう」に さしかえるだけで すむようにする
+   ・ガチャの かくりつ表示は Apple の 審査でも 日本の 法律でも 必要。
+     だから「おなじ★の子から 均等に 1人」に して、
+     どの子も おなじ かくりつだと 1行で 言いきれる形に した
+   ・「◯体そろえたら 特典」は 日本では コンプガチャに あたるので 作らない。
+     ずかんの「かんせい」は お祝いの 画面だけで、もらえる ものは ない
+   ========================================================== */
+const EGGS = [
+  { id:'e13', name:'ふつうの たまご',   lv:[1,2,3], cost:400,  c1:'#fff0f7', c2:'#ff8fc4' },
+  { id:'e45', name:'きらきら たまご',   lv:[4,5],   cost:1200, c1:'#eef7ff', c2:'#9ed8ff' },
+  { id:'e6',  name:'でんせつの たまご', lv:[6],     cost:3000, c1:'#fff8e4', c2:'#ffd76e' },
+  { id:'e7',  name:'にじいろの たまご', lv:[7],     cost:8000, c1:'#fdf0ff', c2:'#c9a7ff' },
+];
+/* ダブりが 出たときに もらえる かけら と、かけらで 交換するのに いる数 */
+const SHARD_GET  = { 1:1, 2:1, 3:1, 4:2, 5:2, 6:4, 7:6 };
+const SHARD_COST = { 1:5, 2:5, 3:5, 4:12, 5:12, 6:30, 7:60 };
+
+let shards = 0;
+try{ shards = +localStorage.getItem('sweetTD.shards') || 0; }catch(e){}
+function saveShards(){ try{ localStorage.setItem('sweetTD.shards', String(shards)); }catch(e){} }
+
+/* その たまごから 出る子。なかま（味方）だけ */
+const eggPool = e => GEN_LIST.filter(o => o.side === 'ch' && e.lv.includes(o.lv));
+const hasGen  = o => !!dex[o.id];
+
+/* たまごを ひらく。まだ いない子を ゆうせんし、ぜんぶ いるなら かけらに する。
+   「まだ いない子ゆうせん」は 親切なうえに、ダブり待ちの ストレスを なくす */
+function eggDraw(e){
+  const pool = eggPool(e);
+  const news = pool.filter(o => !hasGen(o));
+  if (news.length){
+    const o = news[(Math.random() * news.length) | 0];
+    unlock(o.id);
+    return { o, dup: false };
+  }
+  const o = pool[(Math.random() * pool.length) | 0];
+  const n = SHARD_GET[o.lv] || 1;
+  shards += n; saveShards();
+  return { o, dup: true, shard: n };
+}
+
+/* ---------- たまごの 絵 ---------- */
+function eggThumb(e, size, cracked){
+  const c = document.createElement('canvas');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  c.width = size*dpr; c.height = size*dpr;
+  c.style.width = size+'px'; c.style.height = size+'px';
+  const g = c.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0);
+  const M = size/2, R = size*0.3;
+  // たまごの 形（下が まるく、上が ほそい）
+  g.beginPath();
+  g.moveTo(M, M - R*1.28);
+  g.bezierCurveTo(M + R*0.98, M - R*0.66, M + R*1.02, M + R*0.72, M, M + R*1.16);
+  g.bezierCurveTo(M - R*1.02, M + R*0.72, M - R*0.98, M - R*0.66, M, M - R*1.28);
+  g.closePath();
+  const gr = g.createRadialGradient(M - R*0.34, M - R*0.5, R*0.1, M, M, R*1.3);
+  gr.addColorStop(0, '#ffffff'); gr.addColorStop(0.45, e.c1); gr.addColorStop(1, e.c2);
+  g.fillStyle = gr; g.fill();
+  // もよう
+  g.save(); g.clip();
+  g.fillStyle = 'rgba(255,255,255,.55)';
+  for (let i=0;i<3;i++){
+    g.beginPath(); g.ellipse(M, M - R*0.3 + i*R*0.52, R*1.1, R*0.13, 0, 0, GTAU); g.fill();
+  }
+  g.fillStyle = e.c2;
+  for (let i=0;i<7;i++){
+    const a = i*2.399;
+    gspark(g, M + Math.cos(a)*R*0.62, M + Math.sin(a)*R*0.72, R*0.13, a, e.c2);
+  }
+  if (cracked){                         // われめ
+    g.strokeStyle = 'rgba(120,90,120,.45)'; g.lineWidth = size*0.022; g.lineJoin='round';
+    g.beginPath();
+    g.moveTo(M - R, M - R*0.1);
+    for (let i=0;i<6;i++) g.lineTo(M - R + i*R*0.34, M - R*0.1 + (i%2 ? R*0.2 : -R*0.2));
+    g.stroke();
+  }
+  g.restore();
+  g.fillStyle = 'rgba(255,255,255,.6)';  // つや
+  g.beginPath(); g.ellipse(M - R*0.36, M - R*0.62, R*0.24, R*0.13, -0.5, 0, GTAU); g.fill();
+  return c;
+}
+
+/* ---------- たまごの 画面 ---------- */
+const eggOv = $('eggOv'), eggList = $('eggList'), eggStage = $('eggStage'),
+      eggBar = $('eggBar'), eggRates = $('eggRates');
+/* とじたら 来たところへ もどす。もどり先が ないと 画面が どこにも つながらなくなる */
+let eggFrom = '';
+$('eggClose').onclick = () => {
+  eggOv.classList.remove('on');
+  if (eggFrom === 'pick'){ buildPick(); pickOv.classList.add('on'); }
+  eggFrom = '';
+};
+function openEggScreen(from){
+  eggFrom = from || '';
+  buildEggScreen(); eggOv.classList.add('on'); beep(700,.08,'triangle',.04);
+}
+
+function buildEggScreen(){
+  const owned = GEN_LIST.filter(o => o.side === 'ch' && hasGen(o)).length;
+  const all   = GEN_LIST.filter(o => o.side === 'ch').length;
+  eggBar.innerHTML =
+    '<div>おほしさま<b>⭐' + stars + '</b></div>' +
+    '<div>かけら<b>🩷' + shards + '</b></div>' +
+    '<div>なかま<b>' + owned + ' / ' + all + '</b></div>';
+  eggList.innerHTML = '';
+  for (const e of EGGS){
+    const pool = eggPool(e), left = pool.filter(o => !hasGen(o)).length;
+    const d = document.createElement('div');
+    d.className = 'eg' + (stars < e.cost ? ' poor' : '');
+    d.append(eggThumb(e, 66));
+    d.insertAdjacentHTML('beforeend',
+      '<div class="egN">' + e.name + '</div>' +
+      '<div class="egC">⭐' + e.cost + '</div>' +
+      '<div class="egX">★' + e.lv.join('・') + '　のこり ' + left + '人</div>' +
+      (left ? '' : '<div class="egSw">コンプ</div>'));
+    d.onclick = () => buyEgg(e);
+    eggList.append(d);
+  }
+  // かくりつ表示。Apple の 審査でも 日本の 法律でも 出すことに なっている
+  eggRates.innerHTML = '<b>でてくる かくりつ</b><br>' + EGGS.map(e => {
+    const n = eggPool(e).length;
+    return '・' + e.name + '：★' + e.lv.join('と') + 'の ' + n + '人から 1人。' +
+           'どの子も おなじ かくりつ（' + (100/n).toFixed(1) + '%）';
+  }).join('<br>') +
+  '<br>・すでに いる子が でたときは <b>かけら</b>に なるよ' +
+  '<br>・まだ いない子が のこっていれば、かならず その中から でるよ';
+  buildShardBox();
+}
+
+/* かけらで 好きな子と こうかん */
+function buildShardBox(){
+  eggStage.innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'background:rgba(255,255,255,.75);border-radius:14px;padding:9px;font-size:11px';
+  wrap.innerHTML = '<div style="color:var(--pink-d);font-weight:700;margin-bottom:5px">' +
+    '🩷 かけらで こうかん（いま ' + shards + 'こ）</div>' +
+    '<div style="font-size:10px;opacity:.7;margin-bottom:6px">' +
+    'ほしい★を えらぶと、まだ いない子から 1人 もらえるよ</div>';
+  const row = document.createElement('div');
+  row.style.cssText = 'display:flex;gap:5px;flex-wrap:wrap;justify-content:center';
+  for (const lv of [1,2,3,4,5,6,7]){
+    const need = SHARD_COST[lv];
+    const left = GEN_LIST.filter(o => o.side === 'ch' && o.lv === lv && !hasGen(o)).length;
+    const b = document.createElement('button');
+    b.className = 'mini' + (shards < need || !left ? ' gray' : '');
+    b.style.cssText = 'font-size:10.5px;padding:6px 8px';
+    b.textContent = (lv === 7 ? '🌈7' : '★' + lv) + '・🩷' + need;
+    b.disabled = shards < need || !left;
+    b.onclick = () => {
+      const pool = GEN_LIST.filter(o => o.side === 'ch' && o.lv === lv && !hasGen(o));
+      if (!pool.length || shards < need) return;
+      shards -= need; saveShards();
+      const o = pool[(Math.random() * pool.length) | 0];
+      unlock(o.id);
+      showEggResult({ o, dup: false }, true);
+    };
+    row.append(b);
+  }
+  wrap.append(row);
+  eggStage.append(wrap);
+}
+
+/* 買う。課金を 入れるときは ここの「⭐をはらう」を さしかえるだけで すむ */
+function buyEgg(e){
+  if (stars < e.cost){
+    beep(160,.09,'square',.03,.7);
+    eggStage.innerHTML = '<div style="font-size:12px;color:#e06f9c">おほしさまが たりない…（⭐' +
+      e.cost + '）</div>';
+    return;
+  }
+  stars -= e.cost;
+  saveRec(); syncHUD();
+  showEggResult(eggDraw(e), false, e);
+}
+
+/* あけた ところを 見せる。たまご → われる → 出てくる */
+function showEggResult(res, fromShard, e){
+  const { o, dup } = res;
+  eggStage.innerHTML = '';
+  const box = document.createElement('div');
+  box.style.cssText = 'background:linear-gradient(180deg,#fff6fb,#f6ecff);border:2px solid #ffd9ec;' +
+    'border-radius:16px;padding:12px;animation:pop .4s cubic-bezier(.2,1.4,.5,1)';
+  const th = genThumb(o, 108);
+  th.style.cssText = 'margin:0 auto';
+  box.append(th);
+  box.insertAdjacentHTML('beforeend',
+    '<div style="font-size:15px;color:var(--pink-d);font-weight:700;margin-top:4px">' + o.name + '</div>' +
+    '<div style="font-size:11px;opacity:.7">★' + o.lv + (o.cells >= 4 ? '・2×2' : '') + '</div>' +
+    (dup
+      ? '<div style="font-size:12px;color:#8a7a94;margin-top:5px">すでに いた子だったので<br>' +
+        '🩷 かけらが ' + res.shard + 'こ ふえた！</div>'
+      : '<div style="font-size:13px;color:#ff5f8a;margin-top:5px">✨ なかまに なった！ ✨</div>'));
+  eggStage.append(box);
+  if (!dup){
+    celebrate({ conf: 60, rings: true, fanfare: 1 });
+    beep(880,.14,'triangle',.05);
+  } else {
+    beep(520,.1,'sine',.04);
+  }
+  buildEggScreen();
+  // 結果は いちど 消えるので えがきなおす
+  eggStage.innerHTML = ''; eggStage.append(box);
+  const again = document.createElement('button');
+  again.className = 'mini';
+  again.style.cssText = 'margin-top:8px;font-size:12px';
+  again.textContent = 'もういちど えらぶ';
+  again.onclick = () => buildEggScreen();
+  box.append(again);
+}
+
+/* ==========================================================
    アバターづくり（じぶんと ともだち）
    ------------------------------------------------------------
    このゲームは サーバーの ない 1まいの HTML なので、
@@ -1417,6 +1672,19 @@ $('avShare').onclick = () => {
 };
 /* リンク（?f=...）で ひらいたら むかえる。
    よぶのは 起動の さいご（ここで 走らせると まだ できていない ものを さわる） */
+/* はじめて あそぶ人に ★1の なかまを 5人 わたす。
+   1人も いないと ばんめんに 何も おけず、いきなり つまってしまう */
+function giveStarters(){
+  try{ if (localStorage.getItem('sweetTD.starter')) return; }catch(e){ return; }
+  const pool = GEN_LIST.filter(o => o.side === 'ch' && o.lv === 1);
+  for (let i = 0; i < 5 && pool.length; i++){
+    const k = (Math.random() * pool.length) | 0;
+    unlock(pool[k].id);
+    pool.splice(k, 1);
+  }
+  try{ localStorage.setItem('sweetTD.starter', dateStr()); }catch(e){}
+}
+
 function avFromLink(){
   const m = location.search.match(/[?&]f=([^&]+)/);
   if (!m) return;
@@ -1446,9 +1714,12 @@ for (const b of pickTabs.children) b.onclick = () => {
 };
 function openPick(){ buildPick(); pickOv.classList.add('on'); beep(700,.08,'triangle',.04); }
 function buildPick(){
-  const list = GEN_LIST.filter(o => o.side === 'ch' && o.lv === pickLv);
-  pickHint.innerHTML = '★' + pickLv + 'の なかま ' + list.length + '人　' +
-    '⭐' + ALLY_COST[pickLv] + 'で おける' + (pickLv >= 7 ? '（2×2のばしょが いるよ）' : '');
+  // もっている子だけ。もっていない子を ならべても おけないので まぎらわしい
+  const all  = GEN_LIST.filter(o => o.side === 'ch' && o.lv === pickLv);
+  const list = all.filter(o => dex[o.id]);
+  pickHint.innerHTML = '★' + pickLv + 'の なかま ' + list.length + ' / ' + all.length + '人　' +
+    '⭐' + ALLY_COST[pickLv] + 'で おける' + (pickLv >= 7 ? '（2×2のばしょが いるよ）' : '') +
+    '<br>いない子は 🥚たまご か てきを たおして なかまに しよう';
   if (pickIo) pickIo.disconnect();
   pickIo = new IntersectionObserver(es => {
     for (const e of es){
@@ -1458,6 +1729,24 @@ function buildPick(){
     }
   }, { root: pickOv, rootMargin: '240px' });
   pickGrid.innerHTML = '';
+  // たまごの 入り口
+  {
+    const d = document.createElement('div');
+    d.className = 'pk';
+    d.style.cssText = 'grid-column:1/-1;display:flex;align-items:center;gap:10px;' +
+      'text-align:left;padding:7px 10px;background:linear-gradient(90deg,#fff0f8,#f4ecff)';
+    const c = document.createElement('div');
+    c.style.cssText = 'width:52px;height:52px;flex:0 0 52px';
+    c.append(eggThumb(EGGS[0], 52));
+    d.append(c);
+    const left = GEN_LIST.filter(o => o.side === 'ch' && !dex[o.id]).length;
+    d.insertAdjacentHTML('beforeend',
+      '<div style="flex:1;min-width:0"><div class="pkN">🥚 たまごを ひらく</div>' +
+      '<div class="pkS">あと ' + left + '人　🩷かけら ' + shards + 'こ</div></div>' +
+      '<div style="font-size:11px;color:#b98ae0;white-space:nowrap">ひらく ▶</div>');
+    d.onclick = () => { pickOv.classList.remove('on'); openEggScreen('pick'); };
+    pickGrid.append(d);
+  }
   // じぶんの アバターは ★に かかわらず いちばん上（すぐ おけるように）
   {
     const d = document.createElement('div');
@@ -1490,6 +1779,15 @@ function buildPick(){
         '<div style="font-size:11px;color:#b98ae0">つくる ▶</div>');
       d.onclick = () => { pickOv.classList.remove('on'); openAvatar(); };
     }
+    pickGrid.append(d);
+  }
+  if (!list.length){
+    const d = document.createElement('div');
+    d.className = 'pk';
+    d.style.cssText = 'grid-column:1/-1;cursor:default;padding:14px 8px';
+    d.innerHTML = '<div style="font-size:24px">🥚</div>' +
+      '<div class="pkN">★' + pickLv + 'の なかまは まだ いないよ</div>' +
+      '<div class="pkS">たまごを ひらくか、てきを たおして<br>なかまに しよう</div>';
     pickGrid.append(d);
   }
   for (const o of list){
@@ -2183,12 +2481,13 @@ function killEnemy(e, px, py){
   if (unlock('en_' + e.k))
     floatTx(px, py - CELL*0.7, 'ずかんに とうろく！', '#b98ae0');
   if (e.gi && unlock(e.gi.id))
-    floatTx(px, py - CELL*1.2, e.gi.name + 'を とうろく！', '#b98ae0');
+    floatTx(px, py - CELL*1.2, e.gi.name + 'が なかまに なった！', '#b98ae0');
   if (e.av){
     stars += 60;
     const f = avResult(e.av, true);
+    shards += 1; saveShards();
     floatTx(px, py - CELL*1.2,
-            e.av.n + 'に かった！ +⭐60' + (f ? '（つうさん ' + f.w + 'しょう）' : ''), '#ff5f8a');
+            e.av.n + 'に かった！ +⭐60 +🩷1' + (f ? '（つうさん ' + f.w + 'しょう）' : ''), '#ff5f8a');
     celebrate({ conf: 30, rings: true, x: px, y: py, fanfare: 1 });
   }
   const g = goldOf(e.k);
@@ -6032,6 +6331,9 @@ function stageClear(){
       if (pins.length < PIN_MAX && !pins.includes(ch.id)){ pins.push(ch.id); savePins(); }
     }
   }
+  // ステージが すすむほど いい たまごが もらえる
+  const eggIdx = stageNo >= 8 ? 3 : stageNo >= 5 ? 2 : stageNo >= 3 ? 1 : 0;
+  const gift = eggDraw(EGGS[eggIdx]);
   const got = CHARS.filter(c => dex['ch_'+c.id]).length;
   const done = got >= CHARS.length;
   ovT.textContent = (done && ch) ? 'おかしの国 かんせい！🏰' : 'ステージ ' + stageNo + ' クリア！🎉';
@@ -6040,6 +6342,17 @@ function stageClear(){
     const th = charThumb(ch, 96);
     th.style.display = 'block'; th.style.margin = '0 auto 4px';
     ovB.append(th);
+  }
+  // ステージクリアの ごほうびの たまご
+  if (gift){
+    const gth = genThumb(gift.o, 72);
+    gth.style.cssText = 'display:block;margin:6px auto 2px';
+    ovB.append(gth);
+    ovB.insertAdjacentHTML('beforeend',
+      '<div style="font-size:12.5px;color:var(--pink-d)">🥚 ' + EGGS[eggIdx].name + 'から ' +
+      gift.o.name + '（★' + gift.o.lv + '）' +
+      (gift.dup ? '<br><span style="opacity:.7">すでに いたので 🩷かけら+' + gift.shard + '</span>'
+                : '<br>なかまに なった！✨') + '</div>');
   }
   // Lv解放の節目なら いっしょにお知らせ
   let unlockMsg = '';
@@ -9187,6 +9500,7 @@ function loop(ts){
    ========================================================== */
 reset();
 resize();
+giveStarters();   // はじめての人に ★1の なかまを 5人
 avFromLink();     // ともだちの リンクで ひらいたなら、その人を むかえる
 tryResume();      // とちゅうのセーブがあれば、そのウェーブから再開
 checkLogin();     // きょうはじめての起動ならプレゼントを渡す
@@ -9222,6 +9536,8 @@ if (location.search.includes('dbg=1')) window.__dbg = {
   setTool: k => { selTool = k; },
   towers: () => towers.map(t => ({ k:t.k, c:t.c, r:t.r, sp:tSpan(t), lv:t.lv })),
   friendWave: () => friendWave,
+  stars: () => stars,
+  shards: () => shards,
   bunch: () => {   // ともだちを ぎゅっと ならべて なまえの かさなりを 見る
     enemies = []; spawnSeq = 0; friendWave = true;
     for (let i = 0; i < avFriends.length; i++){
