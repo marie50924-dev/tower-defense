@@ -1808,6 +1808,13 @@ function buildPick(){
       '<div class="pkS">' + T.role + '<br>こうげき' + T.dmg + '・はんい' + T.range.toFixed(1) +
       (o.cells >= 4 ? '・2×2' : '') + '</div>');
     d.onclick = () => {
+      // ⭐が たりないのに えらべてしまうと、おけると おもって タップしてしまう
+      if (stars < T.cost){
+        beep(160,.09,'square',.03,.7);
+        pickHint.innerHTML = 'おほしさまが たりない…（' + o.name + 'は ⭐' + T.cost + '）<br>' +
+          'あと ⭐' + (T.cost - stars) + ' ためよう';
+        return;
+      }
       selTool = o.id; selTower = null;
       pickOv.classList.remove('on');
       syncShop(); beep(700,.08,'triangle',.04);
@@ -1967,7 +1974,13 @@ function boardTap(px, py){
   }
 
   const T = TOWERS[selTool];
-  if (stars < T.cost){ beep(160,.09,'square',.03,.7); return; }
+  if (stars < T.cost){
+    // だまって いると「タップが きいていない」と おもわれる
+    beep(160,.09,'square',.03,.7);
+    floatTx(cx(c), cy(r) - CELL*0.9,
+            'おほしさまが たりない（⭐' + T.cost + '）', '#e06f9c');
+    return;
+  }
 
   stars -= T.cost;
   towers.push({ k:selTool, c, r, lv:1, cd:0, ang:-Math.PI/2, pulse:1, ph:Math.random()*6.3 });
@@ -6682,18 +6695,16 @@ function buildColGrid(){
       d.append(silhouetteThumb(o.pid, 64));
       d.insertAdjacentHTML('beforeend',
         '<div class="cNm">？？？</div><div class="cTt" style="color:#b98ae0">✨' + o.hint + '</div>');
-    } else if (o.gen){
+    } else {
       // まだ いない子も うすく 見せる。だれが のこっているか わかると、
-      // どの たまごを ひらくか えらべる
+      // どの たまごを ひらくか・何を すれば いいかが わかる。
+      // 「？」だけだと 何が あるのかも わからない
       d.classList.add('yet');
       d.append(lazyThumb(o, 64));
       d.insertAdjacentHTML('beforeend',
         '<div class="cNm">' + o.name + '</div>' +
         '<div class="cTt">' + o.title + '</div>' +
         '<div class="cTt" style="color:#b98ae0">' + o.hint + '</div>');
-    } else {
-      d.innerHTML = '<div style="font-size:32px;line-height:64px">？</div>' +
-        '<div class="cNm">？？？</div><div class="cTt">' + o.hint + '</div>';
     }
     colGrid.append(d);
   }
