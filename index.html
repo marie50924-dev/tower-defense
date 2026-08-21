@@ -202,7 +202,7 @@
   </div>
 
   <div id="wrap">
-    <canvas id="cv"></canvas>
+    <div id="cv"></div>
     <div id="ov">
       <div id="ovT"></div>
       <div id="ovB"></div>
@@ -285,6 +285,7 @@
 
 <div id="confetti"></div>
 
+<script src="vendor/phaser.min.js"></script>
 <script>
 (() => {
 "use strict";
@@ -388,37 +389,54 @@ const SP_THEMES = {
   sakura: {   // 春
     th: { name:'さくらのくに', g1:'#ffe9f1', g2:'#ffdeeb', p1:'#d98ca8', p2:'#ffd6e2',
           spr:['#ffffff','#ffb3cd','#ffe6ef','#d8f0d8'] },
-    bgm: { bpm: 90, wv:'triangle', vol:.030,
-           mel:[69,72,74,76, 74,72,69,64, 67,69,72,74, 72,69,67,64],
-           bass:[45,50,52,45] },
+    bgm: { bpm:96, vol:.050, dr:.55, ar:.5,
+           ch:['A','D','A','E',  'D','E','A','A'],
+           mel:[81,85,88,-1, 85,-1,-1, 0,  86,90,93,-1, 90,-1,-1, 0,
+                93,-1,90,-1, 88,-1,85,-1,  83,-1,88,-1, 85,-1,-1, 0,
+                93,-1,-1,90, 93,-1,-1, 0,  95,-1,-1,92, 95,-1,-1, 0,
+                97,-1,93,-1, 88,-1,85,-1,  85,-1,88,-1, 81,-1,-1, 0] },
   },
   summer: {   // 夏：よぞらに はなびと ちょうちんの道
     th: { name:'なつまつりのよる', g1:'#cfd0ee', g2:'#c2c3e6', p1:'#d9a54e', p2:'#ffe0a0',
           spr:['#ff9ec9','#ffd76e','#8fe3c4','#ffffff'] },
-    bgm: { bpm: 108, wv:'triangle', vol:.031,
-           mel:[76,79,81,79, 83,81,79,76, 74,76,79,81, 79,76,74,71],
-           bass:[52,47,45,52] },
+    bgm: { bpm:116, vol:.050, dr:1, ar:.9,
+           ch:['E','A','B','E',  'A','B','E','E'],
+           mel:[88,-1,92,-1, 95,-1,92, 0,  93,-1,90,-1, 88,-1,-1, 0,
+                90,-1,95,-1, 99,-1,95, 0,  92,-1,88,-1, 88,-1,-1, 0,
+                93,-1,97,-1, 100,-1,-1, 0, 99,-1,95,-1, 90,-1,-1, 0,
+                92,95,100,-1, 95,-1,92, 0, 88,-1,-1,-1, 90,-1,-1, 0] },
   },
   halloween: {   // 秋：むらさきの野に かぼちゃの道
     th: { name:'おばけのおかしまつり', g1:'#e3d3ef', g2:'#d6c2e6', p1:'#c77b3a', p2:'#f0a95e',
           spr:['#f0a95e','#c9a7ff','#ffffff','#5f4a6b'] },
-    bgm: { bpm: 96, wv:'triangle', vol:.031,
-           mel:[69,72,76,72, 68,72,74,69, 65,69,72,74, 72,68,69,64],
-           bass:[45,41,43,45] },
+    bgm: { bpm:112, vol:.052, dr:.9, ar:.8,
+           ch:['G','F','C','G',  'C','F','G','G'],
+           mel:[83,-1,86,-1, 91,-1,-1, 0,  89,-1,86,-1, 84,-1,-1, 0,
+                84,-1,88,-1, 91,-1,88, 0,  86,-1,83,-1, 79,-1,-1, 0,
+                84,-1,88,-1, 91,-1,-1, 0,  89,-1,86,-1, 84,-1,-1, 0,
+                86,-1,91,-1, 95,-1,91, 0,  88,-1,86,-1, 83,-1,-1, 0] },
   },
   christmas: {   // 冬：ゆきの野に キャンディケーンの道
     th: { name:'せいなるよるのくに', g1:'#eef5f2', g2:'#e0ede6', p1:'#c85a5a', p2:'#f5dede',
           spr:['#c85a5a','#7fae6a','#ffd76e','#ffffff'] },
-    bgm: { bpm: 104, wv:'triangle', vol:.030,
-           mel:[76,76,76,0, 76,76,76,0, 76,79,72,74, 76,0,77,79],
-           bass:[48,48,53,55] },
+    // すず を ふるような くりかえし。音をつめすぎると 音がかさなって
+    // 大きくなりすぎるので、1小節に4つまでに おさえている
+    bgm: { bpm:108, vol:.046, dr:.85, ar:.8,
+           ch:['C','F','G','C',  'F','G','C','C'],
+           mel:[76,79,76, 0, 76,-1,-1, 0,  77,81,84,-1, 81,-1,-1, 0,
+                79,83,86,-1, 83,-1,-1, 0,  84,-1,79,-1, 76,-1,-1, 0,
+                89,-1,-1,84, 89,-1,-1, 0,  91,-1,-1,86, 91,-1,-1, 0,
+                96,-1,91,-1, 88,-1,84, 0,  79,-1,-1,-1, 76,-1,-1, 0] },
   },
   valentine: {   // バレンタイン：ココアの野に ビターチョコの道
     th: { name:'チョコとハートのくに', g1:'#f2ddd3', g2:'#ecd2c6', p1:'#8a4a3a', p2:'#b57a5e',
           spr:['#ff7fae','#ffffff','#ffd0df','#ff5a7a'] },
-    bgm: { bpm: 78, wv:'sine', vol:.032,
-           mel:[72,76,79,84, 0,79,76,72, 74,77,81,77, 76,74,72,0],
-           bass:[48,53,45,50] },
+    bgm: { bpm:100, vol:.052, dr:.6, ar:.5,
+           ch:['F','Dm','Bb','C',  'Bb','C','F','F'],
+           mel:[84,-1,89,-1, 84,-1,81, 0,  86,-1,89,-1, 93,-1,-1, 0,
+                89,-1,86,-1, 82,-1,84,-1,  88,-1,84,-1, 79,-1,-1, 0,
+                89,-1,-1,86, 89,-1,-1, 0,  91,-1,-1,88, 91,-1,-1, 0,
+                93,-1,89,-1, 84,-1,81, 0,  81,-1,84,-1, 77,-1,-1, 0] },
   },
 };
 const CODES = {
@@ -518,7 +536,11 @@ function applyRegen(){
 /* ==========================================================
    DOM
    ========================================================== */
-const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+/* 盤面は Phaser がつくる。えがくときの Canvas 2D は そのつど ctx に入る。
+   Phaser の描画APIには グラデーションも 合成モードもなく、いまの立体感が
+   出せないため、絵は これまでどおり Canvas 2D で描いている */
+const cvHost = document.getElementById('cv');
+let ctx = null, DPR = 1;
 const $ = id => document.getElementById(id);
 const vHp = $('vHp'), vSt = $('vSt'), vWv = $('vWv'), vBw = $('vBw'), hpBox = $('hpBox');
 const shopEl = $('shop'), infoEl = $('info'), infoIc = $('infoIc'), infoTx = $('infoTx');
@@ -640,98 +662,371 @@ function beep(f, dur, type='sine', vol=0.05, slide=1.4){
 
 /* ==========================================================
    BGM（WebAudioで生成。ステージごとに曲がかわる）
+
+   オシレーターを1本 そのまま鳴らすと どうしても「ピコピコ」した
+   電子音になり、ながく聞くと あきてしまう。そこで
+     ・オルゴール風のかさね音（メロディ）
+     ・和音のしきもの（パッド）
+     ・うごくベースと ドラム
+     ・ひびき（リバーブ）と やまびこ（ディレイ）
+   の4つを かさねて、音源ファイルなしでも 生楽器っぽく きこえるようにしている。
    ========================================================== */
-// THEMESと同じならび：テンポ・音色・メロディ（MIDI番号、0は休符）・ベース
+
+/* --- コードのかきかた -------------------------------------
+   "C" "Am" "F#m7" のように 文字でかく。数字のならびだと
+   あとから ならびかえるときに どこが何の和音か 分からなくなるから */
+const NOTE_BASE  = { C:0, D:2, E:4, F:5, G:7, A:9, B:11 };
+const CHORD_KIND = { '':[0,4,7], m:[0,3,7], M7:[0,4,7,11], m7:[0,3,7,10],
+                     '7':[0,4,7,10], sus4:[0,5,7], add9:[0,4,7,14] };
+const chordCache = {};
+function chordOf(name){
+  let c = chordCache[name];
+  if (c) return c;
+  const m = /^([A-G])([#b]?)(.*)$/.exec(name) || [];
+  const root = ((NOTE_BASE[m[1]] || 0) + (m[2] === '#' ? 1 : m[2] === 'b' ? -1 : 0) + 12) % 12;
+  c = chordCache[name] = { root, iv: CHORD_KIND[m[3]] || CHORD_KIND[''] };
+  return c;
+}
+
+/* --- 曲データ ---------------------------------------------
+   1小節＝8ステップ（8分音符）。mel は MIDI番号で、
+   0 は やすみ、-1 は「まえの音をのばす」。
+   ch は 1小節に1つの和音。
+
+   ぜんぶ16小節。
+     A（1〜4小節）   … 主題
+     A'（5〜8小節）  … 主題のこたえ
+     サビ（9〜12小節）… いちばん高いところ。ここから3度下のハモリが入る
+     しめ（13〜16小節）… おりてきて 1小節目へ もどる
+   16小節あると 1周まわるのに30秒ほどかかるので、
+   ずっと聞いていても おなじところの くりかえしに きこえにくい。
+   ぜんぶ長調にしてあるので、どのステージでも あかるい気もちで あそべる。
+
+   dr はドラム、ar はきらきら（対旋律）の音量。しずかな曲は 小さくする */
 const BGMS = [
-  /* 1小節＝8ステップ、ぜんぶで4小節（32ステップ）。
-     0 は やすみ、-1 は「まえの音をのばす」。
-     「たずねて → こたえる」の2フレーズにしてあるので、
-     16ステップでくり返していたころより くどくない */
-  { bpm: 112, wv:'triangle', vol:.030,   // シュガーガーデン：あかるいハ長調
-    mel:[72,72,76,79, 76,-1, 0,74,  74,77,81,79, 77,-1,-1, 0,
-         72,72,76,79, 81,-1, 0,79,  77,76,74,72, 72,-1,-1, 0],
-    bass:[48,48,53,53, 55,55,48,48] },
-  { bpm: 120, wv:'triangle', vol:.032,   // いちご：はずむヘ長調
-    mel:[77, 0,77,81, 84,-1,81, 0,  79,79,77,79, 81,-1,-1, 0,
-         77,81,84,86, 84,-1,81, 0,  79,77,76,77, 77,-1,-1, 0],
-    bass:[53,53,50,50, 55,55,53,53] },
-  { bpm: 92,  wv:'sine',     vol:.034,   // チョコ：あまいニ短調
-    mel:[74,-1,77, 0, 81,-1,-1,79,  77,-1,74,72, 74,-1,-1, 0,
-         77,-1,81, 0, 84,-1,-1,82,  81,79,77,74, 74,-1,-1, 0],
-    bass:[50,50,46,46, 48,48,45,45] },
-  { bpm: 88,  wv:'triangle', vol:.028,   // こおり：すきとおった高音
-    mel:[81, 0,84, 0, 88,-1,86,84,  86, 0,84, 0, 81,-1,-1, 0,
-         83, 0,86, 0, 91,-1,88,86,  88,86,84,83, 81,-1,-1, 0],
-    bass:[45,45,52,52, 48,48,52,52] },
-  { bpm: 80,  wv:'sine',     vol:.030,   // よぞら：ゆめみるホ短調
-    mel:[76,-1,79,-1, 83,-1,-1, 0,  81,-1,79,-1, 76,-1,-1, 0,
-         74,-1,79,-1, 86,-1,83,-1,  81,79,78,76, 76,-1,-1, 0],
-    bass:[40,40,47,47, 43,43,45,45] },
-  { bpm: 96,  wv:'triangle', vol:.032,   // キャラメルのさばく：エキゾチックなト調
-    mel:[67, 0,70,71, 74,-1,72,70,  67, 0,70,67, 65,-1,-1, 0,
-         72, 0,74,75, 79,-1,77,74,  72,70,67,70, 67,-1,-1, 0],
-    bass:[43,43,48,48, 46,46,41,41] },
-  { bpm: 124, wv:'triangle', vol:.030,   // ソーダのうみべ：しゅわっとはずむホ長調
-    mel:[76,80,83,80, 88,-1,83, 0,  85,83,81,80, 80,-1,-1, 0,
-         78,80,83,85, 88,-1,90, 0,  88,85,83,80, 76,-1,-1, 0],
-    bass:[52,52,45,45, 47,47,52,52] },
-  { bpm: 92,  wv:'sine',     vol:.032,   // マカロンのもり：やさしいト長調
-    mel:[79, 0,83, 0, 86,-1,84,83,  81, 0,79, 0, 78,-1,-1, 0,
-         81, 0,84, 0, 88,-1,86,84,  83,81,79,78, 79,-1,-1, 0],
-    bass:[43,43,48,48, 50,50,43,43] },
-  { bpm: 76,  wv:'triangle', vol:.026,   // ゆきのケーキやま：オルゴールのしずけさ
-    mel:[84, 0,88, 0, 91,-1,-1, 0,  89, 0,88,86, 84,-1,-1, 0,
-         86, 0,89, 0, 93,-1,-1, 0,  91,89,88,86, 84,-1,-1, 0],
-    bass:[45,45,50,50, 52,52,45,45] },
-  { bpm: 116, wv:'triangle', vol:.034,   // にじのてんくう：クロノスへむかう最終ステージ
-    mel:[72,76,79,84, 83,-1,79, 0,  81,79,77,76, 77,-1,-1, 0,
-         74,77,81,86, 84,-1,81, 0,  79,77,76,74, 72,-1,-1, 0],
-    bass:[48,48,53,53, 45,45,55,55] },
+  { bpm:118, vol:.052, dr:.9, ar:.8,   // シュガーガーデン：ハ長調のまっすぐな主題
+    ch:['C','G','Am','F',  'F','G','Am','C',
+        'F','G','C','Am',  'F','G','C','C'],
+    mel:[72, 0,76, 0, 79,-1,76,-1,  74, 0,79, 0, 83,-1,-1, 0,
+         81, 0,79, 0, 76,-1,77,-1,  77,-1,-1, 0, 74,-1,-1, 0,
+         77, 0,81, 0, 84,-1,-1,81,  83, 0,81, 0, 79,-1,-1, 0,
+         81, 0,84, 0, 83,81,79,77,  76,-1,-1,-1, 72,-1,-1, 0,
+         84,-1,-1,81, 84,-1,-1, 0,  86,-1,-1,83, 86,-1,-1, 0,
+         88,-1,84,-1, 79,-1,-1, 0,  81,-1,84,-1, 88,-1,-1, 0,
+         89,-1,-1,-1, 84,-1,81, 0,  86,-1,83,-1, 79,-1,-1, 0,
+         84,88,91,-1, 88,-1,84, 0,  76,-1,-1,-1, 79,-1,-1, 0] },
+
+  { bpm:128, vol:.050, dr:1, ar:1,     // いちごのおか：ヘ長調ではずむ
+    ch:['F','C','Dm','Bb',  'Bb','C','Dm','F',
+        'Bb','C','F','Dm',  'Bb','C','F','F'],
+    mel:[81,84,81, 0, 77, 0,79,81,  84,-1,88, 0, 84, 0,79, 0,
+         86,84,86, 0, 89,-1,-1, 0,  86,-1,84, 0, 82,-1,-1, 0,
+         82,84,86, 0, 89, 0,86, 0,  88,-1,84, 0, 79,-1,-1, 0,
+         86,89,88,86, 84,-1,82, 0,  81,-1,-1, 0, 77,-1,-1, 0,
+         89,-1,-1,86, 89,-1,-1, 0,  91,-1,-1,88, 91,-1,-1, 0,
+         93,-1,89,-1, 84,-1,-1, 0,  86,-1,89,-1, 93,-1,-1, 0,
+         94,-1,-1,-1, 89,-1,86, 0,  91,-1,88,-1, 84,-1,-1, 0,
+         89,93,96,-1, 93,-1,89, 0,  88,-1,84,-1, 81,-1,-1, 0] },
+
+  { bpm:102, vol:.054, dr:.75, ar:.6,  // チョコレートのおか：ト長調のゆったりした甘さ
+    ch:['G','D','Em','C',  'Am','D','Em','G',
+        'C','D','G','Em',  'C','D','G','G'],
+    mel:[83,-1,-1,86, 91,-1,-1, 0,  90,-1,-1,86, 83,-1,-1, 0,
+         88,-1,-1,91, 88,-1,86,-1,  84,-1,-1, 0, 83,-1,-1, 0,
+         81,-1,84,-1, 88,-1,-1, 0,  86,-1,90,-1, 93,-1,-1, 0,
+         88,-1,-1,86, 84,-1,83,-1,  83,-1,-1,-1, 79,-1,-1, 0,
+         84,-1,-1,88, 91,-1,-1, 0,  90,-1,-1,86, 90,-1,-1, 0,
+         91,-1,88,-1, 83,-1,-1, 0,  88,-1,91,-1, 95,-1,-1, 0,
+         96,-1,-1,-1, 91,-1,88, 0,  90,-1,86,-1, 83,-1,-1, 0,
+         86,91,95,-1, 91,-1,86, 0,  83,-1,-1,-1, 86,-1,-1, 0] },
+
+  { bpm:114, vol:.048, dr:.85, ar:.9,  // こおりのしろ：ニ長調のすきとおった高音
+    ch:['D','A','Bm','G',  'G','A','Bm','D',
+        'G','A','D','Bm',  'G','A','D','D'],
+    mel:[90, 0,93, 0, 98,-1,93, 0,  97, 0,93, 0, 90,-1,-1, 0,
+         95, 0,90, 0, 86,-1,88,-1,  91,-1,-1, 0, 90,-1,-1, 0,
+         86, 0,91, 0, 95,-1,-1, 0,  93, 0,97, 0, 98,-1,-1, 0,
+         98, 0,95, 0, 93,91,90,88,  90,-1,-1,-1, 86,-1,-1, 0,
+         91,-1,-1,95, 98,-1,-1, 0,  97,-1,-1,93, 97,-1,-1, 0,
+         98,-1,93,-1, 90,-1,-1, 0,  95,-1,98,-1, 95,93,90,-1,
+         91,-1,95,-1, 98,-1,-1, 0,  97,-1,93,-1, 90,-1,-1, 0,
+         90,93,98,-1, 93,-1,90, 0,  86,-1,-1,-1, 90,-1,-1, 0] },
+
+  { bpm:100, vol:.050, dr:.6, ar:.5,   // よぞらのテラス：イ長調のやわらかいアルペジオ
+    ch:['A','E','F#m','D',  'D','E','F#m','A',
+        'D','E','A','F#m',  'D','E','A','A'],
+    mel:[81,85,88,93, 88,-1,-1, 0,  83,88,92,95, 92,-1,-1, 0,
+         90,-1,88,-1, 85,-1,86,-1,  86,-1,-1, 0, 90,-1,-1, 0,
+         86,90,93,97, 93,-1,-1, 0,  88,92,95,-1, 92,-1,-1, 0,
+         90,93,90,88, 86,-1,85,-1,  85,-1,-1,-1, 81,-1,-1, 0,
+         93,-1,-1,90, 93,-1,-1, 0,  95,-1,-1,92, 95,-1,-1, 0,
+         97,-1,93,-1, 88,-1,-1, 0,  90,-1,93,-1, 97,-1,-1, 0,
+         98,-1,-1,-1, 93,-1,90, 0,  95,-1,92,-1, 88,-1,-1, 0,
+         93,97,100,-1, 97,-1,93, 0, 88,-1,-1,-1, 85,-1,-1, 0] },
+
+  { bpm:110, vol:.052, dr:1, ar:.9,    // キャラメルのさばく：変ロ長調の歯切れよいリズム
+    ch:['Bb','F','Gm','Eb',  'Eb','F','Gm','Bb',
+        'Eb','F','Bb','Gm',  'Eb','F','Bb','Bb'],
+    mel:[86, 0,89, 0, 86, 0,82, 0,  84, 0,89, 0, 93,-1,-1, 0,
+         91, 0,89, 0, 86,-1,87,-1,  87,-1,-1, 0, 89,-1,-1, 0,
+         82, 0,87, 0, 91,-1,-1, 0,  89, 0,93, 0, 94,-1,-1, 0,
+         91,94,93,91, 89,-1,86,-1,  86,-1,-1,-1, 82,-1,-1, 0,
+         87,-1,-1,91, 94,-1,-1, 0,  93,-1,-1,89, 93,-1,-1, 0,
+         94,-1,89,-1, 86,-1,-1, 0,  91,-1,94,-1, 98,-1,-1, 0,
+         99,-1,-1,-1, 94,-1,91, 0,  93,-1,89,-1, 86,-1,-1, 0,
+         89,94,98,-1, 94,-1,89, 0,  86,-1,-1,-1, 89,-1,-1, 0] },
+
+  { bpm:134, vol:.048, dr:1, ar:1,     // ソーダのうみべ：ホ長調でいちばん元気
+    ch:['E','B','C#m','A',  'A','B','C#m','E',
+        'A','B','E','C#m',  'A','B','E','E'],
+    mel:[88,92,95,92, 88, 0,85, 0,  87,90,95,-1, 90, 0,83, 0,
+         85,88,92,-1, 97,-1,-1, 0,  93,-1,90,-1, 88,-1,-1, 0,
+         85,88,93,-1, 97, 0,93, 0,  95,-1,90,-1, 87,-1,-1, 0,
+         88,92,97,100, 97,95,92,-1, 92,-1,-1,-1, 88,-1,-1, 0,
+         93,-1,-1,97, 100,-1,-1, 0, 99,-1,-1,95, 99,-1,-1, 0,
+         100,-1,95,-1, 92,-1,-1, 0, 97,-1,100,-1, 97,95,92,-1,
+         93,-1,97,-1, 100,-1,-1, 0, 99,-1,95,-1, 90,-1,-1, 0,
+         92,95,100,-1, 95,-1,92, 0, 88,-1,-1,-1, 90,-1,-1, 0] },
+
+  { bpm:106, vol:.052, dr:.7, ar:.5,   // マカロンのもり：ト長調ののどかな歌
+    ch:['G','C','G','D',  'Em','C','D','G',
+        'C','D','G','Em',  'C','D','G','G'],
+    mel:[79,-1,83,-1, 86,-1,-1, 0,  88,-1,-1,-1, 84,-1,-1, 0,
+         86,-1,83,-1, 79,-1,81,-1,  83,-1,-1, 0, 86,-1,-1, 0,
+         88,-1,91,-1, 88,-1,86,-1,  84,-1,-1,-1, 88,-1,-1, 0,
+         86,-1,90,-1, 91,-1,90,-1,  88,-1,-1,-1, 83,-1,-1, 0,
+         84,-1,88,-1, 91,-1,-1, 0,  90,-1,-1,-1, 86,-1,-1, 0,
+         91,-1,-1,88, 86,-1,-1, 0,  88,-1,-1,91, 95,-1,-1, 0,
+         96,-1,-1,-1, 91,-1,-1, 0,  90,-1,-1,-1, 86,-1,-1, 0,
+         88,-1,91,-1, 95,-1,91, 0,  86,-1,-1,-1, 83,-1,-1, 0] },
+
+  { bpm: 96, vol:.050, dr:.45, ar:.4,  // ゆきのケーキやま：オルゴールのように 間をとる
+    ch:['D','Bm','G','A',  'Bm','G','A','D',
+        'G','A','D','Bm',  'G','A','D','D'],
+    mel:[90,-1,-1, 0, 93,-1,-1, 0,  95,-1,93,-1, 90,-1,-1, 0,
+         91,-1,-1, 0, 88,-1,-1, 0,  90,-1,93,-1, 97,-1,-1, 0,
+         98,-1,-1, 0, 95,-1,-1, 0,  91,-1,95,-1, 98,-1,-1, 0,
+         97,-1,95,-1, 93,91,90,88,  90,-1,-1,-1, 86,-1,-1, 0,
+         91,-1,-1, 0, 95,-1,-1, 0,  97,-1,-1, 0, 93,-1,-1, 0,
+         98,-1,-1, 0, 93,-1,90,-1,  95,-1,-1, 0, 90,-1,-1, 0,
+         91,-1,95,-1, 98,-1,-1, 0,  97,-1,93,-1, 90,-1,-1, 0,
+         90,-1,93,-1, 98,-1,93, 0,  86,-1,-1,-1, 90,-1,-1, 0] },
+
+  { bpm:126, vol:.054, dr:1, ar:.9,    // にじのてんくう：最終ステージ。上へ上へと のぼる
+    ch:['C','G','Am','Em',  'F','C','F','G',
+        'F','G','C','Am',  'F','G','C','C'],
+    mel:[72,76,79,84, 83,-1,79, 0,  74,79,83,86, 83,-1,-1, 0,
+         81,84,88,-1, 84,-1,81, 0,  83,-1,88,-1, 91,-1,-1, 0,
+         89,-1,84,-1, 81,-1,-1, 0,  84,88,91,-1, 88,-1,84, 0,
+         89,-1,-1,86, 84,-1,81, 0,  83,-1,86,-1, 91,-1,-1, 0,
+         89,-1,-1,84, 89,-1,-1, 0,  91,-1,-1,86, 91,-1,-1, 0,
+         96,-1,91,-1, 84,-1,-1, 0,  88,-1,93,-1, 96,-1,-1, 0,
+         96,-1,-1,-1, 89,-1,84, 0,  91,-1,86,-1, 83,-1,-1, 0,
+         84,88,96,-1, 91,-1,88, 0,  79,-1,-1,-1, 83,-1,-1, 0] },
 ];
 let bgmTimer = null, bgmStep = 0, bgmNext = 0;
+let bgmBus = null, bgmWet = null, bgmSend = null, bgmDelayNode = null, bgmNoise = null;
 const midiF = m => 440 * Math.pow(2, (m-69)/12);
-function bgmNote(f, t, dur, wv, vol){
-  const o = actx.createOscillator(), gg = actx.createGain();
-  o.type = wv; o.frequency.value = f;
-  gg.gain.setValueAtTime(0.0001, t);
-  gg.gain.linearRampToValueAtTime(vol, t + 0.02);
-  gg.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(gg).connect(actx.destination);
+
+/* --- 音のとおり道をつくる（さいしょの1回だけ） --------------
+   ひびきと やまびこを通すと、おなじ楽譜でも
+   「部屋で鳴っている音」に きこえて やわらかくなる */
+function bgmSetup(){
+  if (bgmBus) return;
+  const rate = actx.sampleRate;
+
+  // BGMは こうかおん（beep）の下に しずめる。同じ大きさだと
+  // タップの音や こうげきの音が きこえなくなってしまう
+  bgmBus = actx.createGain(); bgmBus.gain.value = 0.55;
+  // かさねた音が われないように、さいごに かるく ならしておく
+  const comp = actx.createDynamicsCompressor();
+  comp.threshold.value = -16; comp.knee.value = 20; comp.ratio.value = 4;
+  comp.attack.value = 0.005; comp.release.value = 0.2;
+  bgmBus.connect(comp); comp.connect(actx.destination);
+
+  // ひびき：ノイズを減衰させた擬似インパルス応答。音源ファイルなしで部屋鳴りが作れる
+  const len = Math.floor(rate * 1.7);
+  const ir = actx.createBuffer(2, len, rate);
+  for (let ch = 0; ch < 2; ch++){
+    const d = ir.getChannelData(ch);
+    for (let i = 0; i < len; i++)
+      d[i] = (Math.random()*2 - 1) * Math.pow(1 - i/len, 2.6) * 0.7;
+  }
+  const conv = actx.createConvolver(); conv.buffer = ir;
+  bgmWet = actx.createGain(); bgmWet.gain.value = 0.5;   // ひびきへ送るつまみ
+  bgmWet.connect(conv); conv.connect(bgmBus);
+
+  // やまびこ：メロディだけに かけて きらきらを のばす
+  bgmSend = actx.createGain(); bgmSend.gain.value = 0.28;
+  bgmDelayNode = actx.createDelay(1.2); bgmDelayNode.delayTime.value = 0.3;
+  const fb = actx.createGain(); fb.gain.value = 0.3;
+  const dlLp = actx.createBiquadFilter(); dlLp.type = 'lowpass'; dlLp.frequency.value = 2600;
+  bgmSend.connect(bgmDelayNode);
+  bgmDelayNode.connect(dlLp); dlLp.connect(fb); fb.connect(bgmDelayNode);
+  dlLp.connect(bgmBus); dlLp.connect(bgmWet);
+
+  // ドラム用のノイズ。毎回つくると おもいので 1つを つかいまわす
+  bgmNoise = actx.createBuffer(1, Math.floor(rate * 0.5), rate);
+  const nd = bgmNoise.getChannelData(0);
+  for (let i = 0; i < nd.length; i++) nd[i] = Math.random()*2 - 1;
+}
+
+/* メロディ：オルゴール風。基音に すこしずらした音と 倍音をかさねると、
+   1本のオシレーターでは出ない ふくらみが生まれる */
+function bgmBell(f, t, dur, vol){
+  const out = actx.createGain();
+  out.gain.setValueAtTime(0.0001, t);
+  out.gain.linearRampToValueAtTime(vol, t + 0.012);
+  out.gain.exponentialRampToValueAtTime(vol*0.3, t + Math.min(dur*0.3, 0.2));
+  out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  // 時間とともに 高い成分が消えていくと、はじいた楽器らしく きこえる
+  const lp = actx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.frequency.setValueAtTime(5400, t);
+  lp.frequency.exponentialRampToValueAtTime(1500, t + dur);
+  out.connect(lp);
+  lp.connect(bgmBus); lp.connect(bgmWet); lp.connect(bgmSend);
+  const P = [[1, 1, 'triangle'], [1.004, .55, 'triangle'], [2.01, .2, 'sine'], [3.02, .06, 'sine']];
+  for (const [mul, amp, wv] of P){
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = wv; o.frequency.value = f*mul; g.gain.value = amp;
+    o.connect(g).connect(out);
+    o.start(t); o.stop(t + dur + 0.1);
+  }
+}
+
+/* 和音のしきもの。メロディの下に ずっと鳴っていると
+   すきまが うまって さみしくならない */
+function bgmPad(freqs, t, dur, vol){
+  const out = actx.createGain();
+  out.gain.setValueAtTime(0.0001, t);
+  out.gain.linearRampToValueAtTime(vol, t + dur*0.3);
+  out.gain.setValueAtTime(vol, t + dur*0.65);
+  out.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1300;
+  out.connect(lp); lp.connect(bgmBus); lp.connect(bgmWet);
+  const amp = 0.34 / Math.sqrt(freqs.length);
+  for (const f of freqs){
+    for (const dt of [-3, 3]){          // 2つを ほんの少しずらすと ゆれて あつみが出る
+      const o = actx.createOscillator(), g = actx.createGain();
+      o.type = 'triangle'; o.frequency.value = f; o.detune.value = dt;
+      g.gain.value = amp;
+      o.connect(g).connect(out);
+      o.start(t); o.stop(t + dur + 0.1);
+    }
+  }
+}
+
+/* ベース：サイン波だけだと ぼやけるので 三角波をすこし足して 芯をつくる */
+function bgmBass(f, t, dur, vol){
+  const g = actx.createGain();
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(vol*0.45, t + dur*0.6);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  const lp = actx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 480;
+  g.connect(lp); lp.connect(bgmBus);
+  const o = actx.createOscillator(); o.type = 'sine'; o.frequency.value = f;
+  const o2 = actx.createOscillator(); o2.type = 'triangle'; o2.frequency.value = f; o2.detune.value = 5;
+  const g2 = actx.createGain(); g2.gain.value = 0.3;
+  o.connect(g); o2.connect(g2).connect(g);
+  o.start(t); o.stop(t + dur + 0.05);
+  o2.start(t); o2.stop(t + dur + 0.05);
+}
+
+/* きらきらの うわもの（対旋律）。メロディが やすんでいる うら拍に
+   和音の音を ならべると、すきまが うまって にぎやかになる。
+   和音の中の音しか つかわないので、どこで鳴っても にごらない */
+function bgmArp(f, t, dur, vol){
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = 'sine'; o.frequency.value = f;
+  g.gain.setValueAtTime(0.0001, t);
+  g.gain.linearRampToValueAtTime(vol, t + 0.008);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g); g.connect(bgmBus); g.connect(bgmWet); g.connect(bgmSend);
   o.start(t); o.stop(t + dur + 0.05);
 }
-/* ひかえめな刻み。うら拍に入れると 曲がねむくならず、前へすすむ感じが出る */
-function bgmClick(t, vol){
-  const o = actx.createOscillator(), g = actx.createGain();
-  o.type = 'triangle';
-  o.frequency.setValueAtTime(2600, t);
-  o.frequency.exponentialRampToValueAtTime(1100, t + 0.035);
-  g.gain.setValueAtTime(vol, t);
-  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
-  o.connect(g).connect(actx.destination);
-  o.start(t); o.stop(t + 0.07);
+
+/* サビでメロディに そえる「3度下」。和音にふくまれる音だけを えらぶので、
+   どの曲でも かならず きれいに かさなる */
+function harmonyBelow(n, C){
+  for (let d = 3; d <= 5; d++)
+    if (C.iv.some(v => (((n - d) - C.root - v) % 12 + 12) % 12 === 0)) return n - d;
+  return 0;
 }
+
+/* ドラム。うら拍にも音があると 曲が前へすすんで ねむくならない */
+function bgmKick(t, vol){
+  const o = actx.createOscillator(), g = actx.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(160, t);
+  o.frequency.exponentialRampToValueAtTime(46, t + 0.09);
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.17);
+  o.connect(g).connect(bgmBus);
+  o.start(t); o.stop(t + 0.19);
+}
+function bgmNoiseHit(t, vol, type, freq, dec, wet){
+  const s = actx.createBufferSource(); s.buffer = bgmNoise;
+  const f = actx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = 1.1;
+  const g = actx.createGain();
+  g.gain.setValueAtTime(vol, t);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dec);
+  s.connect(f).connect(g); g.connect(bgmBus);
+  if (wet) g.connect(bgmWet);
+  // 毎回おなじ場所から鳴らすと 機械っぽくなるので 読みだす位置をずらす
+  s.start(t, Math.random()*0.35); s.stop(t + dec + 0.03);
+}
+const bgmClap = (t, vol) => bgmNoiseHit(t, vol, 'bandpass', 1900, 0.13, true);
+const bgmHat  = (t, vol, open) => bgmNoiseHit(t, vol, 'highpass', open ? 7000 : 9500, open ? 0.14 : 0.04, false);
+
 function bgmTick(){
   if (!sndOn || !actx) return;
+  bgmSetup();
   // ミュートしていた間のぶんを一気に鳴らさないための巻きなおし
   if (bgmNext < actx.currentTime - 0.1) bgmNext = actx.currentTime + 0.05;
   // いまのステージの曲（ウェーブが変わると自動でつぎの曲へ。きせかえ中はその曲）
   const B = themeOverride ? themeOverride.bgm
     : BGMS[Math.max(0, Math.ceil(Math.max(wave,1)/STAGE_WAVES)-1) % BGMS.length];
   const stepDur = 60 / B.bpm / 2;    // 8分音符
-  const ML = B.mel.length, BL = B.bass.length;
+  // やまびこの間かくは 付点8分。テンポに合わせないと リズムから ずれてしまう
+  bgmDelayNode.delayTime.setTargetAtTime(stepDur*1.5, actx.currentTime, 0.08);
+  const ML = B.mel.length, CL = B.ch.length;
+  const dr = B.dr === undefined ? 1 : B.dr, ar = B.ar === undefined ? 1 : B.ar;
   while (bgmNext < actx.currentTime + 0.25){
-    const i = bgmStep % ML;
+    const i = bgmStep % ML, s = i % 8, bar = ((i - s) / 8) % CL;
+    const C = chordOf(B.ch[bar]);
+    // うしろ半分が サビ。ここだけ ハモリを足して 曲がもりあがるようにする
+    const sabi = bar >= CL/2;
     const n = B.mel[i];
     // -1 は「まえの音をのばす」。おなじ長さの音がならぶと のっぺりするので、
     // のばす・やすむ を入れて リズムをつける
     if (n > 0){
       let hold = 1;
-      while (hold < 8 && B.mel[(bgmStep + hold) % ML] === -1) hold++;
-      bgmNote(midiF(n), bgmNext, stepDur*(hold - 0.06), B.wv, B.vol);
+      while (hold < 16 && B.mel[(i + hold) % ML] === -1) hold++;
+      // 音符の長さより すこし長く残す。鐘の音は 自然に消えていくものだから
+      const dur = stepDur*(hold + 0.9);
+      bgmBell(midiF(n), bgmNext, dur, B.vol);
+      if (sabi){
+        const h = harmonyBelow(n, C);
+        if (h) bgmBell(midiF(h), bgmNext, dur, B.vol*0.42);
+      }
+    } else if (ar > 0 && s % 2 === 1){
+      // メロディがない うら拍にだけ 置く。かさねすぎると うるさくなるから
+      const tone = C.iv[((bgmStep / 2) | 0) % C.iv.length];
+      bgmArp(midiF(72 + C.root + tone), bgmNext, stepDur*1.6, B.vol*0.3*ar);
     }
-    if (i % 4 === 0) bgmNote(midiF(B.bass[(bgmStep >> 2) % BL]), bgmNext, stepDur*3.5, 'sine', B.vol*1.15);
-    // うら拍のかるい刻み
-    if (i % 4 === 2) bgmClick(bgmNext, B.vol*0.5);
+    if (s === 0){
+      bgmPad(C.iv.map(v => midiF(60 + C.root + v)), bgmNext, stepDur*7.6, B.vol*0.42);
+      bgmBass(midiF(36 + C.root), bgmNext, stepDur*3.6, B.vol*1.1);
+    }
+    // 小節のなかばで 5度へうごかすと、ベースが歩いているように きこえる
+    if (s === 4) bgmBass(midiF(36 + C.root + 7), bgmNext, stepDur*3.6, B.vol*0.9);
+    if (dr > 0){
+      if (s === 0 || s === 4) bgmKick(bgmNext, B.vol*1.6*dr);
+      if (s === 2 || s === 6) bgmClap(bgmNext, B.vol*0.7*dr);
+      bgmHat(bgmNext, B.vol*(s % 2 ? 0.3 : 0.16)*dr, s === 7);
+    }
     bgmStep++; bgmNext += stepDur;
   }
 }
@@ -740,6 +1035,7 @@ function bgmStart(){
   try{
     if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
     if (actx.state === 'suspended') actx.resume();
+    bgmSetup();
   }catch(e){ return; }
   bgmNext = actx.currentTime + 0.1; bgmStep = 0;
   bgmTimer = setInterval(bgmTick, 120);
@@ -899,12 +1195,10 @@ function syncHUD(){
 /* ==========================================================
    入力
    ========================================================== */
-cv.addEventListener('pointerdown', e => {
-  e.preventDefault();
+/* 盤面のタップ。Phaser の入力から よばれる。
+   px,py は 盤面の左上を原点とした CSSピクセル */
+function boardTap(px, py){
   if (over) return;
-  const b = cv.getBoundingClientRect();
-  const px = (e.clientX-b.left) * (COLS*CELL/b.width);
-  const py = (e.clientY-b.top)  * (ROWS*CELL/b.height);
   const c = Math.floor(px/CELL), r = Math.floor(py/CELL);
   if (c<0||c>=COLS||r<0||r>=ROWS) return;
 
@@ -943,7 +1237,7 @@ cv.addEventListener('pointerdown', e => {
   for (let i=0;i<14;i++) puff(cx(c), cy(r), T.color);
   saveRun();
   syncHUD();
-});
+}
 
 /* ==========================================================
    ウェーブ
@@ -3423,8 +3717,9 @@ function drawPortrait(g, id, S){
 /* ==========================================================
    描画
    ========================================================== */
-function drawBoard(){
-  const W = COLS*CELL, H = ROWS*CELL;
+/* じめんと道は うごかないので、1回だけ テクスチャに焼く。
+   トッピングだけで110個あり、毎フレーム描きなおすのは むだだから */
+function drawGround(){
   const TH = themeOf(wave);   // いまのステージのテーマ色
 
   // じめん
@@ -3432,13 +3727,6 @@ function drawBoard(){
     ctx.fillStyle = (r+c)%2 ? TH.g1 : TH.g2;
     ctx.fillRect(c*CELL, r*CELL, CELL, CELL);
   }
-
-  // 背景のキラキラ
-  for (const s of sparks){
-    ctx.globalAlpha = 0.35 + Math.sin(s.ph)*0.3;
-    sparkle(s.x, s.y, s.r, s.ph*0.4, '#ffffff');
-  }
-  ctx.globalAlpha = 1;
 
   // 道（クッキー）
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -3463,6 +3751,20 @@ function drawBoard(){
     ctx.fillRect(-CELL*0.055, -CELL*0.02, CELL*0.11, CELL*0.04);
     ctx.restore();
   }
+
+}
+
+/* 焼いたじめんの上に かさねる、うごくもの */
+function drawBoardOverlay(){
+  const W = COLS*CELL, H = ROWS*CELL;
+  const TH = themeOf(wave);
+
+  // 背景のキラキラ
+  for (const s of sparks){
+    ctx.globalAlpha = 0.35 + Math.sin(s.ph)*0.3;
+    sparkle(s.x, s.y, s.r, s.ph*0.4, '#ffffff');
+  }
+  ctx.globalAlpha = 1;
 
   // いまのステージ名（右上のかわいいラベル。左上は敵の入り口なので避ける）
   {
@@ -4169,11 +4471,11 @@ function drawShot(s){
 
 function render(){
   const W = COLS*CELL, H = ROWS*CELL;
-  ctx.clearRect(0,0,W,H);
+  // 消すのは Phaser がやる。じめんは その下に 画像として ならんでいる
   ctx.save();
   roundRect(0,0,W,H,20); ctx.clip();
 
-  drawBoard();
+  drawBoardOverlay();
   for (const t of towers) drawTower(t);
   for (const e of enemies) drawEnemy(e);
   for (const s of shots) drawShot(s);
@@ -4351,6 +4653,80 @@ function render(){
 }
 
 /* ==========================================================
+   Phaser（ゲームの土台）
+
+   絵は これまでどおり Canvas 2D で描く。Phaser の描画APIには
+   グラデーションも 合成モードもなく、いまの立体感や つやが出せないため。
+   Phaser には ループ・入力・シーン・画面サイズを まかせ、
+   うごかない じめんと道は テクスチャに 1回だけ焼いて 軽くする。
+   ========================================================== */
+let game = null, gscene = null, boardImg = null, boardKey = '', painter = null;
+
+/* Phaser の中で、これまでの Canvas 2D の描画を そのまま動かすための入れもの。
+   カメラの変換は かからないので、じぶんで CSSピクセル系に そろえる */
+class Painter extends Phaser.GameObjects.GameObject {
+  constructor(sc, fn){
+    super(sc, 'Painter');
+    this.fn = fn;
+    this.setActive(true);
+    this.renderFlags = 0xF;      // これを立てないと Phaser が えがきに来ない
+  }
+  renderCanvas(renderer){
+    const c = renderer.currentContext || renderer.gameContext;
+    const prev = ctx;
+    c.save(); c.setTransform(DPR, 0, 0, DPR, 0, 0); ctx = c;
+    try{ this.fn(); } finally { ctx = prev; c.restore(); }
+  }
+}
+
+/* 絵をやくあいだだけ ctx を さしかえる。
+   これまでの描画コードを 1行も変えずに テクスチャへ描けるようにするため */
+function withCtx(g, fn){ const p = ctx; ctx = g; try{ fn(); } finally { ctx = p; } }
+
+/* じめんの見た目が かわる条件。ここが変わったときだけ 焼きなおす */
+const groundKey = () => themeOf(wave).name + '/' + CELL + '/' + DPR;
+
+function bakeBoard(){
+  if (!gscene) return;
+  const W = COLS*CELL, H = ROWS*CELL;
+  const k = 'ground';
+  if (gscene.textures.exists(k)) gscene.textures.remove(k);
+  const t = gscene.textures.createCanvas(k, Math.ceil(W*DPR), Math.ceil(H*DPR));
+  const g = t.getContext();
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  withCtx(g, () => {
+    g.save();
+    roundRect(0, 0, W, H, 20); g.clip();   // 角まるは 焼くときに入れておく
+    drawGround();
+    g.restore();
+  });
+  t.refresh();
+  if (boardImg) boardImg.destroy();
+  boardImg = gscene.add.image(0, 0, k).setOrigin(0, 0).setDisplaySize(W*DPR, H*DPR);
+  gscene.children.sendToBack(boardImg);   // うごくものは いつも じめんの上
+  boardKey = groundKey();
+}
+
+const BoardScene = {
+  key: 'board',
+  create(){
+    gscene = this;
+    painter = new Painter(this, render);
+    this.add.existing(painter);
+    bakeBoard();
+    // Phaser が タッチとマウスを 同じように あつかってくれる。
+    // 座標は デバイスピクセルで来るので CSSピクセルに もどす
+    this.input.on('pointerdown', p => boardTap(p.x/DPR, p.y/DPR));
+  },
+  update(_t, dtMs){
+    const dt = Math.min(0.05, dtMs/1000);
+    if (!over) for (let i=0;i<speed;i++) update(dt);
+    if (!over) bonusUpdate(dt);   // ボーナスは実時間（速度倍率のえいきょうなし）
+    if (groundKey() !== boardKey) bakeBoard();   // ステージが かわった
+  },
+};
+
+/* ==========================================================
    サイズ
    ========================================================== */
 function resize(){
@@ -4358,34 +4734,37 @@ function resize(){
   const h = window.innerHeight - 362;   // なかまワザのバーと🔑ボタンのぶんも確保する
   CELL = Math.max(24, Math.floor(Math.min(w/COLS, h/ROWS)));
   const W = COLS*CELL, H = ROWS*CELL;
-  const dpr = Math.min(window.devicePixelRatio||1, 2.5);
-  cv.width = W*dpr; cv.height = H*dpr;
-  cv.style.width = W+'px'; cv.style.height = H+'px';
-  ctx.setTransform(dpr,0,0,dpr,0,0);
+  DPR = Math.min(window.devicePixelRatio||1, 2.5);
   measurePath();
   for (const s of sparks){ s.x = Math.min(s.x, W); s.y = Math.min(s.y, H); }
+  if (game){
+    // 中身は こまかく（DPR倍）、見た目は CSSピクセルで
+    game.scale.resize(W*DPR, H*DPR);
+    game.canvas.style.width = W + 'px';
+    game.canvas.style.height = H + 'px';
+    bakeBoard();
+  }
 }
 window.addEventListener('resize', resize);
 
 /* ==========================================================
-   メインループ
+   ゲーム開始
    ========================================================== */
-let last = 0;
-function loop(ts){
-  let dt = Math.min(0.05, (ts-last)/1000 || 0);
-  last = ts;
-  if (!over) for (let i=0;i<speed;i++) update(dt);
-  if (!over) bonusUpdate(dt);   // ボーナスは実時間（速度倍率のえいきょうなし）
-  render();
-  requestAnimationFrame(loop);
-}
-
 reset();
 resize();
+game = new Phaser.Game({
+  type: Phaser.CANVAS,        // 絵は Canvas 2D で描くので WebGL にしない
+  parent: 'cv',
+  width: COLS*CELL*DPR, height: ROWS*CELL*DPR,
+  transparent: true,          // 角まるの外がわを すかすため
+  scene: BoardScene,
+  scale: { mode: Phaser.Scale.NONE, zoom: 1/DPR },
+  banner: false,
+  audio: { noAudio: true },   // 音は じぶんの WebAudio でならす
+});
 tryResume();      // とちゅうのセーブがあれば、そのウェーブから再開
 checkLogin();     // きょうはじめての起動ならプレゼントを渡す
 checkLife();      // 💗の回復まちの途中なら、その画面にもどす
-requestAnimationFrame(loop);
 
 })();
 </script>
