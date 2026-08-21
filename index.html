@@ -202,7 +202,7 @@
   </div>
 
   <div id="wrap">
-    <canvas id="cv"></canvas>
+    <div id="cv"></div>
     <div id="ov">
       <div id="ovT"></div>
       <div id="ovB"></div>
@@ -285,6 +285,7 @@
 
 <div id="confetti"></div>
 
+<script src="vendor/phaser.min.js"></script>
 <script>
 (() => {
 "use strict";
@@ -535,7 +536,11 @@ function applyRegen(){
 /* ==========================================================
    DOM
    ========================================================== */
-const cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+/* 盤面は Phaser がつくる。えがくときの Canvas 2D は そのつど ctx に入る。
+   Phaser の描画APIには グラデーションも 合成モードもなく、いまの立体感が
+   出せないため、絵は これまでどおり Canvas 2D で描いている */
+const cvHost = document.getElementById('cv');
+let ctx = null, DPR = 1;
 const $ = id => document.getElementById(id);
 const vHp = $('vHp'), vSt = $('vSt'), vWv = $('vWv'), vBw = $('vBw'), hpBox = $('hpBox');
 const shopEl = $('shop'), infoEl = $('info'), infoIc = $('infoIc'), infoTx = $('infoTx');
@@ -1190,12 +1195,10 @@ function syncHUD(){
 /* ==========================================================
    入力
    ========================================================== */
-cv.addEventListener('pointerdown', e => {
-  e.preventDefault();
+/* 盤面のタップ。Phaser の入力から よばれる。
+   px,py は 盤面の左上を原点とした CSSピクセル */
+function boardTap(px, py){
   if (over) return;
-  const b = cv.getBoundingClientRect();
-  const px = (e.clientX-b.left) * (COLS*CELL/b.width);
-  const py = (e.clientY-b.top)  * (ROWS*CELL/b.height);
   const c = Math.floor(px/CELL), r = Math.floor(py/CELL);
   if (c<0||c>=COLS||r<0||r>=ROWS) return;
 
@@ -1234,7 +1237,7 @@ cv.addEventListener('pointerdown', e => {
   for (let i=0;i<14;i++) puff(cx(c), cy(r), T.color);
   saveRun();
   syncHUD();
-});
+}
 
 /* ==========================================================
    ウェーブ
@@ -3714,8 +3717,9 @@ function drawPortrait(g, id, S){
 /* ==========================================================
    描画
    ========================================================== */
-function drawBoard(){
-  const W = COLS*CELL, H = ROWS*CELL;
+/* じめんと道は うごかないので、1回だけ テクスチャに焼く。
+   トッピングだけで110個あり、毎フレーム描きなおすのは むだだから */
+function drawGround(){
   const TH = themeOf(wave);   // いまのステージのテーマ色
 
   // じめん
@@ -3723,13 +3727,6 @@ function drawBoard(){
     ctx.fillStyle = (r+c)%2 ? TH.g1 : TH.g2;
     ctx.fillRect(c*CELL, r*CELL, CELL, CELL);
   }
-
-  // 背景のキラキラ
-  for (const s of sparks){
-    ctx.globalAlpha = 0.35 + Math.sin(s.ph)*0.3;
-    sparkle(s.x, s.y, s.r, s.ph*0.4, '#ffffff');
-  }
-  ctx.globalAlpha = 1;
 
   // 道（クッキー）
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
@@ -3754,6 +3751,20 @@ function drawBoard(){
     ctx.fillRect(-CELL*0.055, -CELL*0.02, CELL*0.11, CELL*0.04);
     ctx.restore();
   }
+
+}
+
+/* 焼いたじめんの上に かさねる、うごくもの */
+function drawBoardOverlay(){
+  const W = COLS*CELL, H = ROWS*CELL;
+  const TH = themeOf(wave);
+
+  // 背景のキラキラ
+  for (const s of sparks){
+    ctx.globalAlpha = 0.35 + Math.sin(s.ph)*0.3;
+    sparkle(s.x, s.y, s.r, s.ph*0.4, '#ffffff');
+  }
+  ctx.globalAlpha = 1;
 
   // いまのステージ名（右上のかわいいラベル。左上は敵の入り口なので避ける）
   {
@@ -4460,11 +4471,11 @@ function drawShot(s){
 
 function render(){
   const W = COLS*CELL, H = ROWS*CELL;
-  ctx.clearRect(0,0,W,H);
+  // 消すのは Phaser がやる。じめんは その下に 画像として ならんでいる
   ctx.save();
   roundRect(0,0,W,H,20); ctx.clip();
 
-  drawBoard();
+  drawBoardOverlay();
   for (const t of towers) drawTower(t);
   for (const e of enemies) drawEnemy(e);
   for (const s of shots) drawShot(s);
@@ -4642,6 +4653,80 @@ function render(){
 }
 
 /* ==========================================================
+   Phaser（ゲームの土台）
+
+   絵は これまでどおり Canvas 2D で描く。Phaser の描画APIには
+   グラデーションも 合成モードもなく、いまの立体感や つやが出せないため。
+   Phaser には ループ・入力・シーン・画面サイズを まかせ、
+   うごかない じめんと道は テクスチャに 1回だけ焼いて 軽くする。
+   ========================================================== */
+let game = null, gscene = null, boardImg = null, boardKey = '', painter = null;
+
+/* Phaser の中で、これまでの Canvas 2D の描画を そのまま動かすための入れもの。
+   カメラの変換は かからないので、じぶんで CSSピクセル系に そろえる */
+class Painter extends Phaser.GameObjects.GameObject {
+  constructor(sc, fn){
+    super(sc, 'Painter');
+    this.fn = fn;
+    this.setActive(true);
+    this.renderFlags = 0xF;      // これを立てないと Phaser が えがきに来ない
+  }
+  renderCanvas(renderer){
+    const c = renderer.currentContext || renderer.gameContext;
+    const prev = ctx;
+    c.save(); c.setTransform(DPR, 0, 0, DPR, 0, 0); ctx = c;
+    try{ this.fn(); } finally { ctx = prev; c.restore(); }
+  }
+}
+
+/* 絵をやくあいだだけ ctx を さしかえる。
+   これまでの描画コードを 1行も変えずに テクスチャへ描けるようにするため */
+function withCtx(g, fn){ const p = ctx; ctx = g; try{ fn(); } finally { ctx = p; } }
+
+/* じめんの見た目が かわる条件。ここが変わったときだけ 焼きなおす */
+const groundKey = () => themeOf(wave).name + '/' + CELL + '/' + DPR;
+
+function bakeBoard(){
+  if (!gscene) return;
+  const W = COLS*CELL, H = ROWS*CELL;
+  const k = 'ground';
+  if (gscene.textures.exists(k)) gscene.textures.remove(k);
+  const t = gscene.textures.createCanvas(k, Math.ceil(W*DPR), Math.ceil(H*DPR));
+  const g = t.getContext();
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  withCtx(g, () => {
+    g.save();
+    roundRect(0, 0, W, H, 20); g.clip();   // 角まるは 焼くときに入れておく
+    drawGround();
+    g.restore();
+  });
+  t.refresh();
+  if (boardImg) boardImg.destroy();
+  boardImg = gscene.add.image(0, 0, k).setOrigin(0, 0).setDisplaySize(W*DPR, H*DPR);
+  gscene.children.sendToBack(boardImg);   // うごくものは いつも じめんの上
+  boardKey = groundKey();
+}
+
+const BoardScene = {
+  key: 'board',
+  create(){
+    gscene = this;
+    painter = new Painter(this, render);
+    this.add.existing(painter);
+    bakeBoard();
+    // Phaser が タッチとマウスを 同じように あつかってくれる。
+    // 座標は デバイスピクセルで来るので CSSピクセルに もどす
+    this.input.on('pointerdown', p => boardTap(p.x/DPR, p.y/DPR));
+  },
+  update(_t, dtMs){
+    const dt = Math.min(0.05, dtMs/1000);
+    if (!over) for (let i=0;i<speed;i++) update(dt);
+    if (!over) bonusUpdate(dt);   // ボーナスは実時間（速度倍率のえいきょうなし）
+    if (groundKey() !== boardKey) bakeBoard();   // ステージが かわった
+  },
+};
+
+/* ==========================================================
    サイズ
    ========================================================== */
 function resize(){
@@ -4649,34 +4734,37 @@ function resize(){
   const h = window.innerHeight - 362;   // なかまワザのバーと🔑ボタンのぶんも確保する
   CELL = Math.max(24, Math.floor(Math.min(w/COLS, h/ROWS)));
   const W = COLS*CELL, H = ROWS*CELL;
-  const dpr = Math.min(window.devicePixelRatio||1, 2.5);
-  cv.width = W*dpr; cv.height = H*dpr;
-  cv.style.width = W+'px'; cv.style.height = H+'px';
-  ctx.setTransform(dpr,0,0,dpr,0,0);
+  DPR = Math.min(window.devicePixelRatio||1, 2.5);
   measurePath();
   for (const s of sparks){ s.x = Math.min(s.x, W); s.y = Math.min(s.y, H); }
+  if (game){
+    // 中身は こまかく（DPR倍）、見た目は CSSピクセルで
+    game.scale.resize(W*DPR, H*DPR);
+    game.canvas.style.width = W + 'px';
+    game.canvas.style.height = H + 'px';
+    bakeBoard();
+  }
 }
 window.addEventListener('resize', resize);
 
 /* ==========================================================
-   メインループ
+   ゲーム開始
    ========================================================== */
-let last = 0;
-function loop(ts){
-  let dt = Math.min(0.05, (ts-last)/1000 || 0);
-  last = ts;
-  if (!over) for (let i=0;i<speed;i++) update(dt);
-  if (!over) bonusUpdate(dt);   // ボーナスは実時間（速度倍率のえいきょうなし）
-  render();
-  requestAnimationFrame(loop);
-}
-
 reset();
 resize();
+game = new Phaser.Game({
+  type: Phaser.CANVAS,        // 絵は Canvas 2D で描くので WebGL にしない
+  parent: 'cv',
+  width: COLS*CELL*DPR, height: ROWS*CELL*DPR,
+  transparent: true,          // 角まるの外がわを すかすため
+  scene: BoardScene,
+  scale: { mode: Phaser.Scale.NONE, zoom: 1/DPR },
+  banner: false,
+  audio: { noAudio: true },   // 音は じぶんの WebAudio でならす
+});
 tryResume();      // とちゅうのセーブがあれば、そのウェーブから再開
 checkLogin();     // きょうはじめての起動ならプレゼントを渡す
 checkLife();      // 💗の回復まちの途中なら、その画面にもどす
-requestAnimationFrame(loop);
 
 })();
 </script>
