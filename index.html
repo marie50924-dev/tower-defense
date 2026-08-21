@@ -2191,14 +2191,10 @@ function endBonus(){
 }
 
 /* ---------- なかまの応援パレード ---------- */
-const pcache = {}, scache = {};
+const pcache = {};
 function portraitOf(pid){
   if (!pcache[pid]) pcache[pid] = charThumb({ pid }, 44);
   return pcache[pid];
-}
-function silOf(pid){
-  if (!scache[pid]) scache[pid] = silhouetteThumb(pid, 52);
-  return scache[pid];
 }
 const CHEERS = ['やったね！','すごーい！','さすが✨','おめでとう🎉','かっこいい！','だいすき💗'];
 /* あつめたなかまが下を行進してお祝いしてくれる（all=true で全員：撮影用） */
@@ -8548,15 +8544,30 @@ function drawBoardOverlay(){
     sparkle(bx - CELL*0.12, CELL*0.3 + Math.sin(time*2.5)*CELL*0.05, CELL*0.09, time*2, '#ffd76e');
   }
 
-  // そらをとぶでんせつ（影のときはうっすら）
+  // そらをとぶでんせつ
   if (flyer){
-    const img = flyer.sil ? silOf(flyer.pid) : portraitOf(flyer.pid);
     const fb = Math.sin(time*2 + 1) * CELL*0.12;
-    ctx.globalAlpha = flyer.sil ? 0.5 : 0.95;
-    ctx.drawImage(img, flyer.x - 26, flyer.y - 26 + fb, 52, 52);
-    ctx.globalAlpha = 1;
-    if (!flyer.sil)
-      sparkle(flyer.x - flyer.dir*CELL*0.75, flyer.y + fb, CELL*0.09, time*5, '#ffffff');
+    const fy = flyer.y + fb;
+    if (flyer.sil){
+      // 出会う前は「かたちの わからない かげ」だけを よぎらせる。
+      // すがたが 見えてしまうと、ウェーブ60で はじめて 会う おどろきが なくなる
+      ctx.save();
+      const rg = ctx.createRadialGradient(flyer.x, fy, 0, flyer.x, fy, CELL*0.62);
+      rg.addColorStop(0,    'rgba(140,116,164,.46)');
+      rg.addColorStop(0.55, 'rgba(154,132,178,.22)');
+      rg.addColorStop(1,    'rgba(170,150,190,0)');
+      ctx.fillStyle = rg;
+      ctx.beginPath();
+      ctx.ellipse(flyer.x, fy, CELL*0.62, CELL*0.3 + Math.sin(time*3)*CELL*0.04, 0, 0, 6.2832);
+      ctx.fill();
+      ctx.restore();
+      sparkle(flyer.x - flyer.dir*CELL*0.5, fy - CELL*0.12, CELL*0.07, time*3, 'rgba(201,167,224,.75)');
+    } else {
+      ctx.globalAlpha = 0.95;
+      ctx.drawImage(portraitOf(flyer.pid), flyer.x - 26, fy - 26, 52, 52);
+      ctx.globalAlpha = 1;
+      sparkle(flyer.x - flyer.dir*CELL*0.75, fy, CELL*0.09, time*5, '#ffffff');
+    }
   }
 
   // 置ける場所のうっすらしたガイド
