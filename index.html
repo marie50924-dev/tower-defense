@@ -54,7 +54,8 @@
 
   /* ---------- bottom panel ---------- */
   #panel{min-height:96px}
-  #shop{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:7px}
+  /* おかし4つ＋なかまえらび で 5つ ならぶ */
+  #shop{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;padding:7px}
   .tw{
     position:relative;border:2px solid transparent;border-radius:14px;padding:6px 2px 5px;
     background:rgba(255,255,255,.6);cursor:pointer;text-align:center;line-height:1.15;
@@ -122,15 +123,37 @@
   #ovT{font-size:26px;color:var(--pink-d)}
   #ovB{font-size:13.5px;line-height:1.7;opacity:.8}
 
+  /* ---------- なかまえらび ---------- */
+  #pickOv{position:absolute;inset:0;display:none;flex-direction:column;gap:8px;border-radius:20px;
+    background:rgba(255,244,251,.96);backdrop-filter:blur(6px);padding:12px;overflow-y:auto;z-index:3}
+  #pickOv.on{display:flex;animation:pop .3s cubic-bezier(.2,1.4,.5,1)}
+  #pickHead{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pink-d)}
+  #pickHead>div{flex:1}
+  #pickTabs{display:flex;gap:5px;flex:0 0 auto;overflow-x:auto;scrollbar-width:none}
+  #pickTabs::-webkit-scrollbar{display:none}
+  #pickHint{text-align:center;font-size:10px;color:#b98ae0;background:rgba(255,255,255,.55);
+    border-radius:10px;padding:5px 4px}
+  #pickGrid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+  .pk{background:rgba(255,255,255,.85);border:2px solid #ffd9ec;border-radius:14px;
+    padding:6px 3px 5px;text-align:center;cursor:pointer}
+  .pk.poor{opacity:.5;filter:grayscale(.6)}
+  .pk canvas{display:block;margin:0 auto}
+  .pkN{font-size:10.5px;margin-top:2px;line-height:1.2}
+  .pkC{font-size:10px;color:#e0a52e}
+  .pkS{font-size:9px;opacity:.6}
+
   /* ---------- コレクション図鑑 ---------- */
   #colOv{position:absolute;inset:0;display:none;flex-direction:column;gap:8px;border-radius:20px;
     background:rgba(255,244,251,.96);backdrop-filter:blur(6px);padding:12px;overflow-y:auto;z-index:2}
   #colOv.on{display:flex;animation:pop .3s cubic-bezier(.2,1.4,.5,1)}
   #colHead{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pink-d)}
   #colHead>div{flex:1}
-  #colTabs{display:flex;gap:5px}
-  .ctab{flex:1;border:none;border-radius:11px;padding:7px 2px;font:inherit;font-size:11px;color:var(--ink);
-    background:rgba(255,255,255,.65);cursor:pointer}
+  /* タブが12こに ふえたので、はみ出したぶんは 横に スクロールさせる */
+  /* たて方向の flex の中では ちぢんで 消えてしまうので、ちぢませない */
+  #colTabs{display:flex;gap:5px;flex:0 0 auto;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  #colTabs::-webkit-scrollbar{display:none}
+  .ctab{flex:0 0 auto;border:none;border-radius:11px;padding:7px 9px;font:inherit;font-size:11px;color:var(--ink);
+    background:rgba(255,255,255,.65);cursor:pointer;white-space:nowrap}
   .ctab.sel{background:linear-gradient(180deg,#ffb3dc,var(--pink));color:#fff;box-shadow:0 2px 0 var(--pink-d)}
   #colDone{background:linear-gradient(90deg,#ffe9b8,#ffd9ec);border-radius:12px;padding:8px;
     text-align:center;font-size:12.5px}
@@ -246,6 +269,13 @@
         <button class="ctab" data-t="en">てき</button>
         <button class="ctab" data-t="ch">なかま</button>
         <button class="ctab" data-t="lg">でんせつ</button>
+        <button class="ctab" data-t="g1">★1</button>
+        <button class="ctab" data-t="g2">★2</button>
+        <button class="ctab" data-t="g3">★3</button>
+        <button class="ctab" data-t="g4">★4</button>
+        <button class="ctab" data-t="g5">★5</button>
+        <button class="ctab" data-t="g6">★6</button>
+        <button class="ctab" data-t="g7">🌈7</button>
       </div>
       <div id="colStats"></div>
       <div id="colHint" style="display:none">📌 あつめたなかまをタップすると ワザバーに はったり はがしたり できるよ（7こまで）</div>
@@ -253,6 +283,24 @@
       <div id="colGrid"></div>
       <div id="colTotal"></div>
     </div>
+  </div>
+
+  <div id="pickOv">
+    <div id="pickHead">
+      <div>🧸 なかまを えらぶ</div>
+      <button class="mini gray" id="pickClose">とじる</button>
+    </div>
+    <div id="pickTabs">
+      <button class="ctab sel" data-p="1">★1</button>
+      <button class="ctab" data-p="2">★2</button>
+      <button class="ctab" data-p="3">★3</button>
+      <button class="ctab" data-p="4">★4</button>
+      <button class="ctab" data-p="5">★5</button>
+      <button class="ctab" data-p="6">★6</button>
+      <button class="ctab" data-p="7">🌈7</button>
+    </div>
+    <div id="pickHint"></div>
+    <div id="pickGrid"></div>
   </div>
 
   <div class="card" id="skillBar"></div>
@@ -1100,10 +1148,84 @@ function buildShop(){
     };
     shopEl.append(d);
   }
+  // 5つめは なかまえらびの 入り口。152体を バーに ならべるのは むりなので 別画面にする
+  const pk = document.createElement('div');
+  pk.className = 'tw';
+  pk.dataset.k = '__pick';
+  pk.innerHTML = '<div class="ic" style="font-size:34px;line-height:46px">🧸</div>' +
+                 '<div class="nm">なかま</div><div class="cs">えらぶ<span class="twC"></span></div>';
+  pk.onclick = () => { selTower = null; closeInfo(); openPick(); };
+  shopEl.append(pk);
   syncShop();
+}
+
+/* ---------- なかまえらび ----------
+   なかまは 152体いるので 買いものバーには のらない。★べつの 別画面から えらぶ。
+   えらぶと ふつうの おかしと おなじように ばんめんに おける */
+const pickOv = $('pickOv'), pickGrid = $('pickGrid'), pickTabs = $('pickTabs'), pickHint = $('pickHint');
+let pickLv = 1, pickIo = null;
+$('pickClose').onclick = () => pickOv.classList.remove('on');
+for (const b of pickTabs.children) b.onclick = () => {
+  pickLv = +b.dataset.p;
+  for (const x of pickTabs.children) x.classList.toggle('sel', x === b);
+  buildPick(); beep(660,.06,'triangle',.03);
+};
+function openPick(){ buildPick(); pickOv.classList.add('on'); beep(700,.08,'triangle',.04); }
+function buildPick(){
+  const list = GEN_LIST.filter(o => o.side === 'ch' && o.lv === pickLv);
+  pickHint.innerHTML = '★' + pickLv + 'の なかま ' + list.length + '人　' +
+    '⭐' + ALLY_COST[pickLv] + 'で おける' + (pickLv >= 7 ? '（2×2のばしょが いるよ）' : '');
+  if (pickIo) pickIo.disconnect();
+  pickIo = new IntersectionObserver(es => {
+    for (const e of es){
+      if (!e.isIntersecting || !e.target.__draw) continue;
+      const f = e.target.__draw; e.target.__draw = null;
+      pickIo.unobserve(e.target); f();
+    }
+  }, { root: pickOv, rootMargin: '240px' });
+  pickGrid.innerHTML = '';
+  for (const o of list){
+    const T = TOWERS[o.id];
+    const d = document.createElement('div');
+    d.className = 'pk' + (stars < T.cost ? ' poor' : '');
+    const box = document.createElement('div');
+    box.style.cssText = 'width:56px;height:56px;margin:0 auto';
+    box.__draw = () => box.replaceWith(genThumb(o, 56));
+    pickIo.observe(box);
+    d.append(box);
+    d.insertAdjacentHTML('beforeend',
+      '<div class="pkN">' + o.name + '</div>' +
+      '<div class="pkC">⭐' + T.cost + '</div>' +
+      '<div class="pkS">' + T.role + '<br>こうげき' + T.dmg + '・はんい' + T.range.toFixed(1) +
+      (o.cells >= 4 ? '・2×2' : '') + '</div>');
+    d.onclick = () => {
+      selTool = o.id; selTower = null;
+      pickOv.classList.remove('on');
+      syncShop(); beep(700,.08,'triangle',.04);
+      floatTx(cx(4), cy(6), o.name + 'を おく ばしょを タップ', '#b98ae0');
+    };
+    pickGrid.append(d);
+  }
 }
 function syncShop(){
   for (const el of shopEl.children){
+    if (el.dataset.k === '__pick'){
+      // なかまを えらんでいる あいだは この ボタンを 光らせる
+      const on = !!(selTool && TOWERS[selTool] && TOWERS[selTool].ally);
+      el.classList.toggle('sel', on);
+      el.classList.remove('poor');
+      el.querySelector('.twC').textContent = '';
+      el.querySelector('.nm').textContent = on ? TOWERS[selTool].name : 'なかま';
+      const ic = el.querySelector('.ic');
+      if (on){
+        ic.textContent = ''; ic.style.fontSize = '';
+        ic.append(genThumb(TOWERS[selTool].gen, 42));
+      } else if (!ic.dataset.plain){
+        ic.textContent = '🧸'; ic.style.cssText = 'font-size:32px;line-height:46px';
+      }
+      ic.dataset.plain = on ? '' : '1';
+      continue;
+    }
     const T = TOWERS[el.dataset.k];
     el.classList.toggle('sel', selTool === el.dataset.k);
     el.classList.toggle('poor', stars < T.cost);
@@ -1117,7 +1239,9 @@ function syncShop(){
 function openInfo(t){
   const T = TOWERS[t.k];
   infoEl.classList.add('on'); shopEl.style.display = 'none';
-  infoIc.textContent = T.ic;
+  // なかまは 絵文字ではなく じぶんの すがたを 出す（おかしの絵文字だと 別人に見える）
+  infoIc.textContent = '';
+  if (T.gen) infoIc.append(genThumb(T.gen, 46)); else infoIc.textContent = T.ic;
   const cap = maxLv();
   const up = t.lv < cap ? Math.round(T.cost * UP_MUL[t.lv]) : null;
   infoTx.innerHTML =
@@ -1152,7 +1276,7 @@ btnUp.onclick = () => {
   // ずかんに「ここまで育てた」記録を残す
   const rc = dex['tw_' + t.k];
   if (rc && (rc.lv || 1) < t.lv){ rc.lv = t.lv; saveDex(); }
-  const px = cx(t.c), py = cy(t.r);
+  const px = tcx(t), py = tcy(t);
   ring(px, py, '#ffffff', CELL*1.5);
   ring(px, py, t.lv >= 5 ? '#ffd76e' : TOWERS[t.k].color, CELL*2.1);
   for (let i=0;i<18;i++) puff(px, py, '#fff2a8');
@@ -1172,7 +1296,7 @@ btnSell.onclick = () => {
   stars += sellOf(t);
   towers = towers.filter(x => x !== t);
   beep(420,.15,'sine',.05,.6);
-  for (let i=0;i<12;i++) puff(cx(t.c), cy(t.r), '#ffd7ec');
+  for (let i=0;i<12;i++) puff(tcx(t), tcy(t), '#ffd7ec');
   closeInfo(); saveRun(); syncHUD(); syncShop();
 };
 
@@ -1214,11 +1338,21 @@ function boardTap(px, py){
     return;
   }
 
-  const hit = towers.find(t => t.c === c && t.r === r);
+  const hit = towerAt(c, r);
   if (hit){ selTool = null; selTower = hit; syncShop(); openInfo(hit); return; }
 
   if (!selTool){ closeInfo(); return; }
-  if (pathCells.has(key(c,r))){ beep(160,.09,'square',.03,.7); return; }
+
+  // 4マスの子は 2×2 ぶん あいている ひつようがある
+  const sp = spanOf(selTool);
+  for (let dc=0; dc<sp; dc++) for (let dr=0; dr<sp; dr++){
+    const c2 = c+dc, r2 = r+dr;
+    if (c2 >= COLS || r2 >= ROWS || pathCells.has(key(c2,r2)) || towerAt(c2,r2)){
+      beep(160,.09,'square',.03,.7);
+      floatTx(cx(c), cy(r) - CELL*0.9, sp > 1 ? '2×2 ぶん あかないよ' : 'ここには おけないよ', '#e06f9c');
+      return;
+    }
+  }
 
   const T = TOWERS[selTool];
   if (stars < T.cost){ beep(160,.09,'square',.03,.7); return; }
@@ -1251,6 +1385,7 @@ function startWave(early){
   wave++;
   bgmStart();          // 最初のウェーブからBGM開始（タップ後なので再生できる）
   spawnQ = waveList(wave).slice();
+  spawnSeq = 0;      // ウェーブごとに 0にもどす（おなじウェーブは いつも おなじ顔ぶれ）
   spawnT = 0; running = true;
   btnWave.disabled = true;
   btnWave.innerHTML = 'ウェーブ' + wave + '<br>しんこう中';
@@ -1573,10 +1708,10 @@ function update(dt){
   // タワーの攻撃
   for (const t of towers){
     if (t.lv >= 2 && Math.random() < dt*(t.lv-1)*1.7)
-      mote(cx(t.c), cy(t.r) - CELL*0.08, t.lv >= 4 ? '#ffe27a' : '#ffffff');
+      mote(tcx(t), tcy(t) - CELL*0.08, t.lv >= 4 ? '#ffe27a' : '#ffffff');
     if (t.pulse > 0) t.pulse = Math.max(0, t.pulse - dt*2.6);
     t.cd -= dt;
-    const R = rangeOf(t)*CELL, ox = cx(t.c), oy = cy(t.r);
+    const R = rangeOf(t)*CELL, ox = tcx(t), oy = tcy(t);
     let best = null, bestD = -1;
     for (const e of enemies){
       const p = posAt(e.d);
@@ -1696,10 +1831,12 @@ function hitTarget(s, p){
 }
 
 /* 敵をひとり道においてスタートさせる（通常出現とボスのしょうかんで共用） */
+let spawnSeq = 0;                                     // ウェーブ内での 何ばんめか
 function spawnEnemy(k, d0){
   const E = ENEMIES[k];
   const hp = E.hp * hpScale(wave);
   enemies.push({ k, d: d0 || 0, hp, max: hp, slow:0, slowAmt:0,
+                 gi: enemyLook(k, wave, spawnSeq++),   // 見た目に する コレクションの子
                  wob: Math.random()*6.3, ph: Math.random()*6.3 });
 }
 
@@ -1710,6 +1847,8 @@ function killEnemy(e, px, py){
   enemies.splice(idx,1);
   if (unlock('en_' + e.k))
     floatTx(px, py - CELL*0.7, 'ずかんに とうろく！', '#b98ae0');
+  if (e.gi && unlock(e.gi.id))
+    floatTx(px, py - CELL*1.2, e.gi.name + 'を とうろく！', '#b98ae0');
   const g = goldOf(e.k);
   stars += g;
   rec.kills++;                                            // じぶんきろく（保存はウェーブ終了時）
@@ -1720,7 +1859,7 @@ function killEnemy(e, px, py){
     cheerOne(px, py + CELL*1.2);
   }
   if (Math.random() < dropRate(e.k)) spawnGift(px, py);   // ときどきワザのプレゼントを落とす
-  for (let i=0;i<14;i++) puff(px, py, ENEMIES[e.k].color);
+  for (let i=0;i<14;i++) puff(px, py, e.gi ? e.gi.pal[0] : ENEMIES[e.k].color);
   beep(520,.1,'sine',.035);
   syncHUD();
 }
@@ -1758,6 +1897,3285 @@ function gameOver(){
     beep(180,.5,'sawtooth',.06,.4);
   }
 }
+/* ==========================================================
+   コレクションの200体
+   ------------------------------------------------------------
+   おかしの形だけでは 200種類も 見わけがつかないので、
+   からだの「型」（quad=けもの / fowl=とり / bug=むし / hero=人 ほか）に
+   みみ・しっぽ・つの などの ちがいを さして 1体ずつ 作りわけている。
+
+   色は その生きもの じしんの色にする（シャチなら 黒と白）。
+   レベルでは 変えない。ほんとうの色でないと ただの色ちがいに 見えるから。
+   レベル7だけは 例外で にじいろにする。
+
+   えがく じゅんばんが 大事：
+     drawGen()      → 平らな色で かたちを つくる
+     portraitShade()→ 光と かげを かぶせて 立体にする
+     drawGenFx()    → にじいろ・金・キラキラを のせる
+   portraitShade は 絵を くらくするので、にじいろは そのあとに かける。
+   ========================================================== */
+/* ==========================================================
+   キャラの部品（たくさんの子を 組みあわせでつくる）
+
+   1体ずつ 手で描いていると 300体で5000行をこえてしまう。
+   そこで「からだ（おかしの形）」「あたま」「せなか」「もちもの」を
+   部品にして、レシピから 組み立てる。
+
+   色は べたぬりでよい。立体感と つやは portraitShade が
+   あとから ぜんぶの子に まとめてのせるため、ここでグラデを
+   焼きこむと その子だけ 立体感が二重になってしまう。
+
+   レベルの差は 彩度ではなく かざり（キラキラ・金のふち・かんむり）で
+   出す。彩度を上げるとパステルでなくなり、シリーズの見た目が崩れるため。
+   ========================================================== */
+const GTAU = 6.2832;
+
+/* レベル1〜7の いろ。上へいくほど 色がすこし濃く、
+   キラキラ(sp)と 金のふち(metal)が ふえる。7は にじいろ */
+const LV = [ null,
+  { c:['#ffeef5','#eaf6ff','#edfaef','#fff9e9','#f4efff'], ink:'#cdb2c4', sp:0, metal:null },
+  { c:['#ffdcea','#d9eeff','#dbf5e4','#fff2ce','#e7ddff'], ink:'#c49cb4', sp:1, metal:null },
+  { c:['#ffc2da','#bfe2ff','#bdeed4','#ffe6ae','#d3bfff'], ink:'#bb87a4', sp:2, metal:null },
+  { c:['#ffa5c9','#9fd4ff','#96e5c6','#ffd873','#c4a3ff', ], ink:'#ae7292', sp:3, metal:null },
+  { c:['#ff85b8','#78c3ff','#66d9ae','#ffc84a','#ab88ff'], ink:'#9f5f80', sp:5, metal:'#ffd76e' },
+  { c:['#ff5fa6','#4aabff','#38cb98','#ffb61f','#8f66ff'], ink:'#8e4a70', sp:7, metal:'#ffd76e' },
+  // 7は 形と かおが 見えるように いちど ふつうの色でぬり、
+  // 立体感のあとから にじいろを「色相だけ」かける（drawGenFx）
+  // 下地は こく。ここが うすいと 色相をかえたあと Lv6より 弱く見えてしまう
+  { c:['#ff4f9e','#3aa2ff','#25c592','#ffae14','#8558ff'],
+    rainbow:true,                                          ink:'#9a6fb0', sp:12, metal:'#fff0a0' },
+];
+
+/* ぬりの色。レベル7だけ にじいろのグラデにする */
+function gcol(g, lv, i, S){
+  const L = LV[lv];
+  if (!L.rainbow) return L.c[i % L.c.length];
+  const r = g.createLinearGradient(S*0.16, S*0.16, S*0.84, S*0.84);
+  const stops = ['#ffb3d1','#ffd9a3','#fff3a8','#a8f0c8','#a8dcff','#c9b3ff','#ffb3e6'];
+  // レシピごとに にじの まわりぐあいを ずらして、全員おなじ色にしない
+  for (let k = 0; k < stops.length; k++)
+    r.addColorStop(k/(stops.length-1), stops[(k + i) % stops.length]);
+  return r;
+}
+
+/* ---------- からだ（おかしの形）。ぜんぶ (g,S,x,y,r,col) ---------- */
+const gRR = (g,x,y,w,h,rad) => {
+  const k = Math.min(rad, w/2, h/2);
+  g.beginPath(); g.moveTo(x+k,y);
+  g.arcTo(x+w,y,x+w,y+h,k); g.arcTo(x+w,y+h,x,y+h,k);
+  g.arcTo(x,y+h,x,y,k);     g.arcTo(x,y,x+w,y,k); g.closePath();
+};
+const GBODY = {
+  ball: (g,S,x,y,r,c) => { g.fillStyle=c; g.beginPath(); g.arc(x,y,r,0,GTAU); g.fill(); },
+
+  candy: (g,S,x,y,r,c) => {                       // つつみキャンディ
+    g.fillStyle = c;
+    for (const s of [-1,1]){
+      g.beginPath(); g.moveTo(x+s*r*0.78,y);
+      g.lineTo(x+s*r*1.42, y-r*0.56); g.lineTo(x+s*r*1.42, y+r*0.56);
+      g.closePath(); g.fill();
+    }
+    g.beginPath(); g.ellipse(x,y,r,r*0.86,0,0,GTAU); g.fill();
+  },
+
+  icecream: (g,S,x,y,r,c) => {                    // コーンの上に まるいアイス
+    g.fillStyle = '#e8b979';
+    g.beginPath(); g.moveTo(x-r*0.66,y+r*0.28);
+    g.lineTo(x+r*0.66,y+r*0.28); g.lineTo(x,y+r*1.5); g.closePath(); g.fill();
+    g.fillStyle = c;
+    g.beginPath(); g.arc(x, y-r*0.16, r*0.9, 0, GTAU); g.fill();
+  },
+
+  choco: (g,S,x,y,r,c,m,c2) => {                  // 板チョコ（つつみ紙は 銀いろに して チョコと 分ける）
+    // 銀紙。パレットの こい色を つかうと ぜんたいが 黒い箱に 見えてしまう
+    g.fillStyle = '#dfe4ec';
+    g.beginPath();
+    g.moveTo(x-r*1.1,y+r*0.94); g.lineTo(x-r*0.98,y-r*0.5);
+    g.lineTo(x+r*1.02,y-r*0.66); g.lineTo(x+r*1.14,y+r*0.78);
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(150,160,180,.35)';         // 銀紙の しわ
+    for (let i=-2;i<=2;i++){
+      g.beginPath();
+      g.moveTo(x+r*i*0.42-r*0.03, y-r*0.58); g.lineTo(x+r*i*0.42+r*0.04, y+r*0.86);
+      g.lineTo(x+r*i*0.42+r*0.1, y+r*0.86); g.lineTo(x+r*i*0.42+r*0.03, y-r*0.58);
+      g.closePath(); g.fill();
+    }
+    // 中みの チョコ。銀紙から 上に すこし 出す
+    const bx = x-r*0.92, by = y-r*0.86, bw = r*1.84, bh = r*1.34;
+    g.fillStyle = c;
+    gRR(g, bx, by, bw, bh, r*0.08); g.fill();
+    // ３×２の ブロック。みぞと ふちの てりで 立体に する
+    for (let a2=0;a2<3;a2++) for (let b2=0;b2<2;b2++){
+      const px = bx + r*0.06 + a2*(bw-r*0.12)/3, py = by + r*0.06 + b2*(bh-r*0.12)/2;
+      const pw = (bw-r*0.12)/3 - r*0.07, ph = (bh-r*0.12)/2 - r*0.07;
+      g.fillStyle = 'rgba(255,255,255,.2)';        // 上と 左の ふち
+      gRR(g, px, py, pw, ph, r*0.05); g.fill();
+      g.fillStyle = c2 || 'rgba(70,40,22,.55)';    // ブロックの おもて
+      gRR(g, px+r*0.05, py+r*0.05, pw-r*0.07, ph-r*0.07, r*0.04); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.14)';       // つや
+      gRR(g, px+r*0.1, py+r*0.09, pw-r*0.3, ph*0.28, r*0.03); g.fill();
+    }
+  },
+
+  star: (g,S,x,y,r,c) => {                        // ほしのクッキー
+    g.fillStyle = c; g.beginPath();
+    for (let i=0;i<10;i++){
+      const a = -Math.PI/2 + i*Math.PI/5, rr = i%2 ? r*0.46 : r*1.08;
+      i ? g.lineTo(x+Math.cos(a)*rr, y+Math.sin(a)*rr)
+        : g.moveTo(x+Math.cos(a)*rr, y+Math.sin(a)*rr);
+    }
+    g.closePath(); g.fill();
+  },
+
+  macaron: (g,S,x,y,r,c) => {                     // マカロン（上下の生地とクリーム）
+    g.fillStyle = c;
+    g.beginPath(); g.ellipse(x,y-r*0.42,r*0.98,r*0.54,0,0,GTAU); g.fill();
+    g.beginPath(); g.ellipse(x,y+r*0.42,r*0.98,r*0.54,0,0,GTAU); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.7)';
+    gRR(g, x-r*0.9, y-r*0.2, r*1.8, r*0.4, r*0.18); g.fill();
+  },
+
+  cake: (g,S,x,y,r,c,m,c2) => {                   // ショートケーキ（いちごたっぷり）
+    const berry = (bx,by,br) => {                 // いちご（つぶつぶと へた つき）
+      g.fillStyle = '#ff3f6b';
+      g.beginPath();
+      g.moveTo(bx, by+br*1.15);
+      g.bezierCurveTo(bx-br*1.1, by+br*0.5, bx-br*0.95, by-br*0.75, bx, by-br*0.7);
+      g.bezierCurveTo(bx+br*0.95, by-br*0.75, bx+br*1.1, by+br*0.5, bx, by+br*1.15);
+      g.closePath(); g.fill();
+      g.fillStyle = 'rgba(255,240,180,.85)';
+      for (const [dx,dy] of [[-0.4,-0.1],[0.4,-0.1],[0,0.35],[-0.28,0.6],[0.28,0.6]]){
+        g.beginPath(); g.arc(bx+br*dx, by+br*dy, br*0.11, 0, GTAU); g.fill();
+      }
+      g.fillStyle = '#5fb35f';                    // へた
+      for (let i=0;i<5;i++){
+        const a2 = -Math.PI/2 + i*GTAU/5;
+        g.beginPath();
+        g.moveTo(bx, by-br*0.62);
+        g.lineTo(bx+Math.cos(a2)*br*0.62, by-br*0.62+Math.sin(a2)*br*0.4);
+        g.lineTo(bx+Math.cos(a2+0.5)*br*0.3, by-br*0.5+Math.sin(a2+0.5)*br*0.24);
+        g.closePath(); g.fill();
+      }
+    };
+    // スポンジ 2だん、あいだに いちごの だんめん
+    g.fillStyle = c;
+    gRR(g, x-r*1.0, y-r*0.02, r*2.0, r*1.0, r*0.14); g.fill();
+    gRR(g, x-r*0.7, y-r*0.9, r*1.4, r*0.9, r*0.12); g.fill();
+    g.fillStyle = '#ff7f9e';                      // だんめんの いちご
+    for (let i=-2;i<=2;i++){
+      g.beginPath(); g.ellipse(x+r*i*0.34, y+r*0.3, r*0.13, r*0.16, 0,0,GTAU); g.fill();
+    }
+    for (let i=-1;i<=1;i++){
+      g.beginPath(); g.ellipse(x+r*i*0.36, y-r*0.56, r*0.12, r*0.15, 0,0,GTAU); g.fill();
+    }
+    g.fillStyle = c2 || 'rgba(255,255,255,.92)';  // 生クリームの そう
+    gRR(g, x-r*1.02, y-r*0.14, r*2.04, r*0.26, r*0.13); g.fill();
+    gRR(g, x-r*0.72, y-r*1.0, r*1.44, r*0.24, r*0.12); g.fill();
+    for (let i=-3;i<=3;i++){                      // すその しぼりクリーム
+      g.beginPath(); g.arc(x+r*i*0.28, y+r*0.98, r*0.15, Math.PI, 0); g.fill();
+    }
+    berry(x, y-r*1.34, r*0.3);                    // てっぺんの いちご
+    berry(x-r*0.52, y-r*1.16, r*0.19);
+    berry(x+r*0.52, y-r*1.16, r*0.19);
+    g.fillStyle = '#8fd8c4';                      // ミントの は
+    g.beginPath(); g.ellipse(x+r*0.26, y-r*1.5, r*0.16, r*0.08, -0.5, 0, GTAU); g.fill();
+    g.fillStyle = '#ffd76e';                      // まわりの きんの つぶ
+    for (const [dx,dy] of [[-0.8,-0.34],[0.8,-0.34]]){
+      g.beginPath(); g.arc(x+r*dx, y+r*dy, r*0.08, 0, GTAU); g.fill();
+    }
+  },
+
+  wedding: (g,S,x,y,r,c,m,c2) => {                // ウエディングケーキ（3だん・レース・花）
+    const tier = (ty, hw, hh) => {
+      g.fillStyle = c;
+      gRR(g, x-r*hw, y+r*ty, r*hw*2, r*hh, r*0.08); g.fill();
+      g.fillStyle = c2 || '#ffd0e2';               // ふちの レース
+      for (let i=-6;i<=6;i++){
+        const px = x + r*i*(hw*2/13);
+        if (Math.abs(px-x) > r*hw) continue;
+        g.beginPath(); g.arc(px, y+r*(ty+hh), r*hw*0.1, Math.PI, 0, true); g.fill();
+      }
+      g.fillStyle = 'rgba(255,255,255,.6)';        // 上ぶちの クリーム
+      gRR(g, x-r*hw, y+r*ty, r*hw*2, r*0.1, r*0.04); g.fill();
+    };
+    tier(0.5, 1.06, 0.62);
+    tier(-0.2, 0.78, 0.62);
+    tier(-0.88, 0.5, 0.6);
+    // 花かざり（だんの あいだに）
+    g.fillStyle = m || '#ff9ec9';
+    for (const [dx,dy,rr] of [[-0.8,0.46,0.11],[0.8,0.46,0.11],[-0.56,-0.24,0.1],
+                              [0.56,-0.24,0.1],[-0.3,-0.92,0.09],[0.3,-0.92,0.09]]){
+      for (let k=0;k<5;k++){
+        const a2=k*GTAU/5;
+        g.beginPath(); g.arc(x+r*dx+Math.cos(a2)*r*rr*0.9, y+r*dy+Math.sin(a2)*r*rr*0.9, r*rr*0.6, 0, GTAU); g.fill();
+      }
+    }
+    // てっぺんの ハート
+    g.fillStyle = '#ff5f8a';
+    const hx2=x, hy2=y-r*1.34, k2=r*0.22;
+    g.beginPath(); g.moveTo(hx2, hy2+k2*0.75);
+    g.bezierCurveTo(hx2-k2*1.5, hy2-k2*0.5, hx2-k2*0.3, hy2-k2*1.3, hx2, hy2-k2*0.4);
+    g.bezierCurveTo(hx2+k2*0.3, hy2-k2*1.3, hx2+k2*1.5, hy2-k2*0.5, hx2, hy2+k2*0.75);
+    g.fill();
+  },
+
+  watame: (g,S,x,y,r,c) => {                      // わたあめ（もこもこ）
+    g.strokeStyle = '#e0b98a'; g.lineWidth = r*0.13; g.lineCap='round';
+    g.beginPath(); g.moveTo(x-r*0.1,y+r*0.6); g.lineTo(x-r*0.34,y+r*1.6); g.stroke();
+    g.fillStyle = c;
+    // ふちを もこもこにする。まるを かさねるより 波のほうが わたあめらしい
+    g.beginPath();
+    for (let i=0;i<=14;i++){
+      const a = i/14*GTAU, rr = r*(1.0 + 0.1*Math.sin(i*2.6));
+      const px = x+Math.cos(a)*rr*1.02, py = y+Math.sin(a)*rr*1.06;
+      i ? g.lineTo(px,py) : g.moveTo(px,py);
+    }
+    g.closePath(); g.fill();
+  },
+
+  /* --- いきもの。形は リアル寄りに。
+         まるを ならべるのではなく、その生きものの プロポーションと
+         とくちょう（ひれの位置・もよう・羽のかさなり）を なぞる。
+         色は べたぬりのまま。立体感は portraitShade が あとでのせる --- */
+
+  orca: (g,S,x,y,r,c) => {                        // シャチ
+    const dk = 'rgba(90,70,110,.3)';
+    g.fillStyle = c;
+    // むなびれ（大きな パドル形。からだの下の 前より）
+    g.beginPath();
+    g.moveTo(x+r*0.34,y+r*0.4);
+    g.quadraticCurveTo(x+r*0.02,y+r*1.12, x-r*0.42,y+r*1.16);
+    g.quadraticCurveTo(x-r*0.08,y+r*0.74, x+r*0.16,y+r*0.5);
+    g.closePath(); g.fill();
+    // せびれ（高く、後ろへ すこし たおれる。からだの まん中より すこし前）
+    g.beginPath();
+    g.moveTo(x+r*0.16,y-r*0.54);
+    g.quadraticCurveTo(x+r*0.06,y-r*1.5, x-r*0.44,y-r*1.5);
+    g.quadraticCurveTo(x-r*0.3,y-r*0.86, x-r*0.5,y-r*0.5);
+    g.closePath(); g.fill();
+    // からだ。前が ふとく、しっぽの つけねで きゅっと 細くなる
+    g.beginPath();
+    g.moveTo(x+r*1.16,y+r*0.02);                  // はな先
+    g.bezierCurveTo(x+r*1.14,y-r*0.5,  x+r*0.66,y-r*0.7,  x+r*0.16,y-r*0.68);
+    g.bezierCurveTo(x-r*0.5,y-r*0.66,  x-r*0.92,y-r*0.4,  x-r*1.06,y-r*0.14);
+    g.bezierCurveTo(x-r*0.94,y+r*0.06, x-r*0.94,y+r*0.1,  x-r*1.06,y+r*0.2);
+    g.bezierCurveTo(x-r*0.86,y+r*0.5,  x-r*0.4,y+r*0.7,   x+r*0.16,y+r*0.7);
+    g.bezierCurveTo(x+r*0.72,y+r*0.7,  x+r*1.1,y+r*0.48,  x+r*1.16,y+r*0.02);
+    g.closePath(); g.fill();
+    // おびれ（よこに ひろがり、まん中が くびれる）
+    g.beginPath();
+    g.moveTo(x-r*0.98,y+r*0.02);
+    g.quadraticCurveTo(x-r*1.4,y-r*0.24, x-r*1.72,y-r*0.62);
+    g.quadraticCurveTo(x-r*1.4,y-r*0.16, x-r*1.24,y+r*0.04);
+    g.quadraticCurveTo(x-r*1.4,y+r*0.26, x-r*1.72,y+r*0.66);
+    g.quadraticCurveTo(x-r*1.36,y+r*0.3, x-r*0.98,y+r*0.14);
+    g.closePath(); g.fill();
+    // おなかの白。あご下から しっぽへ ほそくのびる
+    g.fillStyle = 'rgba(255,255,255,.95)';
+    g.beginPath();
+    g.moveTo(x+r*1.0,y+r*0.24);
+    g.bezierCurveTo(x+r*0.6,y+r*0.72, x-r*0.4,y+r*0.72, x-r*0.98,y+r*0.16);
+    g.bezierCurveTo(x-r*0.5,y+r*0.46, x+r*0.4,y+r*0.46, x+r*1.0,y+r*0.24);
+    g.closePath(); g.fill();
+    // 目のうしろの 白いもよう（シャチの めじるし）
+    g.beginPath(); g.ellipse(x+r*0.5,y-r*0.34,r*0.3,r*0.15,-0.22,0,GTAU); g.fill();
+    // せなかの うすい サドルもよう
+    g.fillStyle = dk;
+    g.beginPath(); g.ellipse(x-r*0.5,y-r*0.34,r*0.34,r*0.14,0.2,0,GTAU); g.fill();
+  },
+
+  dolphin: (g,S,x,y,r,c) => {                     // いるか（バンドウ）
+    g.fillStyle = c;
+    g.beginPath();                                // むなびれ
+    g.moveTo(x+r*0.24,y+r*0.36);
+    g.quadraticCurveTo(x-r*0.06,y+r*0.98, x-r*0.44,y+r*1.0);
+    g.quadraticCurveTo(x-r*0.14,y+r*0.66, x+r*0.06,y+r*0.44);
+    g.closePath(); g.fill();
+    g.beginPath();                                // せびれ（かま形に そりかえる）
+    g.moveTo(x-r*0.04,y-r*0.5);
+    g.bezierCurveTo(x-r*0.16,y-r*1.16, x-r*0.5,y-r*1.24, x-r*0.8,y-r*1.02);
+    g.bezierCurveTo(x-r*0.42,y-r*0.94, x-r*0.4,y-r*0.6,  x-r*0.5,y-r*0.44);
+    g.closePath(); g.fill();
+    g.beginPath();                                // からだ＋ひたいの ふくらみ＋くちばし
+    g.moveTo(x+r*1.56,y+r*0.3);                   // くちばしの先
+    g.bezierCurveTo(x+r*1.2,y+r*0.06, x+r*1.06,y-r*0.04, x+r*0.9,y-r*0.16);
+    g.bezierCurveTo(x+r*0.86,y-r*0.5, x+r*0.5,y-r*0.62,  x+r*0.1,y-r*0.6);
+    g.bezierCurveTo(x-r*0.56,y-r*0.58, x-r*0.98,y-r*0.34, x-r*1.1,y-r*0.1);
+    g.bezierCurveTo(x-r*1.0,y+r*0.04, x-r*1.0,y+r*0.08,  x-r*1.1,y+r*0.18);
+    g.bezierCurveTo(x-r*0.92,y+r*0.44, x-r*0.4,y+r*0.6,  x+r*0.1,y+r*0.58);
+    g.bezierCurveTo(x+r*0.62,y+r*0.56, x+r*0.94,y+r*0.4, x+r*1.02,y+r*0.26);
+    g.bezierCurveTo(x+r*1.2,y+r*0.3,  x+r*1.4,y+r*0.32,  x+r*1.56,y+r*0.3);
+    g.closePath(); g.fill();
+    g.beginPath();                                // おびれ
+    g.moveTo(x-r*1.02,y+r*0.04);
+    g.quadraticCurveTo(x-r*1.42,y-r*0.2, x-r*1.72,y-r*0.54);
+    g.quadraticCurveTo(x-r*1.4,y-r*0.12, x-r*1.26,y+r*0.06);
+    g.quadraticCurveTo(x-r*1.4,y+r*0.28, x-r*1.7,y+r*0.62);
+    g.quadraticCurveTo(x-r*1.36,y+r*0.3, x-r*1.02,y+r*0.16);
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.85)';        // おなかの うすい色
+    g.beginPath();
+    g.moveTo(x+r*1.0,y+r*0.3);
+    g.bezierCurveTo(x+r*0.5,y+r*0.62, x-r*0.44,y+r*0.6, x-r*1.0,y+r*0.14);
+    g.bezierCurveTo(x-r*0.44,y+r*0.4, x+r*0.5,y+r*0.44, x+r*1.0,y+r*0.3);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(90,70,110,.35)';        // 口のライン
+    g.lineWidth = r*0.05; g.lineCap='round';
+    g.beginPath(); g.moveTo(x+r*0.92,y+r*0.18); g.lineTo(x+r*1.44,y+r*0.3); g.stroke();
+  },
+
+  turtle: (g,S,x,y,r,c) => {                      // かめ
+    g.fillStyle = c;
+    for (const [dx,dy,rot,sx,sy] of [                 // あし（前は大きく、後ろは小さく）
+      [0.66,0.64,-0.35,0.36,0.24],[-0.72,0.6,0.4,0.3,0.2],[-0.96,0.06,0.15,0.26,0.18]]){
+      g.save(); g.translate(x+r*dx, y+r*dy); g.rotate(rot);
+      g.beginPath(); g.ellipse(0,0,r*sx,r*sy,0,0,GTAU); g.fill();
+      g.restore();
+    }
+    g.beginPath();                                // しっぽ
+    g.moveTo(x-r*0.86,y+r*0.14);
+    g.quadraticCurveTo(x-r*1.28,y+r*0.22, x-r*1.2,y+r*0.44);
+    g.quadraticCurveTo(x-r*1.0,y+r*0.34, x-r*0.84,y+r*0.36);
+    g.closePath(); g.fill();
+    g.beginPath();                                // こうら（後ろが すこし ひろい たまご形）
+    g.moveTo(x+r*0.86,y+r*0.06);
+    g.bezierCurveTo(x+r*0.84,y-r*0.56, x+r*0.3,y-r*0.86, x-r*0.16,y-r*0.84);
+    g.bezierCurveTo(x-r*0.72,y-r*0.82, x-r*1.06,y-r*0.44, x-r*1.06,y+r*0.06);
+    g.bezierCurveTo(x-r*1.06,y+r*0.44, x-r*0.6,y+r*0.62, x-r*0.1,y+r*0.62);
+    g.bezierCurveTo(x+r*0.44,y+r*0.62, x+r*0.86,y+r*0.42, x+r*0.86,y+r*0.06);
+    g.closePath(); g.fill();
+    // こうらの もよう。まん中のれつ と ふちのれつ（かめの こうらの つくり）
+    g.strokeStyle = 'rgba(255,255,255,.72)'; g.lineWidth = r*0.07;
+    g.beginPath(); g.ellipse(x-r*0.1,y-r*0.1,r*0.52,r*0.42,0,0,GTAU); g.stroke();
+    for (let i=0;i<7;i++){
+      const a2 = i*GTAU/7 + 0.4;
+      g.beginPath();
+      g.moveTo(x-r*0.1+Math.cos(a2)*r*0.52, y-r*0.1+Math.sin(a2)*r*0.42);
+      g.lineTo(x-r*0.1+Math.cos(a2)*r*0.92, y-r*0.1+Math.sin(a2)*r*0.74);
+      g.stroke();
+    }
+    g.fillStyle = c;                              // くび と あたま（こうらの あと）
+    g.beginPath(); g.ellipse(x+r*0.82,y+r*0.06,r*0.26,r*0.2,-0.3,0,GTAU); g.fill();
+    g.beginPath(); g.ellipse(x+r*1.06,y-r*0.16,r*0.44,r*0.38,0,0,GTAU); g.fill();
+  },
+
+  bird: (g,S,x,y,r,c) => {                        // ことり
+    g.strokeStyle='#e89a2a'; g.lineWidth=r*0.09; g.lineCap='round';
+    for (const s2 of [-1,1]){                     // あし（ゆびも すこし）
+      g.beginPath(); g.moveTo(x+s2*r*0.2,y+r*0.72); g.lineTo(x+s2*r*0.22,y+r*1.02); g.stroke();
+      g.beginPath(); g.moveTo(x+s2*r*0.02,y+r*1.04); g.lineTo(x+s2*r*0.42,y+r*1.04); g.stroke();
+    }
+    g.fillStyle = c;
+    g.beginPath();                                // おびれ（羽が 3まい かさなる）
+    g.moveTo(x-r*0.52,y+r*0.06);
+    g.lineTo(x-r*1.5,y-r*0.3); g.lineTo(x-r*1.4,y+r*0.02);
+    g.lineTo(x-r*1.56,y+r*0.24); g.lineTo(x-r*1.4,y+r*0.34);
+    g.lineTo(x-r*1.48,y+r*0.62); g.lineTo(x-r*0.5,y+r*0.4);
+    g.closePath(); g.fill();
+    g.beginPath();                                // からだ（したが ふくらむ たまご形）
+    g.moveTo(x+r*0.62,y-r*0.42);
+    g.bezierCurveTo(x+r*0.2,y-r*0.96, x-r*0.6,y-r*0.8,  x-r*0.76,y-r*0.16);
+    g.bezierCurveTo(x-r*0.9,y+r*0.5,  x-r*0.3,y+r*0.86, x+r*0.16,y+r*0.82);
+    g.bezierCurveTo(x+r*0.66,y+r*0.78, x+r*0.94,y+r*0.3, x+r*0.86,y-r*0.1);
+    g.closePath(); g.fill();
+    // たたんだ つばさ（羽の かさなりを 線であらわす）
+    g.fillStyle = 'rgba(255,255,255,.4)';
+    g.beginPath();
+    g.moveTo(x-r*0.42,y-r*0.22);
+    g.bezierCurveTo(x+r*0.16,y-r*0.24, x+r*0.3,y+r*0.2, x-r*0.06,y+r*0.5);
+    g.bezierCurveTo(x-r*0.5,y+r*0.5,  x-r*0.66,y+r*0.1, x-r*0.42,y-r*0.22);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(120,90,130,.28)'; g.lineWidth = r*0.05;
+    for (let i=0;i<3;i++){
+      g.beginPath();
+      g.moveTo(x-r*(0.5-i*0.12), y+r*(0.06+i*0.1));
+      g.quadraticCurveTo(x-r*0.1, y+r*(0.3+i*0.08), x+r*(0.12-i*0.06), y+r*(0.44+i*0.02));
+      g.stroke();
+    }
+    g.fillStyle = '#ffb43f';                      // くちばし（上下に わかれた 円すい）
+    g.beginPath();
+    g.moveTo(x+r*0.74,y-r*0.16); g.lineTo(x+r*1.24,y+r*0.02);
+    g.lineTo(x+r*0.76,y+r*0.08); g.closePath(); g.fill();
+    g.fillStyle = '#e8942a';
+    g.beginPath();
+    g.moveTo(x+r*0.76,y+r*0.06); g.lineTo(x+r*1.2,y+r*0.04);
+    g.lineTo(x+r*0.78,y+r*0.2); g.closePath(); g.fill();
+  },
+
+  dragon: (g,S,x,y,r,c,m,c2) => {                 // ドラゴン
+    const ac = c2 || c;
+    g.fillStyle = c;
+    g.beginPath();                                // しっぽ（S字に うねって さきが やじり）
+    g.moveTo(x-r*0.5,y+r*0.24);
+    g.bezierCurveTo(x-r*1.16,y+r*0.26, x-r*1.4,y+r*0.7, x-r*1.26,y+r*1.06);
+    g.bezierCurveTo(x-r*1.14,y+r*0.72, x-r*0.92,y+r*0.58, x-r*0.44,y+r*0.62);
+    g.closePath(); g.fill();
+    g.beginPath();
+    g.moveTo(x-r*1.3,y+r*0.96); g.lineTo(x-r*1.76,y+r*0.78);
+    g.lineTo(x-r*1.52,y+r*1.04); g.lineTo(x-r*1.68,y+r*1.34);
+    g.closePath(); g.fill();
+    // つばさ（こうもり型）。これが ないと ただの トカゲに 見える
+    g.fillStyle = ac;
+    g.beginPath();
+    g.moveTo(x-r*0.2,y-r*0.3);
+    g.bezierCurveTo(x-r*1.0,y-r*1.34, x-r*1.7,y-r*1.22, x-r*1.66,y-r*0.86);
+    g.lineTo(x-r*1.16,y-r*0.86); g.lineTo(x-r*1.34,y-r*0.44);
+    g.lineTo(x-r*0.76,y-r*0.6); g.lineTo(x-r*0.86,y-r*0.16);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(90,70,110,.3)'; g.lineWidth = r*0.05;   // つばさの ほね
+    for (const [ex,ey] of [[-1.6,-0.88],[-1.28,-0.5],[-0.82,-0.2]]){
+      g.beginPath(); g.moveTo(x-r*0.24,y-r*0.34); g.lineTo(x+r*ex,y+r*ey); g.stroke();
+    }
+    g.fillStyle = ac;
+    for (let i=0;i<5;i++){                        // せなかの とげ
+      const k = 1 - i*0.15;
+      g.beginPath();
+      g.moveTo(x-r*(0.0+i*0.28), y-r*0.5);
+      g.lineTo(x-r*(0.16+i*0.28), y-r*(0.5+0.46*k));
+      g.lineTo(x-r*(0.34+i*0.28), y-r*0.44);
+      g.closePath(); g.fill();
+    }
+    g.fillStyle = c;
+    g.beginPath();                                // からだ
+    g.ellipse(x-r*0.12,y+r*0.2,r*0.8,r*0.72,0.06,0,GTAU); g.fill();
+    g.beginPath();                                // あし（かぎづめ つき）
+    g.ellipse(x+r*0.34,y+r*0.74,r*0.3,r*0.2,-0.26,0,GTAU); g.fill();
+    g.ellipse(x-r*0.58,y+r*0.74,r*0.28,r*0.18,0.28,0,GTAU); g.fill();
+    g.fillStyle = '#fdfaff';
+    for (const [bx,s2] of [[0.56,1],[-0.8,-1]])
+      for (let i=-1;i<=1;i++){
+        g.beginPath();
+        g.moveTo(x+r*bx, y+r*0.8); g.lineTo(x+r*(bx+s2*0.16), y+r*(0.86+i*0.06));
+        g.lineTo(x+r*bx, y+r*0.9); g.closePath(); g.fill();
+      }
+    g.fillStyle = c;
+    g.beginPath();                                // くび（太くして あたまを 胴から はなす）
+    g.moveTo(x+r*0.2,y-r*0.4);
+    g.bezierCurveTo(x+r*0.78,y-r*0.54, x+r*0.94,y-r*0.86, x+r*0.9,y-r*1.14);
+    g.bezierCurveTo(x+r*0.4,y-r*0.94, x+r*0.16,y-r*0.5, x-r*0.14,y-r*0.24);
+    g.closePath(); g.fill();
+    g.beginPath();                                // あたま（大きく して 竜らしく）
+    g.ellipse(x+r*0.72,y-r*1.16,r*0.6,r*0.5,0.12,0,GTAU); g.fill();
+    g.fillStyle = ac;                             // あたまの つの（うしろへ そる）
+    for (const s2 of [-1,1]){
+      g.beginPath();
+      g.moveTo(x+r*(0.5+s2*0.06), y-r*1.5);
+      g.quadraticCurveTo(x+r*(0.06+s2*0.06), y-r*(1.9+s2*0.12), x+r*(0.2+s2*0.06), y-r*1.5);
+      g.closePath(); g.fill();
+    }
+    g.fillStyle = c;
+    g.beginPath();                                // はな先（あごが 前に つき出す）
+    g.moveTo(x+r*1.02,y-r*1.46);
+    g.quadraticCurveTo(x+r*1.72,y-r*1.3, x+r*1.6,y-r*0.98);
+    g.lineTo(x+r*1.0,y-r*0.88);
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.3)';         // はなの あたま側の てり
+    g.beginPath(); g.ellipse(x+r*1.2,y-r*1.34,r*0.24,r*0.07,-0.1,0,GTAU); g.fill();
+    g.fillStyle = '#4a3a4a';
+    g.beginPath(); g.ellipse(x+r*1.5,y-r*1.24,r*0.07,r*0.06,0,0,GTAU); g.fill();
+    g.fillStyle = c;
+    g.fillStyle = '#fdfaff';                      // きば
+    for (const s2 of [0,1]){
+      g.beginPath();
+      g.moveTo(x+r*(1.14+s2*0.26), y-r*0.94); g.lineTo(x+r*(1.2+s2*0.26), y-r*0.68);
+      g.lineTo(x+r*(1.28+s2*0.26), y-r*0.96); g.closePath(); g.fill();
+    }
+    g.fillStyle = 'rgba(255,255,255,.55)';        // おなかの もよう（横しま）
+    g.save();
+    g.beginPath(); g.ellipse(x-r*0.06,y+r*0.46,r*0.48,r*0.32,0,0,GTAU); g.clip();
+    for (let i=0;i<4;i++){
+      g.beginPath(); g.ellipse(x-r*0.06, y+r*(0.2+i*0.2), r*0.48, r*0.07, 0, 0, GTAU); g.fill();
+    }
+    g.restore();
+    g.strokeStyle = 'rgba(255,255,255,.22)';      // うろこ
+    g.lineWidth = r*0.04;
+    for (let a2=0;a2<3;a2++) for (let b2=0;b2<3;b2++){
+      g.beginPath();
+      g.arc(x-r*(0.62-a2*0.34), y-r*(0.24-b2*0.28), r*0.16, Math.PI*1.05, Math.PI*1.95); g.stroke();
+    }
+  },
+
+  fairy: (g,S,x,y,r,c,m,c2) => {                  // ようせい：はねが 主役。虹いろの まく に すじが とおる
+    // はね（上が大きく、下が小さい。うすく すきとおらせる）
+    const wing = (sx, sy, w, h, rot, al) => {
+      g.save(); g.translate(x + r*sx, y + r*sy); g.rotate(rot);
+      const wg = g.createLinearGradient(0, -h*r, 0, h*r);
+      const st = ['#ffc2e0','#ffe6b8','#fbffbf','#bff0d8','#bfe4ff','#dcc8ff'];
+      for (let k=0;k<st.length;k++) wg.addColorStop(k/(st.length-1), st[k]);
+      g.globalAlpha = al;
+      g.fillStyle = wg;
+      g.beginPath(); g.ellipse(0, 0, w*r, h*r, 0, 0, GTAU); g.fill();
+      g.globalAlpha = al*0.8;                     // はねの すじ
+      g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = r*0.035;
+      for (let i=-2;i<=2;i++){
+        g.beginPath();
+        g.moveTo(0, 0);
+        g.quadraticCurveTo(w*r*0.5, h*r*i*0.3, w*r*0.94, h*r*i*0.28);
+        g.stroke();
+      }
+      g.restore();
+    };
+    wing(-0.5, -0.62, 0.66, 0.4, -0.55, 0.85);    // 左上
+    wing( 0.5, -0.62, 0.66, 0.4,  0.55+Math.PI, 0.85);
+    wing(-0.44, -0.02, 0.44, 0.28, -0.3, 0.75);   // 左下
+    wing( 0.44, -0.02, 0.44, 0.28,  0.3+Math.PI, 0.75);
+    // スカート（花びらを かさねた形）
+    g.fillStyle = c;
+    g.beginPath();
+    g.moveTo(x-r*0.1, y+r*0.1);
+    for (let i=-3;i<=3;i++){
+      g.lineTo(x + r*i*0.16, y + r*(0.72 + 0.14*Math.cos(i*1.1)));
+    }
+    g.lineTo(x+r*0.1, y+r*0.1); g.closePath(); g.fill();
+    g.fillStyle = c2 || c;                        // 上の花びら
+    g.beginPath();
+    g.moveTo(x-r*0.06, y+r*0.1);
+    for (let i=-2;i<=2;i++) g.lineTo(x + r*i*0.14, y + r*(0.5 + 0.1*Math.cos(i*1.2)));
+    g.lineTo(x+r*0.06, y+r*0.1); g.closePath(); g.fill();
+    // からだ と あたま
+    g.fillStyle = '#ffe4d0';
+    g.beginPath(); g.ellipse(x, y+r*0.02, r*0.2, r*0.26, 0, 0, GTAU); g.fill();
+    for (const s2 of [-1,1]){                     // あし
+      g.beginPath(); g.ellipse(x+s2*r*0.12, y+r*0.92, r*0.07, r*0.22, s2*0.2, 0, GTAU); g.fill();
+    }
+    g.beginPath(); g.arc(x, y-r*0.44, r*0.36, 0, GTAU); g.fill();
+    g.fillStyle = m || '#d8a860';                 // かみ。かおに かからないよう 外がわだけ
+    g.beginPath(); g.arc(x, y-r*0.44, r*0.44, Math.PI*1.06, Math.PI*1.94); g.fill();
+    for (const [dx,dy,rr] of [[-0.42,-0.44,0.18],[0.42,-0.44,0.18],
+                              [-0.34,-0.72,0.17],[0.34,-0.72,0.17],[0,-0.8,0.19]])
+      { g.beginPath(); g.arc(x+r*dx, y+r*dy, r*rr, 0, GTAU); g.fill(); }
+  },
+
+  butterfly: (g,S,x,y,r,c,m,c2) => {              // ちょうちょ：4まいばね、すじ入り
+    const wing = (sx, sy, w, h, rot, al) => {
+      g.save(); g.translate(x + r*sx, y + r*sy); g.rotate(rot);
+      const wg = g.createLinearGradient(-w*r, 0, w*r, 0);
+      const st = ['#ffc2e0','#ffe0b0','#fbff bf'.replace(' ',''),'#bff0d8','#bfe4ff','#d8c4ff'];
+      for (let k=0;k<st.length;k++) wg.addColorStop(k/(st.length-1), st[k]);
+      g.globalAlpha = al; g.fillStyle = wg;
+      g.beginPath(); g.ellipse(0,0,w*r,h*r,0,0,GTAU); g.fill();
+      g.strokeStyle = 'rgba(160,120,90,.55)'; g.lineWidth = r*0.03;
+      g.beginPath(); g.ellipse(0,0,w*r,h*r,0,0,GTAU); g.stroke();
+      g.lineWidth = r*0.025;                      // はねの すじ
+      for (let i=-2;i<=2;i++){
+        g.beginPath(); g.moveTo(-w*r*0.9, 0);
+        g.quadraticCurveTo(0, h*r*i*0.34, w*r*0.86, h*r*i*0.3);
+        g.stroke();
+      }
+      g.restore();
+    };
+    wing(-0.72,-0.36, 0.74, 0.46, -0.42, 0.92);   // うわばね
+    wing( 0.72,-0.36, 0.74, 0.46,  0.42, 0.92);
+    wing(-0.6, 0.46, 0.56, 0.36, 0.4, 0.86);      // したばね
+    wing( 0.6, 0.46, 0.56, 0.36, -0.4, 0.86);
+    g.fillStyle = c;                              // どうたい（ふしが 3つ）
+    g.beginPath(); g.ellipse(x, y+r*0.06, r*0.16, r*0.72, 0, 0, GTAU); g.fill();
+    g.strokeStyle = m || '#a88060'; g.lineWidth = r*0.05; g.lineCap='round';
+    for (const s2 of [-1,1]){                     // しょっかく
+      g.beginPath();
+      g.moveTo(x+s2*r*0.06, y-r*0.6);
+      g.quadraticCurveTo(x+s2*r*0.4, y-r*1.1, x+s2*r*0.56, y-r*1.02);
+      g.stroke();
+      g.fillStyle = m || '#a88060';
+      g.beginPath(); g.arc(x+s2*r*0.58, y-r*1.0, r*0.06, 0, GTAU); g.fill();
+    }
+  },
+
+  unicorn: (g,S,x,y,r,c,m,c2,rc) => {             // ユニコーン：たてがみと しっぽが ながれる
+    const uo = (rc && rc.opt) || {};
+    if (uo.wing){                                 // ペガサスの つばさ
+      g.fillStyle = 'rgba(255,255,255,.95)';
+      for (const s2 of [-1,1]){
+        g.beginPath();
+        g.moveTo(x-r*0.1,y-r*0.16);
+        g.bezierCurveTo(x+s2*r*0.9,y-r*1.5, x+s2*r*1.5,y-r*0.66, x+s2*r*1.16,y-r*0.1);
+        g.bezierCurveTo(x+s2*r*0.8,y-r*0.4, x+s2*r*0.4,y-r*0.34, x-r*0.06,y-r*0.06);
+        g.closePath(); g.fill();
+      }
+    }
+    g.fillStyle = c2 || '#c9a7ff';                // しっぽ（うねる）
+    g.beginPath();
+    g.moveTo(x-r*0.66, y+r*0.02);
+    g.bezierCurveTo(x-r*1.5,y-r*0.2, x-r*1.5,y+r*0.72, x-r*1.02,y+r*0.96);
+    g.bezierCurveTo(x-r*1.16,y+r*0.5, x-r*0.92,y+r*0.36, x-r*0.6,y+r*0.4);
+    g.closePath(); g.fill();
+    g.fillStyle = c;
+    for (const [dx,rot] of [[-0.42,0.12],[0.3,-0.1],[-0.14,0.06],[0.56,-0.14]]){  // あし
+      g.save(); g.translate(x+r*dx, y+r*0.72); g.rotate(rot);
+      g.beginPath(); g.ellipse(0,0,r*0.13,r*0.34,0,0,GTAU); g.fill();
+      g.restore();
+    }
+    g.beginPath();                                // どうたい
+    g.ellipse(x-r*0.06, y+r*0.16, r*0.78, r*0.52, -0.06, 0, GTAU); g.fill();
+    g.beginPath();                                // くび
+    g.moveTo(x+r*0.32,y-r*0.16);
+    g.bezierCurveTo(x+r*0.72,y-r*0.3, x+r*0.86,y-r*0.7, x+r*0.8,y-r*0.98);
+    g.bezierCurveTo(x+r*0.56,y-r*0.72, x+r*0.36,y-r*0.36, x+r*0.2,y-r*0.1);
+    g.closePath(); g.fill();
+    g.beginPath();                                // あたま（はなさきが 長い）
+    g.ellipse(x+r*0.86,y-r*1.0,r*0.42,r*0.3,0.5,0,GTAU); g.fill();
+    g.beginPath(); g.ellipse(x+r*1.1,y-r*0.76,r*0.2,r*0.16,0.6,0,GTAU); g.fill();
+    g.beginPath();                                // みみ
+    g.moveTo(x+r*0.66,y-r*1.2); g.lineTo(x+r*0.7,y-r*1.56);
+    g.lineTo(x+r*0.88,y-r*1.24); g.closePath(); g.fill();
+    g.fillStyle = c2 || '#c9a7ff';                // たてがみ
+    g.beginPath();
+    g.moveTo(x+r*0.62,y-r*1.2);
+    g.bezierCurveTo(x+r*0.1,y-r*1.4, x-r*0.3,y-r*0.9, x-r*0.16,y-r*0.28);
+    g.bezierCurveTo(x-r*0.02,y-r*0.7, x+r*0.3,y-r*0.86, x+r*0.5,y-r*0.86);
+    g.closePath(); g.fill();
+    g.fillStyle = m || '#ffd76e';                 // つの（らせんの みぞ）
+    g.beginPath();
+    g.moveTo(x+r*0.78,y-r*1.3); g.lineTo(x+r*0.98,y-r*1.3);
+    g.lineTo(x+r*0.96,y-r*2.0); g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth = r*0.04;
+    for (let i=1;i<=3;i++){
+      const t2=i/4;
+      g.beginPath();
+      g.moveTo(x+r*(0.78+0.18*t2), y-r*(1.3+0.7*t2));
+      g.lineTo(x+r*(0.98-0.02*t2), y-r*(1.34+0.7*t2));
+      g.stroke();
+    }
+  },
+
+  /* --- 人のキャラ。まるい体に かざりを のせるのではなく、
+         その役らしい すがた（ぼうし・マント・ほうき・ドレス）を ちゃんと つくる --- */
+
+  witch: (g,S,x,y,r,c,m,c2) => {                  // まじょ
+    const skin = '#ffe0c8';
+    // ほうき（ななめ うしろに かまえる）
+    g.strokeStyle = '#b98a5a'; g.lineWidth = r*0.1; g.lineCap='round';
+    g.beginPath(); g.moveTo(x-r*1.24,y+r*1.16); g.lineTo(x+r*0.9,y-r*0.18); g.stroke();
+    g.fillStyle = '#e8c489';                      // ほ（ひろがった たば）
+    g.beginPath();
+    g.moveTo(x+r*0.74,y-r*0.08);
+    g.lineTo(x+r*1.42,y-r*0.62); g.lineTo(x+r*1.5,y-r*0.16);
+    g.lineTo(x+r*1.36,y+r*0.16); g.closePath(); g.fill();
+    g.strokeStyle='rgba(150,110,70,.5)'; g.lineWidth=r*0.03;
+    for (let i=0;i<4;i++){
+      g.beginPath(); g.moveTo(x+r*0.82,y-r*0.06);
+      g.lineTo(x+r*(1.38-i*0.02), y-r*(0.54-i*0.2)); g.stroke();
+    }
+    g.strokeStyle = '#8a6440'; g.lineWidth = r*0.06;
+    g.beginPath(); g.moveTo(x+r*0.7,y+r*0.02); g.lineTo(x+r*0.84,y-r*0.14); g.stroke();
+    // マント（うしろに ひろがる）
+    g.fillStyle = c2 || '#6b4f8a';
+    g.beginPath();
+    g.moveTo(x-r*0.32,y-r*0.28);
+    g.bezierCurveTo(x-r*1.2,y+r*0.1, x-r*1.16,y+r*0.86, x-r*0.86,y+r*1.06);
+    g.lineTo(x+r*0.1,y+r*0.9); g.closePath(); g.fill();
+    // ローブ（すそが ぎざぎざ）
+    g.fillStyle = c;
+    g.beginPath();
+    g.moveTo(x-r*0.26,y-r*0.16); g.lineTo(x+r*0.26,y-r*0.16);
+    g.lineTo(x+r*0.62,y+r*0.92);
+    for (let i=4;i>=0;i--) g.lineTo(x+r*(0.62-i*0.31), y+r*(0.92 + (i%2?0.16:0)));
+    g.closePath(); g.fill();
+    // あし（しましまタイツ と とんがりぐつ）
+    for (const s2 of [-1,1]){
+      g.fillStyle = '#fff';
+      g.beginPath(); g.ellipse(x+s2*r*0.2, y+r*1.14, r*0.1, r*0.24, 0,0,GTAU); g.fill();
+      g.fillStyle = c2 || '#6b4f8a';
+      for (let i=0;i<3;i++){
+        g.beginPath();
+        g.ellipse(x+s2*r*0.2, y+r*(1.0+i*0.16), r*0.1, r*0.045, 0,0,GTAU); g.fill();
+      }
+      g.beginPath();                              // さきの とがった くつ
+      g.moveTo(x+s2*r*0.1,y+r*1.34);
+      g.lineTo(x+s2*r*0.3,y+r*1.34); g.lineTo(x+s2*r*0.5,y+r*1.5);
+      g.lineTo(x+s2*r*0.08,y+r*1.5); g.closePath(); g.fill();
+    }
+    // うで（ほうきを もつ）
+    g.strokeStyle = skin; g.lineWidth = r*0.14; g.lineCap='round';
+    g.beginPath(); g.moveTo(x+r*0.16,y+r*0.02); g.lineTo(x+r*0.6,y+r*0.08); g.stroke();
+    // あたま
+    g.fillStyle = skin;
+    g.beginPath(); g.arc(x, y-r*0.46, r*0.38, 0, GTAU); g.fill();
+    // かみ（ながく うねる）
+    g.fillStyle = m || '#6b4a3a';
+    g.beginPath();
+    g.moveTo(x-r*0.38,y-r*0.5);
+    g.bezierCurveTo(x-r*0.66,y+r*0.1, x-r*0.5,y+r*0.4, x-r*0.3,y+r*0.34);
+    g.bezierCurveTo(x-r*0.34,y-r*0.06, x-r*0.3,y-r*0.3, x-r*0.2,y-r*0.5);
+    g.closePath(); g.fill();
+    g.beginPath();
+    g.moveTo(x+r*0.38,y-r*0.5);
+    g.bezierCurveTo(x+r*0.62,y+r*0.06, x+r*0.46,y+r*0.36, x+r*0.28,y+r*0.3);
+    g.bezierCurveTo(x+r*0.32,y-r*0.08, x+r*0.28,y-r*0.3, x+r*0.18,y-r*0.5);
+    g.closePath(); g.fill();
+    // ぼうし（つばが ひろく、さきが しなる）
+    g.fillStyle = c2 || '#6b4f8a';
+    g.beginPath(); g.ellipse(x, y-r*0.8, r*0.86, r*0.2, -0.04, 0, GTAU); g.fill();
+    g.beginPath();
+    g.moveTo(x-r*0.42,y-r*0.84);
+    g.bezierCurveTo(x-r*0.2,y-r*1.6, x+r*0.22,y-r*1.9, x+r*0.6,y-r*1.82);
+    g.bezierCurveTo(x+r*0.3,y-r*1.4, x+r*0.4,y-r*0.98, x+r*0.42,y-r*0.84);
+    g.closePath(); g.fill();
+    g.fillStyle = m || '#ffd76e';                 // ぼうしの バンドと 星
+    gRR(g, x-r*0.44, y-r*1.0, r*0.88, r*0.18, r*0.08); g.fill();
+    g.save(); g.translate(x+r*0.28, y-r*1.06);
+    g.beginPath();
+    for (let i=0;i<10;i++){
+      const a2=-Math.PI/2+i*Math.PI/5, rr2=i%2?r*0.06:r*0.15;
+      i? g.lineTo(Math.cos(a2)*rr2,Math.sin(a2)*rr2) : g.moveTo(Math.cos(a2)*rr2,Math.sin(a2)*rr2);
+    }
+    g.closePath(); g.fill(); g.restore();
+  },
+
+  princess: (g,S,x,y,r,c,m,c2) => {               // おひめさま
+    const skin = '#ffe4d0';
+    // ドレス（3だんの ふくらみ）
+    g.fillStyle = c;
+    g.beginPath();
+    g.moveTo(x-r*0.24,y-r*0.1); g.lineTo(x+r*0.24,y-r*0.1);
+    g.bezierCurveTo(x+r*0.9,y+r*0.6, x+r*0.96,y+r*1.1, x+r*0.86,y+r*1.28);
+    g.bezierCurveTo(x, y+r*1.5, x-r*0.86,y+r*1.28, x-r*0.86,y+r*1.28);
+    g.bezierCurveTo(x-r*0.96,y+r*1.1, x-r*0.9,y+r*0.6, x-r*0.24,y-r*0.1);
+    g.closePath(); g.fill();
+    g.fillStyle = c2 || '#ffffff';                // すその フリル
+    for (let i=-3;i<=3;i++){
+      g.beginPath();
+      g.arc(x+r*i*0.26, y+r*1.28, r*0.16, 0, Math.PI); g.fill();
+    }
+    g.fillStyle = 'rgba(255,255,255,.5)';         // まえの きりかえ
+    g.beginPath();
+    g.moveTo(x, y+r*0.1);
+    g.bezierCurveTo(x+r*0.4,y+r*0.7, x+r*0.42,y+r*1.1, x+r*0.34,y+r*1.28);
+    g.lineTo(x-r*0.34,y+r*1.28);
+    g.bezierCurveTo(x-r*0.42,y+r*1.1, x-r*0.4,y+r*0.7, x, y+r*0.1);
+    g.closePath(); g.fill();
+    // ぱふスリーブ と うで
+    g.fillStyle = c;
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.arc(x+s2*r*0.34, y-r*0.06, r*0.19, 0, GTAU); g.fill();
+    }
+    g.strokeStyle = skin; g.lineWidth = r*0.12; g.lineCap='round';
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.moveTo(x+s2*r*0.38,y+r*0.02); g.lineTo(x+s2*r*0.52,y+r*0.32); g.stroke();
+    }
+    // からだ と あたま
+    g.fillStyle = skin;
+    g.beginPath(); g.ellipse(x, y-r*0.12, r*0.2, r*0.16, 0,0,GTAU); g.fill();
+    g.beginPath(); g.arc(x, y-r*0.5, r*0.38, 0, GTAU); g.fill();
+    // かみ（たてロールっぽく まく）
+    g.fillStyle = m || '#f0c46a';
+    g.beginPath(); g.arc(x, y-r*0.56, r*0.44, Math.PI*1.02, Math.PI*1.98); g.fill();
+    for (const s2 of [-1,1]){
+      g.beginPath();
+      g.moveTo(x+s2*r*0.4,y-r*0.62);
+      g.bezierCurveTo(x+s2*r*0.72,y-r*0.1, x+s2*r*0.6,y+r*0.36, x+s2*r*0.34,y+r*0.3);
+      g.bezierCurveTo(x+s2*r*0.5,y-r*0.06, x+s2*r*0.34,y-r*0.4, x+s2*r*0.24,y-r*0.6);
+      g.closePath(); g.fill();
+      g.beginPath(); g.arc(x+s2*r*0.44, y+r*0.24, r*0.16, 0, GTAU); g.fill();
+    }
+    // ティアラ
+    g.fillStyle = '#ffd76e';
+    g.beginPath();
+    g.moveTo(x-r*0.34,y-r*0.84);
+    g.quadraticCurveTo(x, y-r*1.3, x+r*0.34,y-r*0.84);
+    g.quadraticCurveTo(x, y-r*1.02, x-r*0.34,y-r*0.84);
+    g.closePath(); g.fill();
+    g.fillStyle = '#ff8fc4';
+    g.beginPath(); g.arc(x, y-r*1.06, r*0.08, 0, GTAU); g.fill();
+  },
+
+  prince: (g,S,x,y,r,c,m,c2) => {                 // おうじさま
+    const skin = '#ffe4d0';
+    g.fillStyle = c2 || '#c85a7a';                // マント
+    g.beginPath();
+    g.moveTo(x-r*0.3,y-r*0.2);
+    g.bezierCurveTo(x-r*1.06,y+r*0.2, x-r*1.0,y+r*0.9, x-r*0.74,y+r*1.12);
+    g.lineTo(x+r*0.16,y+r*0.96); g.closePath(); g.fill();
+    for (const s2 of [-1,1]){                     // ブーツ
+      g.fillStyle = '#5b4a5e';
+      gRR(g, x+s2*r*0.28-r*0.12, y+r*0.86, r*0.24, r*0.5, r*0.08); g.fill();
+      g.beginPath(); g.ellipse(x+s2*r*0.3, y+r*1.34, r*0.2, r*0.1, 0,0,GTAU); g.fill();
+    }
+    g.fillStyle = c;                              // うわぎ
+    g.beginPath();
+    g.moveTo(x-r*0.34,y-r*0.14); g.lineTo(x+r*0.34,y-r*0.14);
+    g.lineTo(x+r*0.42,y+r*0.9); g.lineTo(x-r*0.42,y+r*0.9);
+    g.closePath(); g.fill();
+    g.fillStyle = m || '#ffd76e';                 // かたの かざりと ボタン
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.ellipse(x+s2*r*0.36, y-r*0.1, r*0.16, r*0.1, 0,0,GTAU); g.fill();
+    }
+    for (let i=0;i<3;i++){
+      g.beginPath(); g.arc(x, y+r*(0.06+i*0.24), r*0.06, 0, GTAU); g.fill();
+    }
+    gRR(g, x-r*0.44, y+r*0.5, r*0.88, r*0.14, r*0.06); g.fill();   // ベルト
+    g.strokeStyle = skin; g.lineWidth = r*0.13; g.lineCap='round';
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.moveTo(x+s2*r*0.36,y+r*0.04); g.lineTo(x+s2*r*0.5,y+r*0.42); g.stroke();
+    }
+    g.fillStyle = skin;                           // あたま
+    g.beginPath(); g.arc(x, y-r*0.5, r*0.38, 0, GTAU); g.fill();
+    g.fillStyle = m || '#8a6a4a';                // かみ（みじかく さらり）
+    g.beginPath();
+    g.moveTo(x-r*0.4,y-r*0.5);
+    g.bezierCurveTo(x-r*0.44,y-r*0.94, x+r*0.44,y-r*0.98, x+r*0.4,y-r*0.5);
+    g.bezierCurveTo(x+r*0.3,y-r*0.72, x+r*0.06,y-r*0.66, x-r*0.06,y-r*0.8);
+    g.bezierCurveTo(x-r*0.16,y-r*0.62, x-r*0.3,y-r*0.6, x-r*0.4,y-r*0.5);
+    g.closePath(); g.fill();
+    g.fillStyle = '#ffd76e';                      // かんむり
+    g.beginPath();
+    g.moveTo(x-r*0.3,y-r*0.86); g.lineTo(x-r*0.3,y-r*1.16);
+    g.lineTo(x-r*0.1,y-r*0.98); g.lineTo(x,y-r*1.28);
+    g.lineTo(x+r*0.1,y-r*0.98); g.lineTo(x+r*0.3,y-r*1.16);
+    g.lineTo(x+r*0.3,y-r*0.86); g.closePath(); g.fill();
+  },
+
+  /* ================= うみの生きもの ================= */
+
+  jelly: (g,S,x,y,r,c,m,c2) => {                  // クラゲ
+    g.strokeStyle = c2 || 'rgba(255,214,236,.85)'; g.lineCap='round';
+    g.lineWidth = r*0.07;
+    for (let i=-2;i<=2;i++){                      // しょくしゅ（ゆらゆら）
+      g.beginPath();
+      g.moveTo(x+r*i*0.24, y+r*0.26);
+      g.bezierCurveTo(x+r*(i*0.24+0.2), y+r*0.7, x+r*(i*0.24-0.2), y+r*1.0, x+r*(i*0.24+0.08), y+r*1.36);
+      g.stroke();
+    }
+    g.fillStyle = c;                              // かさ（下ぶちが 波打つ）
+    g.beginPath();
+    g.moveTo(x-r*0.92,y+r*0.24);
+    g.bezierCurveTo(x-r*0.92,y-r*0.86, x+r*0.92,y-r*0.86, x+r*0.92,y+r*0.24);
+    for (let i=3;i>=-3;i--) g.quadraticCurveTo(x+r*(i*0.3+0.15), y+r*(0.42), x+r*i*0.3, y+r*0.22);
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.5)';
+    g.beginPath(); g.ellipse(x-r*0.26,y-r*0.32,r*0.26,r*0.16,-0.4,0,GTAU); g.fill();
+  },
+
+  starfish: (g,S,x,y,r,c,m,c2) => {               // ヒトデ
+    g.fillStyle = c;
+    g.beginPath();
+    for (let i=0;i<5;i++){
+      const a1=-Math.PI/2+i*GTAU/5, a2=a1+GTAU/10;
+      const p1x=x+Math.cos(a1)*r*1.24, p1y=y+Math.sin(a1)*r*1.24;
+      i? g.lineTo(p1x,p1y) : g.moveTo(p1x,p1y);
+      g.quadraticCurveTo(x+Math.cos(a2)*r*0.3, y+Math.sin(a2)*r*0.3,
+                         x+Math.cos(a1+GTAU/5)*r*1.24, y+Math.sin(a1+GTAU/5)*r*1.24);
+    }
+    g.closePath(); g.fill();
+    g.fillStyle = c2 || 'rgba(255,255,255,.5)';   // つぶつぶ
+    for (let i=0;i<5;i++){
+      const a1=-Math.PI/2+i*GTAU/5;
+      for (let k=1;k<=2;k++){
+        g.beginPath();
+        g.arc(x+Math.cos(a1)*r*k*0.36, y+Math.sin(a1)*r*k*0.36, r*0.08, 0, GTAU); g.fill();
+      }
+    }
+  },
+
+  clownfish: (g,S,x,y,r,c,m,c2) => {              // カクレクマノミ
+    g.fillStyle = c;
+    g.beginPath();                                // せびれ・はらびれ
+    g.moveTo(x-r*0.1,y-r*0.5); g.lineTo(x+r*0.2,y-r*0.96);
+    g.lineTo(x+r*0.44,y-r*0.44); g.closePath(); g.fill();
+    g.beginPath();
+    g.moveTo(x-r*0.1,y+r*0.5); g.lineTo(x+r*0.1,y+r*0.92);
+    g.lineTo(x+r*0.4,y+r*0.44); g.closePath(); g.fill();
+    g.beginPath(); g.ellipse(x+r*0.06,y,r*1.0,r*0.62,0,0,GTAU); g.fill();
+    g.beginPath();                                // おびれ
+    g.moveTo(x-r*0.86,y);
+    g.lineTo(x-r*1.46,y-r*0.5); g.lineTo(x-r*1.32,y);
+    g.lineTo(x-r*1.46,y+r*0.5); g.closePath(); g.fill();
+    g.fillStyle = '#ffffff';                      // 白い3本の帯
+    for (const [dx,w] of [[0.56,0.16],[0.0,0.2],[-0.6,0.13]]){
+      g.save();
+      g.beginPath(); g.ellipse(x+r*0.06,y,r*1.0,r*0.62,0,0,GTAU); g.clip();
+      gRR(g, x+r*dx-r*w/2, y-r*0.7, r*w, r*1.4, r*0.05); g.fill();
+      g.restore();
+    }
+    g.strokeStyle = c2 || '#2f2f3a'; g.lineWidth = r*0.05;
+    g.beginPath(); g.ellipse(x+r*0.06,y,r*1.0,r*0.62,0,0,GTAU); g.stroke();
+  },
+
+  hermit: (g,S,x,y,r,c,m,c2) => {                 // ヤドカリ
+    g.fillStyle = c2 || '#ff8a6b';                // からだ と はさみ
+    g.beginPath(); g.ellipse(x+r*0.7,y+r*0.3,r*0.42,r*0.34,0,0,GTAU); g.fill();
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.ellipse(x+r*(0.9+0.2*s2), y+r*(0.68+0.1*s2), r*0.22, r*0.16, s2*0.5,0,GTAU); g.fill();
+    }
+    for (const s2 of [-1,1]){                     // あし
+      g.strokeStyle=c2||'#ff8a6b'; g.lineWidth=r*0.08; g.lineCap='round';
+      g.beginPath(); g.moveTo(x+r*0.5,y+r*0.5); g.lineTo(x+r*(0.4+s2*0.2),y+r*0.98); g.stroke();
+    }
+    g.fillStyle = c;                              // まきがい（うずまき）
+    g.beginPath(); g.arc(x-r*0.16,y-r*0.06,r*0.86,0,GTAU); g.fill();
+    g.strokeStyle = 'rgba(140,100,70,.55)'; g.lineWidth = r*0.07;
+    g.beginPath();
+    for (let i=0;i<=40;i++){
+      const t2=i/40, a2=t2*GTAU*1.6, rr=r*0.82*(1-t2*0.86);
+      const px=x-r*0.16+Math.cos(a2)*rr, py=y-r*0.06+Math.sin(a2)*rr;
+      i? g.lineTo(px,py) : g.moveTo(px,py);
+    }
+    g.stroke();
+  },
+
+  seahorse: (g,S,x,y,r,c,m,c2) => {               // タツノオトシゴ
+    g.fillStyle = c;
+    g.beginPath();                                // からだ（S字）と まいたしっぽ
+    g.moveTo(x+r*0.1,y-r*1.0);
+    g.bezierCurveTo(x+r*0.62,y-r*0.7, x+r*0.5,y-r*0.1, x+r*0.16,y+r*0.3);
+    g.bezierCurveTo(x-r*0.1,y+r*0.62, x+r*0.2,y+r*0.9, x+r*0.34,y+r*0.74);
+    g.bezierCurveTo(x+r*0.16,y+r*1.0, x-r*0.34,y+r*0.86, x-r*0.22,y+r*0.42);
+    g.bezierCurveTo(x-r*0.12,y+r*0.02, x-r*0.1,y-r*0.6, x-r*0.28,y-r*0.96);
+    g.closePath(); g.fill();
+    g.beginPath();                                // はなさき
+    g.moveTo(x-r*0.24,y-r*1.02); g.lineTo(x-r*0.9,y-r*0.86);
+    g.lineTo(x-r*0.24,y-r*0.7); g.closePath(); g.fill();
+    g.fillStyle = c2 || '#ffb43f';                // せびれの ぎざぎざ
+    for (let i=0;i<4;i++){
+      g.beginPath();
+      g.moveTo(x+r*(0.3-i*0.06), y-r*(0.8-i*0.34));
+      g.lineTo(x+r*(0.62-i*0.06), y-r*(0.72-i*0.34));
+      g.lineTo(x+r*(0.32-i*0.06), y-r*(0.56-i*0.34));
+      g.closePath(); g.fill();
+    }
+  },
+
+  crab: (g,S,x,y,r,c,m,c2) => {                   // カニ
+    g.fillStyle = c;
+    for (const s2 of [-1,1]){                     // あし（3本ずつ）
+      g.strokeStyle=c; g.lineWidth=r*0.1; g.lineCap='round';
+      for (let i=0;i<3;i++){
+        g.beginPath();
+        g.moveTo(x+s2*r*0.6, y+r*(0.1+i*0.16));
+        g.quadraticCurveTo(x+s2*r*1.06, y+r*(0.3+i*0.2), x+s2*r*1.1, y+r*(0.66+i*0.16));
+        g.stroke();
+      }
+      g.beginPath();                              // はさみ
+      g.moveTo(x+s2*r*0.66,y-r*0.16);
+      g.lineTo(x+s2*r*1.2,y-r*0.6); g.stroke();
+      g.beginPath(); g.ellipse(x+s2*r*1.34,y-r*0.72,r*0.28,r*0.2,s2*0.5,0,GTAU); g.fill();
+      g.fillStyle='#fff';
+      g.beginPath(); g.ellipse(x+s2*r*1.42,y-r*0.66,r*0.14,r*0.05,s2*0.5,0,GTAU); g.fill();
+      g.fillStyle=c;
+    }
+    g.beginPath(); g.ellipse(x,y+r*0.06,r*0.92,r*0.62,0,0,GTAU); g.fill();
+    g.fillStyle = c2 || 'rgba(255,255,255,.35)';
+    g.beginPath(); g.ellipse(x,y+r*0.2,r*0.62,r*0.24,0,0,GTAU); g.fill();
+  },
+
+  penguin: (g,S,x,y,r,c,m,c2) => {                // ペンギン
+    g.fillStyle = '#ffb43f';
+    for (const s2 of [-1,1]){                     // あし
+      g.beginPath(); g.ellipse(x+s2*r*0.28,y+r*1.06,r*0.24,r*0.11,s2*0.2,0,GTAU); g.fill();
+    }
+    g.fillStyle = c;                              // からだ
+    g.beginPath(); g.ellipse(x,y+r*0.16,r*0.82,r*0.94,0,0,GTAU); g.fill();
+    for (const s2 of [-1,1]){                     // つばさ
+      g.beginPath(); g.ellipse(x+s2*r*0.82,y+r*0.24,r*0.22,r*0.56,s2*0.24,0,GTAU); g.fill();
+    }
+    g.fillStyle = '#ffffff';                      // おなかの白
+    g.beginPath(); g.ellipse(x,y+r*0.3,r*0.56,r*0.72,0,0,GTAU); g.fill();
+    g.beginPath(); g.ellipse(x,y-r*0.5,r*0.44,r*0.4,0,0,GTAU); g.fill();
+    g.fillStyle = '#ffb43f';                      // くちばし
+    g.beginPath();
+    g.moveTo(x-r*0.14,y-r*0.4); g.lineTo(x+r*0.24,y-r*0.32);
+    g.lineTo(x-r*0.14,y-r*0.2); g.closePath(); g.fill();
+  },
+
+  octopus: (g,S,x,y,r,c,m,c2) => {                // タコ
+    g.fillStyle = c;
+    for (let i=-3;i<=3;i++){                      // あし8本ぶん（見えるのは 7本）
+      g.save();
+      g.beginPath();
+      g.moveTo(x+r*i*0.26, y+r*0.28);
+      g.bezierCurveTo(x+r*(i*0.32+0.16), y+r*0.86, x+r*(i*0.34-0.14), y+r*1.06, x+r*(i*0.38), y+r*1.3);
+      g.lineTo(x+r*(i*0.38+0.16), y+r*1.26);
+      g.bezierCurveTo(x+r*(i*0.34+0.06), y+r*0.98, x+r*(i*0.32+0.3), y+r*0.8, x+r*(i*0.26+0.18), y+r*0.28);
+      g.closePath(); g.fill();
+      g.restore();
+    }
+    g.beginPath(); g.ellipse(x,y-r*0.16,r*0.86,r*0.8,0,0,GTAU); g.fill();
+    g.fillStyle = c2 || 'rgba(255,255,255,.4)';   // きゅうばん
+    for (let i=-2;i<=2;i++)
+      for (let k=0;k<2;k++){
+        g.beginPath(); g.arc(x+r*i*0.28, y+r*(0.62+k*0.26), r*0.06, 0, GTAU); g.fill();
+      }
+  },
+
+  seal: (g,S,x,y,r,c,m,c2) => {                   // アザラシ
+    g.fillStyle = c;
+    g.beginPath();                                // おびれ（うしろに ひらく）
+    g.moveTo(x-r*0.78,y+r*0.3);
+    g.lineTo(x-r*1.44,y-r*0.02); g.lineTo(x-r*1.24,y+r*0.42);
+    g.lineTo(x-r*1.42,y+r*0.84); g.closePath(); g.fill();
+    g.beginPath();                                // からだ（首がなく、なめらかに あたまへ つづく）
+    g.moveTo(x+r*1.12,y-r*0.36);
+    g.bezierCurveTo(x+r*1.24,y+r*0.16, x+r*0.9,y+r*0.6, x+r*0.2,y+r*0.66);
+    g.bezierCurveTo(x-r*0.5,y+r*0.72, x-r*0.9,y+r*0.6, x-r*0.98,y+r*0.36);
+    g.bezierCurveTo(x-r*1.0,y+r*0.04, x-r*0.6,y-r*0.36, x+r*0.1,y-r*0.5);
+    g.bezierCurveTo(x+r*0.66,y-r*0.62, x+r*1.04,y-r*0.6, x+r*1.12,y-r*0.36);
+    g.closePath(); g.fill();
+    for (const s2 of [-1,1]){                     // まえびれ
+      g.beginPath();
+      g.moveTo(x+r*0.1, y+r*(0.4+s2*0.1));
+      g.quadraticCurveTo(x-r*0.2, y+r*(0.9+s2*0.1), x-r*0.5, y+r*(0.84+s2*0.1));
+      g.quadraticCurveTo(x-r*0.24, y+r*(0.56+s2*0.1), x+r*0.06, y+r*(0.34+s2*0.1));
+      g.closePath(); g.fill();
+    }
+    g.fillStyle = c2 || 'rgba(255,255,255,.6)';   // おなかの 白
+    g.beginPath(); g.ellipse(x-r*0.06,y+r*0.4,r*0.66,r*0.22,0,0,GTAU); g.fill();
+    g.fillStyle = 'rgba(120,120,140,.35)';        // まだらもよう
+    for (const [dx,dy] of [[-0.44,-0.2],[0.0,-0.3],[-0.68,0.1],[0.34,-0.06],[-0.2,0.06]]){
+      g.beginPath(); g.arc(x+r*dx,y+r*dy,r*0.11,0,GTAU); g.fill();
+    }
+    g.fillStyle = '#4a4450';                      // 黒い はな
+    g.beginPath(); g.ellipse(x+r*1.0,y-r*0.24,r*0.11,r*0.09,0,0,GTAU); g.fill();
+    g.strokeStyle='rgba(255,255,255,.8)'; g.lineWidth=r*0.035; g.lineCap='round';
+    for (let i=-1;i<=1;i++){                      // ひげ
+      g.beginPath(); g.moveTo(x+r*0.94,y-r*0.16);
+      g.lineTo(x+r*1.5,y-r*(0.24+i*0.18)); g.stroke();
+    }
+  },
+
+  shark: (g,S,x,y,r,c,m,c2) => {                  // サメ
+    g.fillStyle = c;
+    g.beginPath();                                // せびれ（大きな三角）
+    g.moveTo(x+r*0.2,y-r*0.5); g.lineTo(x-r*0.22,y-r*1.4);
+    g.lineTo(x-r*0.5,y-r*0.46); g.closePath(); g.fill();
+    g.beginPath();                                // からだ（とがった はな先）
+    g.moveTo(x+r*1.3,y-r*0.06);
+    g.bezierCurveTo(x+r*1.0,y-r*0.56, x+r*0.2,y-r*0.66, x-r*0.4,y-r*0.56);
+    g.bezierCurveTo(x-r*0.9,y-r*0.46, x-r*1.06,y-r*0.16, x-r*1.1,y+r*0.02);
+    g.bezierCurveTo(x-r*0.98,y+r*0.4, x-r*0.3,y+r*0.66, x+r*0.4,y+r*0.56);
+    g.bezierCurveTo(x+r*0.98,y+r*0.46, x+r*1.22,y+r*0.2, x+r*1.3,y-r*0.06);
+    g.closePath(); g.fill();
+    g.beginPath();                                // おびれ（上が長い）
+    g.moveTo(x-r*1.02,y+r*0.02);
+    g.lineTo(x-r*1.66,y-r*0.86); g.lineTo(x-r*1.34,y+r*0.06);
+    g.lineTo(x-r*1.6,y+r*0.62); g.closePath(); g.fill();
+    g.beginPath();                                // むなびれ
+    g.moveTo(x+r*0.3,y+r*0.4); g.lineTo(x-r*0.2,y+r*1.0);
+    g.lineTo(x+r*0.46,y+r*0.6); g.closePath(); g.fill();
+    g.fillStyle = c2 || 'rgba(255,255,255,.8)';   // おなかの白
+    g.beginPath();
+    g.moveTo(x+r*1.12,y+r*0.14);
+    g.bezierCurveTo(x+r*0.4,y+r*0.62, x-r*0.5,y+r*0.6, x-r*1.0,y+r*0.14);
+    g.bezierCurveTo(x-r*0.4,y+r*0.38, x+r*0.5,y+r*0.36, x+r*1.12,y+r*0.14);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.7)'; g.lineWidth=r*0.04;  // えら
+    for (let i=0;i<3;i++){
+      g.beginPath();
+      g.moveTo(x+r*(0.5-i*0.14), y-r*0.3); g.lineTo(x+r*(0.44-i*0.14), y+r*0.1); g.stroke();
+    }
+  },
+
+  manta: (g,S,x,y,r,c,m,c2) => {                  // マンタ
+    g.fillStyle = c;
+    g.beginPath();                                // ひろがった むなびれ（ひし形に ちかい）
+    g.moveTo(x,y-r*0.66);
+    g.bezierCurveTo(x+r*0.5,y-r*0.6, x+r*1.5,y-r*0.1, x+r*1.66,y+r*0.36);
+    g.bezierCurveTo(x+r*1.0,y+r*0.3, x+r*0.5,y+r*0.5, x,y+r*0.62);
+    g.bezierCurveTo(x-r*0.5,y+r*0.5, x-r*1.0,y+r*0.3, x-r*1.66,y+r*0.36);
+    g.bezierCurveTo(x-r*1.5,y-r*0.1, x-r*0.5,y-r*0.6, x,y-r*0.66);
+    g.closePath(); g.fill();
+    for (const s2 of [-1,1]){                     // あたまの ひれ（つの のよう）
+      g.beginPath();
+      g.moveTo(x+s2*r*0.16,y-r*0.6);
+      g.lineTo(x+s2*r*0.4,y-r*0.98); g.lineTo(x+s2*r*0.46,y-r*0.56);
+      g.closePath(); g.fill();
+    }
+    g.strokeStyle=c; g.lineWidth=r*0.08; g.lineCap='round';   // 長いしっぽ
+    g.beginPath(); g.moveTo(x,y+r*0.56); g.lineTo(x-r*0.1,y+r*1.5); g.stroke();
+    g.fillStyle = c2 || 'rgba(255,255,255,.75)'; // おなかの白
+    g.beginPath(); g.ellipse(x,y+r*0.16,r*0.52,r*0.34,0,0,GTAU); g.fill();
+  },
+
+  whale: (g,S,x,y,r,c,m,c2) => {                  // クジラ
+    g.fillStyle = c2 || 'rgba(190,225,255,.85)';  // しおふき
+    for (const [dx,dy,rr] of [[0.36,-1.14,0.16],[0.2,-1.4,0.12],[0.52,-1.4,0.1]]){
+      g.beginPath(); g.arc(x+r*dx,y+r*dy,r*rr,0,GTAU); g.fill();
+    }
+    g.fillStyle = c;
+    g.beginPath();                                // からだ（あごが 大きい）
+    g.moveTo(x+r*1.24,y+r*0.1);
+    g.bezierCurveTo(x+r*1.16,y-r*0.5, x+r*0.4,y-r*0.76, x-r*0.24,y-r*0.68);
+    g.bezierCurveTo(x-r*0.86,y-r*0.6, x-r*1.06,y-r*0.24, x-r*1.06,y+r*0.02);
+    g.bezierCurveTo(x-r*0.96,y+r*0.44, x-r*0.2,y+r*0.76, x+r*0.5,y+r*0.66);
+    g.bezierCurveTo(x+r*1.0,y+r*0.58, x+r*1.24,y+r*0.36, x+r*1.24,y+r*0.1);
+    g.closePath(); g.fill();
+    g.beginPath();                                // おびれ
+    g.moveTo(x-r*0.98,y+r*0.02);
+    g.quadraticCurveTo(x-r*1.44,y-r*0.3, x-r*1.74,y-r*0.6);
+    g.quadraticCurveTo(x-r*1.4,y-r*0.16, x-r*1.26,y+r*0.08);
+    g.quadraticCurveTo(x-r*1.4,y+r*0.34, x-r*1.72,y+r*0.7);
+    g.quadraticCurveTo(x-r*1.36,y+r*0.36, x-r*0.98,y+r*0.16);
+    g.closePath(); g.fill();
+    g.beginPath();                                // むなびれ
+    g.moveTo(x+r*0.34,y+r*0.5); g.lineTo(x-r*0.14,y+r*1.02);
+    g.lineTo(x+r*0.5,y+r*0.66); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.82)';        // おなかの すじ
+    g.save();
+    g.beginPath(); g.ellipse(x+r*0.2,y+r*0.3,r*0.9,r*0.4,0.06,0,GTAU); g.clip();
+    for (let i=0;i<5;i++){
+      gRR(g, x-r*0.7, y+r*(0.04+i*0.16), r*1.9, r*0.07, r*0.03); g.fill();
+    }
+    g.restore();
+  },
+
+  /* ================= 4本あしの けもの =================
+     ネコもイヌもクマも 骨ぐみは おなじ。
+     みみ・しっぽ・はなさき・もよう・ずんぐり具合 で 見わける。
+     じっさいの動物も そこで 見わけているので、これで 別の種になる。
+     o.ear   : みみの形   o.tail : しっぽの形
+     o.snout : はなさき   o.mark : もよう   o.stout: からだの ずんぐり
+     o.mane  : たてがみ   o.horn : つの     o.trunk: はな（ゾウ） */
+
+  quad: (g,S,x,y,r,c,m,c2,rc) => {
+    const o = (rc && rc.opt) || {};
+    const st = o.stout === undefined ? 1 : o.stout;   // 1=ふつう 1.3=ずんぐり 0.8=すらり
+    const nk = o.neck || 0;                           // 首の長さ（キリンなど）
+    y = y + r*nk*0.5;                                 // 首のぶん からだを 下げる（鳥と おなじ考え）
+    const hx = x + r*(0.72 + nk*0.22), hy = y - r*(0.42 + nk);   // あたまの ばしょ
+    // ふとい体は あたまを のみこむ。かおの ばしょは 動かせないので からだを 左へ にがす
+    const ox = x - r*(o.headOut || 0);
+    x = ox;
+    const ac = c2 || c, dk = o.dark || 'rgba(90,70,110,.28)';
+
+    // --- しっぽ（さきに 描いて うしろに まわす）
+    g.fillStyle = c;
+    if (o.tail === 'bushy'){                          // キツネ・リスの ふさふさ
+      g.beginPath();
+      g.moveTo(x-r*0.58,y+r*0.1);
+      g.bezierCurveTo(x-r*1.5,y+r*0.1, x-r*1.6,y-r*0.9, x-r*0.9,y-r*1.0);
+      g.bezierCurveTo(x-r*1.24,y-r*0.6, x-r*1.06,y-r*0.14, x-r*0.5,y+r*0.44);
+      g.closePath(); g.fill();
+      g.fillStyle = ac;
+      g.beginPath(); g.ellipse(x-r*0.98,y-r*0.94,r*0.22,r*0.18,0.3,0,GTAU); g.fill();
+    } else if (o.tail === 'long'){                    // ネコ・ヒョウの ながい しっぽ
+      g.strokeStyle = c; g.lineWidth = r*0.15; g.lineCap='round';
+      g.beginPath();
+      g.moveTo(x-r*0.62,y+r*0.16);
+      g.bezierCurveTo(x-r*1.3,y+r*0.16, x-r*1.34,y-r*0.6, x-r*0.94,y-r*0.86);
+      g.stroke();
+    } else if (o.tail === 'puff'){                    // ウサギの まるい しっぽ
+      g.beginPath(); g.arc(x-r*0.72,y+r*0.16,r*0.24,0,GTAU); g.fill();
+    } else if (o.tail === 'tuft'){                    // ライオン・ウシの ふさ つき
+      g.strokeStyle = c; g.lineWidth = r*0.1; g.lineCap='round';
+      g.beginPath();
+      g.moveTo(x-r*0.62,y+r*0.06);
+      g.quadraticCurveTo(x-r*1.24,y-r*0.1, x-r*1.16,y-r*0.6); g.stroke();
+      g.fillStyle = o.tuftC || ac;
+      g.beginPath(); g.ellipse(x-r*1.16,y-r*0.72,r*0.16,r*0.22,0,0,GTAU); g.fill();
+    } else if (o.tail === 'curl'){                    // ブタの くるん
+      g.strokeStyle = c; g.lineWidth = r*0.09; g.lineCap='round';
+      g.beginPath();
+      g.moveTo(x-r*0.6,y+r*0.02);
+      g.bezierCurveTo(x-r*1.0,y-r*0.1, x-r*0.86,y-r*0.5, x-r*1.1,y-r*0.42);
+      g.stroke();
+    } else if (o.tail === 'short'){                   // クマ・パンダの みじかい
+      g.beginPath(); g.arc(x-r*0.68,y+r*0.06,r*0.16,0,GTAU); g.fill();
+    } else if (o.tail === 'thick'){                   // カンガルーの ふとい しっぽ
+      g.beginPath();
+      g.moveTo(x-r*0.5,y+r*0.1);
+      g.bezierCurveTo(x-r*1.3,y+r*0.3, x-r*1.5,y+r*0.9, x-r*1.36,y+r*1.06);
+      g.bezierCurveTo(x-r*1.2,y+r*0.66, x-r*0.9,y+r*0.6, x-r*0.44,y+r*0.6);
+      g.closePath(); g.fill();
+    }
+
+    // --- あし（4本。まえ2・うしろ2）
+    g.fillStyle = c;
+    if (o.legs === 'hop'){                            // カンガルー：うしろあしが 大きい
+      g.beginPath(); g.ellipse(x-r*0.24, y+r*0.86, r*0.46, r*0.24, -0.16, 0, GTAU); g.fill();
+      g.beginPath(); g.ellipse(x-r*0.06, y+r*0.5, r*0.28, r*0.4, -0.2, 0, GTAU); g.fill();
+      g.beginPath(); g.ellipse(x+r*0.4, y+r*0.36, r*0.11, r*0.22, -0.3, 0, GTAU); g.fill();
+    } else {
+      const LG = o.shortLeg
+        ? [[-0.44,0.62,0.19,0.26],[-0.12,0.66,0.18,0.22],[0.42,0.64,0.19,0.24],[0.74,0.66,0.18,0.2]]
+        : [[-0.44,0.7,0.17,0.34],[-0.12,0.74,0.16,0.3],[0.42,0.72,0.17,0.32],[0.74,0.74,0.16,0.28]];
+      for (const [dx,dy,w,h] of LG){
+        g.beginPath(); g.ellipse(x+r*dx, y+r*dy, r*w, r*h, 0,0,GTAU); g.fill();
+      }
+      if (o.hoof){                                    // ひづめ（ブタ・ウシ・シカ）
+        g.fillStyle = o.hoof;
+        for (const [dx,dy,w,h] of LG){
+          g.beginPath(); g.ellipse(x+r*dx, y+r*(dy+h*0.62), r*w*0.9, r*h*0.3, 0,0,GTAU); g.fill();
+        }
+        g.fillStyle = c;
+      }
+    }
+    // --- どうたい
+    if (o.legs === 'hop'){                            // カンガルーは たてに 長い体
+      g.beginPath(); g.ellipse(x+r*0.1, y+r*0.16, r*0.5, r*0.66, -0.08, 0, GTAU); g.fill();
+      g.fillStyle = o.pouchC || 'rgba(255,255,255,.4)';   // おなかの ふくろ
+      g.beginPath(); g.ellipse(x+r*0.3, y+r*0.32, r*0.26, r*0.3, -0.1, 0, GTAU); g.fill();
+      g.fillStyle = c;
+    } else {
+      const bh = o.flat === undefined ? st : o.flat;   // よこ長の 体（カバ・サイ）
+      g.beginPath(); g.ellipse(x+r*0.06, y+r*0.24, r*0.78*st, r*0.5*bh, -0.04, 0, GTAU); g.fill();
+    }
+
+    // --- 首（長いときだけ）
+    if (nk > 0){
+      g.beginPath();
+      g.moveTo(x+r*0.42, y-r*0.16);
+      g.lineTo(hx-r*0.3, hy+r*0.3); g.lineTo(hx+r*0.24, hy+r*0.34);
+      g.lineTo(x+r*0.78, y-r*0.1); g.closePath(); g.fill();
+    }
+    // --- あたま。まるだけだと どの子も おなじ顔になるので、種ごとに 形をかえる
+    const H = { round:[0.52,0.48,0], wide:[0.6,0.5,0], big:[0.66,0.58,0],
+                small:[0.4,0.38,0], long:[0.56,0.42,0.1], flat:[0.54,0.44,0],
+                boxy:[0.58,0.46,0] }[o.head || 'round'];
+    g.beginPath(); g.ellipse(hx, hy, r*H[0], r*H[1], H[2], 0, GTAU); g.fill();
+    if (o.head === 'boxy'){                           // ウシ：あごが 四角い
+      gRR(g, hx-r*0.3, hy+r*0.1, r*0.9, r*0.5, r*0.14); g.fill();
+    }
+    if (o.ruff){                                      // オオカミ：くびの まわりの けば
+      g.fillStyle = o.ruffC || c2 || c;
+      for (let i=0;i<7;i++){
+        const a2 = Math.PI*(0.42 + i*0.16);
+        g.beginPath();
+        g.arc(hx+Math.cos(a2)*r*0.5, hy+Math.sin(a2)*r*0.48, r*0.17, 0, GTAU); g.fill();
+      }
+      g.fillStyle = c;
+      g.beginPath(); g.ellipse(hx, hy, r*H[0], r*H[1], H[2], 0, GTAU); g.fill();
+    }
+    if (o.faceRing){                                  // サル：かおの まわりだけ 色がちがう
+      g.fillStyle = o.faceRing;
+      g.beginPath(); g.ellipse(hx+r*0.06, hy+r*0.04, r*0.38, r*0.36, 0, 0, GTAU); g.fill();
+      g.fillStyle = c;
+    }
+    if (o.nose){                                      // コアラ：大きな はな
+      g.fillStyle = o.noseC || '#4a4450';
+      g.beginPath(); g.ellipse(hx+r*0.22, hy+r*0.14, r*0.17, r*0.22, 0, 0, GTAU); g.fill();
+      g.fillStyle = c;
+    }
+    if (o.whisker){                                   // アザラシ・カワウソ：ひげ
+      g.strokeStyle = o.whiskerC || 'rgba(255,255,255,.85)';
+      g.lineWidth = r*0.035; g.lineCap='round';
+      for (let i=-1;i<=1;i++){
+        g.beginPath();
+        g.moveTo(hx+r*0.28, hy+r*0.16);
+        g.lineTo(hx+r*0.86, hy+r*(0.06+i*0.16)); g.stroke();
+      }
+    }
+    if (o.claw){                                      // ナマケモノ：ながい つめ
+      g.strokeStyle = o.clawC || '#6b5a48'; g.lineWidth = r*0.06; g.lineCap='round';
+      for (const [cx2,cy2] of [[-0.44,0.86],[0.42,0.88]])
+        for (let i=-1;i<=1;i++){
+          g.beginPath();
+          g.moveTo(x+r*cx2, y+r*cy2);
+          g.lineTo(x+r*(cx2+i*0.1), y+r*(cy2+0.34)); g.stroke();
+        }
+    }
+    if (o.horn === 'ossicone'){                       // キリンの つの
+      g.fillStyle = o.hornC || '#8a6440';
+      for (const s2 of [-1,1]){
+        g.beginPath(); g.ellipse(hx+s2*r*0.16, hy-r*0.5, r*0.06, r*0.16, 0,0,GTAU); g.fill();
+        g.beginPath(); g.arc(hx+s2*r*0.16, hy-r*0.62, r*0.08, 0, GTAU); g.fill();
+      }
+      g.fillStyle = c;
+    } else if (o.horn === 'rhino'){                   // サイの つの
+      // ベジェで 三かくを 作ると 板に 見えるので、だんだん 小さくなる 丸を ならべて 円すいに する
+      const cone = (bx,by,ex,ey,w) => {
+        for (let i=0;i<=16;i++){
+          const t=i/16;
+          const px = bx + (ex-bx)*t - Math.sin(t*2.4)*r*0.1;   // すこし そらす
+          const py = by + (ey-by)*t;
+          g.beginPath(); g.arc(px, py, r*w*(1-t*0.92), 0, GTAU); g.fill();
+        }
+      };
+      const nx = hx + r*0.56, ny = hy + r*0.36;       // 鼻さきが つのの ねもと
+      g.fillStyle = o.hornC || '#f2e8d4';
+      cone(nx, ny, nx + r*0.3, ny - r*1.06, 0.24);
+      g.fillStyle = 'rgba(255,255,255,.4)';           // 前がわの てり
+      cone(nx + r*0.08, ny - r*0.06, nx + r*0.32, ny - r*1.0, 0.1);
+      g.fillStyle = o.hornC || '#f2e8d4';
+      cone(hx + r*0.14, hy - r*0.1, hx + r*0.24, hy - r*0.62, 0.14);   // うしろの 小さい つの
+      g.strokeStyle = 'rgba(120,105,130,.4)'; g.lineWidth = r*0.05;    // 皮ふの ひだ
+      g.beginPath(); g.moveTo(x-r*0.1, y-r*0.2);
+      g.quadraticCurveTo(x-r*0.24, y+r*0.24, x-r*0.06, y+r*0.62); g.stroke();
+      g.beginPath(); g.moveTo(x+r*0.34, y-r*0.22);
+      g.quadraticCurveTo(x+r*0.24, y+r*0.24, x+r*0.38, y+r*0.64); g.stroke();
+      g.fillStyle = c;
+    } else if (o.horn === 'goat'){                    // ヤギの つの と あごひげ
+      g.fillStyle = o.hornC || '#c9b18a';
+      for (const s2 of [-1,1]){
+        g.beginPath();
+        g.moveTo(hx+s2*r*0.24, hy-r*0.36);
+        g.quadraticCurveTo(hx+s2*r*0.44, hy-r*0.86, hx+s2*r*0.2, hy-r*0.9);
+        g.quadraticCurveTo(hx+s2*r*0.32, hy-r*0.6, hx+s2*r*0.12, hy-r*0.34);
+        g.closePath(); g.fill();
+      }
+      g.fillStyle = o.beardC || c2 || c;
+      g.beginPath(); g.ellipse(hx+r*0.12, hy+r*0.52, r*0.12, r*0.22, 0,0,GTAU); g.fill();
+      g.fillStyle = c;
+    }
+
+    // --- みみ
+    const ear = (fn) => { for (const s2 of [-1,1]) fn(s2); };
+    if (o.ear === 'point'){                           // ネコ・キツネ・オオカミ
+      ear(s2 => { g.beginPath();
+        g.moveTo(hx+s2*r*0.1, hy-r*0.38);
+        g.lineTo(hx+s2*r*0.5, hy-r*0.34); g.lineTo(hx+s2*r*0.3, hy-r*0.86);
+        g.closePath(); g.fill(); });
+      g.fillStyle = o.earIn || '#ffc2d4';
+      ear(s2 => { g.beginPath();
+        g.moveTo(hx+s2*r*0.18, hy-r*0.4);
+        g.lineTo(hx+s2*r*0.4, hy-r*0.38); g.lineTo(hx+s2*r*0.29, hy-r*0.68);
+        g.closePath(); g.fill(); });
+      g.fillStyle = c;
+    } else if (o.ear === 'round'){                    // クマ・パンダ・ネズミ
+      const ek = o.earK || 1;
+      ear(s2 => { g.beginPath(); g.arc(hx+s2*r*0.4, hy-r*0.4, r*0.2*ek, 0, GTAU); g.fill(); });
+      if (o.earC){ g.fillStyle=o.earC;
+        ear(s2 => { g.beginPath(); g.arc(hx+s2*r*0.4, hy-r*0.42, r*0.12*ek, 0, GTAU); g.fill(); });
+        g.fillStyle=c; }
+    } else if (o.ear === 'long'){                     // ウサギ
+      ear(s2 => { g.save(); g.translate(hx+s2*r*0.2, hy-r*0.66); g.rotate(s2*0.2);
+        g.beginPath(); g.ellipse(0,0,r*0.15,r*0.5,0,0,GTAU); g.fill();
+        g.fillStyle = o.earIn || '#ffc2d4';
+        g.beginPath(); g.ellipse(0,r*0.04,r*0.07,r*0.36,0,0,GTAU); g.fill();
+        g.fillStyle = c; g.restore(); });
+    } else if (o.ear === 'droop'){                    // イヌ（たれみみ）
+      ear(s2 => { g.beginPath();
+        g.ellipse(hx+s2*r*0.5, hy-r*0.04, r*0.18, r*0.34, s2*0.3, 0, GTAU); g.fill(); });
+    } else if (o.ear === 'pigflop'){                  // ブタ：あたまより 大きい たれみみ
+      ear(s2 => { g.beginPath();
+        g.moveTo(hx+s2*r*0.02, hy-r*0.5);
+        g.quadraticCurveTo(hx+s2*r*0.66, hy-r*0.96, hx+s2*r*0.62, hy-r*0.18);
+        g.quadraticCurveTo(hx+s2*r*0.44, hy-r*0.36, hx+s2*r*0.0, hy-r*0.28);
+        g.closePath(); g.fill(); });
+      g.fillStyle = o.earIn || 'rgba(255,175,200,.8)';
+      ear(s2 => { g.beginPath();
+        g.moveTo(hx+s2*r*0.12, hy-r*0.48);
+        g.quadraticCurveTo(hx+s2*r*0.54, hy-r*0.82, hx+s2*r*0.5, hy-r*0.28);
+        g.closePath(); g.fill(); });
+      g.strokeStyle = 'rgba(190,120,145,.4)'; g.lineWidth = r*0.04;
+      ear(s2 => { g.beginPath();
+        g.moveTo(hx+s2*r*0.02, hy-r*0.5);
+        g.quadraticCurveTo(hx+s2*r*0.66, hy-r*0.96, hx+s2*r*0.62, hy-r*0.18); g.stroke(); });
+      g.fillStyle = c;
+    } else if (o.ear === 'big'){                      // ゾウ（みみが 体より 目だつ）
+      ear(s2 => {
+        g.beginPath();
+        g.ellipse(hx+s2*r*0.6, hy-r*0.06, r*0.52, r*0.6, s2*0.24, 0, GTAU); g.fill();
+        g.fillStyle = o.earIn || 'rgba(255,255,255,.3)';
+        g.beginPath();
+        g.ellipse(hx+s2*r*0.62, hy-r*0.04, r*0.34, r*0.4, s2*0.24, 0, GTAU); g.fill();
+        g.fillStyle = c;
+      });
+    } else if (o.ear === 'horse'){                    // ウマ・シマウマ（ほそ長い たてみみ）
+      ear(s2 => { g.save(); g.translate(hx+s2*r*0.26, hy-r*0.5); g.rotate(s2*0.24);
+        g.beginPath(); g.ellipse(0,0,r*0.12,r*0.3,0,0,GTAU); g.fill();
+        g.fillStyle = o.earIn || 'rgba(255,255,255,.35)';
+        g.beginPath(); g.ellipse(0,r*0.02,r*0.055,r*0.2,0,0,GTAU); g.fill();
+        g.fillStyle = c; g.restore(); });
+    } else if (o.ear === 'tuftear'){                  // リス（ふさ みみ）
+      ear(s2 => { g.beginPath();
+        g.moveTo(hx+s2*r*0.12, hy-r*0.36);
+        g.quadraticCurveTo(hx+s2*r*0.56, hy-r*0.98, hx+s2*r*0.38, hy-r*0.3);
+        g.closePath(); g.fill(); });
+    }
+
+    // --- つの
+    if (o.horn === 'antler'){                         // シカ
+      g.strokeStyle = o.hornC || '#b98a5a'; g.lineWidth=r*0.07; g.lineCap='round';
+      ear(s2 => {
+        g.beginPath(); g.moveTo(hx+s2*r*0.2, hy-r*0.4);
+        g.lineTo(hx+s2*r*0.34, hy-r*0.98); g.stroke();
+        g.beginPath(); g.moveTo(hx+s2*r*0.28, hy-r*0.72);
+        g.lineTo(hx+s2*r*0.56, hy-r*0.86); g.stroke();
+      });
+    } else if (o.horn === 'cow'){                     // ウシ・ヒツジ
+      g.fillStyle = o.hornC || '#e7d3a8';
+      ear(s2 => { g.beginPath();
+        g.moveTo(hx+s2*r*0.3, hy-r*0.36);
+        g.quadraticCurveTo(hx+s2*r*0.72, hy-r*0.56, hx+s2*r*0.62, hy-r*0.2);
+        g.quadraticCurveTo(hx+s2*r*0.56, hy-r*0.44, hx+s2*r*0.24, hy-r*0.3);
+        g.closePath(); g.fill(); });
+      g.fillStyle = c;
+    }
+
+    // --- たてがみ（ライオン）
+    if (o.mane === 'lion'){                           // まるを かさねて ふさふさに
+      g.fillStyle = o.maneC || '#c98a44';
+      for (let i=0;i<11;i++){
+        const a2 = i*GTAU/11;
+        g.beginPath();
+        g.arc(hx+Math.cos(a2)*r*0.54, hy+Math.sin(a2)*r*0.5, r*0.26, 0, GTAU); g.fill();
+      }
+      g.fillStyle = c;
+      g.beginPath(); g.ellipse(hx, hy, r*0.5, r*0.46, 0, 0, GTAU); g.fill();
+    } else if (o.mane === 'horse'){                   // くびすじに そって ながれる たてがみ
+      g.fillStyle = o.maneC || '#5b3e28';
+      g.beginPath();
+      g.moveTo(hx-r*0.34, hy-r*0.4);
+      g.bezierCurveTo(hx-r*0.7, hy-r*0.1, hx-r*0.72, hy+r*0.4, hx-r*0.5, hy+r*0.56);
+      g.bezierCurveTo(hx-r*0.42, hy+r*0.16, hx-r*0.16, hy-r*0.16, hx-r*0.02, hy-r*0.44);
+      g.closePath(); g.fill();
+      g.fillStyle = c;
+    }
+
+    // --- はなさき
+    if (o.snout === 'hippo'){                         // カバ：口が あたまより 太く、前へ つき出す
+      g.fillStyle = c;
+      gRR(g, hx-r*0.14, hy+r*0.02, r*1.04, r*0.8, r*0.36); g.fill();
+      g.fillStyle = o.snoutC || 'rgba(255,255,255,.34)';   // 口の 上がわが あかるい
+      gRR(g, hx-r*0.06, hy+r*0.08, r*0.9, r*0.36, r*0.18); g.fill();
+      g.strokeStyle = 'rgba(90,70,100,.4)'; g.lineWidth = r*0.05; g.lineCap='round';
+      g.beginPath();                                  // 口の わかれめ
+      g.moveTo(hx-r*0.02, hy+r*0.5); g.lineTo(hx+r*0.84, hy+r*0.48); g.stroke();
+      g.fillStyle = '#fdfaff';                        // 下の きば（カバの めじるし）
+      for (const s2 of [0,1]){
+        g.beginPath();
+        g.ellipse(hx+r*(0.24+s2*0.44), hy+r*0.62, r*0.1, r*0.16, 0,0,GTAU); g.fill();
+      }
+      g.fillStyle = 'rgba(90,70,100,.55)';            // はなの あな（上むき・大きい）
+      for (const s2 of [-1,1]){
+        g.beginPath(); g.ellipse(hx+r*0.66+s2*r*0.16, hy+r*0.1, r*0.1, r*0.08, 0,0,GTAU); g.fill();
+      }
+    } else if (o.snout === 'long'){                   // イヌ・オオカミ・ウマ
+      g.fillStyle = c;
+      g.beginPath(); g.ellipse(hx+r*0.42, hy+r*0.2, r*0.3, r*0.2, 0.1, 0, GTAU); g.fill();
+    } else if (o.snout === 'pig'){                    // ブタ：はなが かおの 半分ちかくを しめる
+      g.fillStyle = o.snoutC || '#ffb3c8';
+      g.beginPath(); g.ellipse(hx+r*0.44, hy+r*0.22, r*0.42, r*0.34, 0,0,GTAU); g.fill();
+      g.strokeStyle = 'rgba(180,110,130,.55)'; g.lineWidth = r*0.045;
+      g.beginPath(); g.ellipse(hx+r*0.44, hy+r*0.22, r*0.42, r*0.34, 0,0,GTAU); g.stroke();
+      g.fillStyle = 'rgba(255,255,255,.4)';
+      g.beginPath(); g.ellipse(hx+r*0.36, hy+r*0.06, r*0.18, r*0.07, 0,0,GTAU); g.fill();
+      g.fillStyle = 'rgba(150,90,110,.65)';
+      for (const s2 of [-1,1]){ g.beginPath();
+        g.ellipse(hx+r*0.46+s2*r*0.15, hy+r*0.24, r*0.07, r*0.12, 0,0,GTAU); g.fill(); }
+    } else if (o.snout === 'pale'){                   // クマ・パンダ・サルの 口まわり
+      g.fillStyle = o.snoutC || 'rgba(255,255,255,.7)';
+      g.beginPath(); g.ellipse(hx+r*0.16, hy+r*0.22, r*0.3, r*0.2, 0,0,GTAU); g.fill();
+    }
+    if (o.trunk){                                     // ゾウの はな（下へ ながく たれる）
+      g.fillStyle = c;
+      g.beginPath();
+      g.moveTo(hx+r*0.16, hy+r*0.24);
+      g.bezierCurveTo(hx+r*0.6,hy+r*0.4, hx+r*0.66,hy+r*1.0, hx+r*0.4,hy+r*1.24);
+      g.bezierCurveTo(hx+r*0.5,hy+r*0.94, hx+r*0.4,hy+r*0.56, hx-r*0.02,hy+r*0.46);
+      g.closePath(); g.fill();
+      g.strokeStyle = 'rgba(120,110,130,.35)'; g.lineWidth = r*0.035;
+      for (let i=1;i<=3;i++){
+        g.beginPath();
+        g.moveTo(hx+r*(0.1+i*0.06), hy+r*(0.4+i*0.2));
+        g.lineTo(hx+r*(0.46+i*0.02), hy+r*(0.46+i*0.2)); g.stroke();
+      }
+    }
+
+    // --- もよう
+    if (o.mark === 'stripe'){                         // トラ・シマウマ
+      g.fillStyle = dk; g.save();
+      g.beginPath(); g.ellipse(x+r*0.06,y+r*0.24,r*0.78*st,r*0.5*st,-0.04,0,GTAU); g.clip();
+      for (let i=-2;i<=2;i++){
+        g.save(); g.translate(x+r*i*0.3, y+r*0.24); g.rotate(0.2);
+        g.beginPath(); g.ellipse(0,0,r*0.055,r*0.5,0,0,GTAU); g.fill(); g.restore();
+      }
+      g.restore();
+    } else if (o.mark === 'spot'){                    // シカ・アライグマ
+      g.fillStyle = o.markC || 'rgba(255,255,255,.6)';
+      for (const [dx,dy] of [[-0.3,0.12],[0.06,0.3],[0.36,0.14],[-0.1,0.44]]){
+        g.beginPath(); g.arc(x+r*dx,y+r*dy,r*0.09,0,GTAU); g.fill();
+      }
+    } else if (o.mark === 'belly'){                   // おなかが 白い子
+      g.fillStyle = o.markC || 'rgba(255,255,255,.75)';
+      g.beginPath(); g.ellipse(x+r*0.1,y+r*0.44,r*0.5*st,r*0.24*st,0,0,GTAU); g.fill();
+    } else if (o.mark === 'panda'){                   // パンダ：手あしと 目のまわりだけ 黒く
+      g.fillStyle = o.markC || '#2f3346';
+      for (const [dx,dy,w,h] of [[-0.44,0.72,0.19,0.36],[-0.12,0.76,0.18,0.32],
+                                 [0.42,0.74,0.19,0.34],[0.74,0.76,0.18,0.3]]){
+        g.beginPath(); g.ellipse(x+r*dx,y+r*dy,r*w,r*h,0,0,GTAU); g.fill();
+      }
+      for (const s2 of [-1,1]){                       // 目のまわりの ぶち
+        g.beginPath();
+        g.ellipse(hx+s2*r*0.2, hy-r*0.02, r*0.19, r*0.24, s2*0.4, 0, GTAU); g.fill();
+      }
+    } else if (o.mark === 'quill'){                   // ハリネズミの はり
+      g.fillStyle = o.markC || '#8a6a58';
+      for (let i=0;i<9;i++){
+        const a2 = Math.PI*(1.06 + i*0.1);
+        g.beginPath();
+        g.moveTo(x+r*0.06+Math.cos(a2)*r*0.72*st, y+r*0.24+Math.sin(a2)*r*0.46*st);
+        g.lineTo(x+r*0.06+Math.cos(a2-0.06)*r*1.1*st, y+r*0.24+Math.sin(a2-0.06)*r*0.8*st);
+        g.lineTo(x+r*0.06+Math.cos(a2+0.06)*r*0.72*st, y+r*0.24+Math.sin(a2+0.06)*r*0.46*st);
+        g.closePath(); g.fill();
+      }
+    }
+  },
+
+  /* ================= そら（鳥）=================
+     くちばし・とさか・しっぽ・首の長さ・つばさ で 見わける */
+
+  fowl: (g,S,x,y,r,c,m,c2,rc) => {
+    const o=(rc&&rc.opt)||{}, ac=c2||c, beakC=o.beakC||'#ffb43f';
+    const neck = o.neck || 0;                        // 首の長さ
+    // 首が長い子は からだごと 下へさげる。でないと あたまが 上で切れる
+    y = y + r*neck*0.62;
+    const hx = x + r*0.24, hy = y - r*(0.52 + neck);
+    g.strokeStyle = o.legC || beakC; g.lineWidth = r*(o.longLeg?0.07:0.09); g.lineCap='round';
+    for (const s2 of [-1,1]){                        // あし
+      const ly = o.longLeg ? 1.5 : 1.02;
+      g.beginPath(); g.moveTo(x+s2*r*0.18,y+r*0.62); g.lineTo(x+s2*r*0.2,y+r*ly); g.stroke();
+      g.beginPath(); g.moveTo(x+s2*r*0.02,y+r*ly); g.lineTo(x+s2*r*0.4,y+r*ly); g.stroke();
+    }
+    g.fillStyle = c;
+    if (o.tail === 'fan'){                           // クジャク・ハトの ひろがる尾
+      for (let i=-2;i<=2;i++){
+        g.save(); g.translate(x-r*0.5,y+r*0.1); g.rotate(i*0.22+0.1);
+        g.beginPath(); g.ellipse(-r*0.6,0,r*0.62,r*0.14,0,0,GTAU); g.fill();
+        g.restore();
+      }
+    } else if (o.tail === 'fork'){                   // ツバメの ふたまた
+      g.beginPath();
+      g.moveTo(x-r*0.4,y+r*0.1);
+      g.lineTo(x-r*1.5,y-r*0.34); g.lineTo(x-r*1.0,y+r*0.24);
+      g.lineTo(x-r*1.44,y+r*0.68); g.closePath(); g.fill();
+    } else if (o.tail === 'long'){                   // ハチドリ・インコの ながい尾
+      g.beginPath();
+      g.moveTo(x-r*0.4,y+r*0.06);
+      g.lineTo(x-r*1.66,y+r*0.34); g.lineTo(x-r*0.42,y+r*0.42); g.closePath(); g.fill();
+    } else {                                         // ふつうの みじかい尾
+      g.beginPath();
+      g.moveTo(x-r*0.44,y+r*0.04);
+      g.lineTo(x-r*1.16,y-r*0.2); g.lineTo(x-r*1.1,y+r*0.16);
+      g.lineTo(x-r*1.16,y+r*0.5); g.closePath(); g.fill();
+    }
+    g.beginPath();                                   // からだ
+    g.ellipse(x, y+r*0.1, r*0.74, r*(o.slim?0.6:0.72), 0.08, 0, GTAU); g.fill();
+    if (o.sneck){                                    // ハクチョウの S字の 首
+      g.strokeStyle = c; g.lineWidth = r*0.26; g.lineCap = 'round';
+      g.beginPath();
+      g.moveTo(x+r*0.16, y-r*0.36);
+      g.bezierCurveTo(x+r*0.86, y-r*0.5, x+r*0.94, y-r*(0.3+neck*0.9), hx, hy+r*0.24);
+      g.stroke();
+    } else if (neck > 0){                            // 首
+      g.beginPath();
+      g.moveTo(x+r*0.04,y-r*0.3);
+      g.quadraticCurveTo(hx-r*0.1, hy+r*0.3, hx-r*0.02, hy+r*0.1);
+      g.lineTo(hx+r*0.28, hy+r*0.14);
+      g.quadraticCurveTo(hx+r*0.2, hy+r*0.5, x+r*0.4,y-r*0.24);
+      g.closePath(); g.fill();
+    }
+    if (o.wing !== false){                           // たたんだ つばさ
+      g.fillStyle = ac;
+      g.beginPath(); g.ellipse(x-r*0.1,y+r*0.16,r*0.46,r*0.3,-0.24,0,GTAU); g.fill();
+      g.strokeStyle='rgba(110,90,120,.28)'; g.lineWidth=r*0.04;
+      for (let i=0;i<3;i++){
+        g.beginPath();
+        g.moveTo(x-r*(0.46-i*0.1), y+r*(0.06+i*0.08));
+        g.quadraticCurveTo(x-r*0.1, y+r*(0.26+i*0.06), x+r*(0.22-i*0.06), y+r*(0.32+i*0.02));
+        g.stroke();
+      }
+    }
+    g.fillStyle = o.headC || c;                      // あたまだけ 色をかえる子（ハクトウワシ）
+    g.beginPath(); g.ellipse(hx, hy, r*0.42, r*0.4, 0, 0, GTAU); g.fill();
+    if (neck > 0 && o.headC){                        // 首も おなじ色で ぬりつなぐ
+      g.beginPath();
+      g.moveTo(hx-r*0.3, hy+r*0.2); g.lineTo(hx+r*0.3, hy+r*0.24);
+      g.quadraticCurveTo(hx+r*0.22, hy+r*0.7, x+r*0.34, y-r*0.24);
+      g.lineTo(x, y-r*0.3);
+      g.quadraticCurveTo(hx-r*0.14, hy+r*0.6, hx-r*0.3, hy+r*0.2);
+      g.closePath(); g.fill();
+    }
+    g.fillStyle = c;
+    if (o.crest === 'spike'){                        // インコ・オウムの とさか
+      g.fillStyle = o.crestC || ac;
+      for (let i=-1;i<=1;i++){
+        g.beginPath();
+        g.moveTo(hx+r*i*0.14, hy-r*0.3);
+        g.quadraticCurveTo(hx+r*(i*0.2-0.1), hy-r*1.0, hx+r*(i*0.16+0.14), hy-r*0.34);
+        g.closePath(); g.fill();
+      }
+    } else if (o.crest === 'comb'){                  // ニワトリの とさか
+      g.fillStyle = o.crestC || '#e8503f';
+      for (let i=-1;i<=1;i++){
+        g.beginPath(); g.arc(hx+r*i*0.16, hy-r*0.42, r*0.13, 0, GTAU); g.fill();
+      }
+      g.beginPath(); g.ellipse(hx+r*0.06, hy+r*0.36, r*0.1, r*0.16, 0,0,GTAU); g.fill();
+    } else if (o.crest === 'tuft'){                  // フクロウの みみ羽
+      g.fillStyle = c;
+      for (const s2 of [-1,1]){
+        g.beginPath();
+        g.moveTo(hx+s2*r*0.1, hy-r*0.3);
+        g.lineTo(hx+s2*r*0.42, hy-r*0.32); g.lineTo(hx+s2*r*0.3, hy-r*0.72);
+        g.closePath(); g.fill();
+      }
+    }
+    g.fillStyle = beakC;                             // くちばし
+    if (o.beak === 'long'){                          // ハチドリ・ペリカン
+      g.beginPath();
+      g.moveTo(hx+r*0.3,hy-r*0.06); g.lineTo(hx+r*1.24,hy+r*0.06);
+      g.lineTo(hx+r*0.3,hy+r*0.16); g.closePath(); g.fill();
+    } else if (o.beak === 'hook'){                   // ワシ・フクロウ
+      g.beginPath();
+      g.moveTo(hx+r*0.24,hy-r*0.1);
+      g.quadraticCurveTo(hx+r*0.66,hy-r*0.02, hx+r*0.5,hy+r*0.3);
+      g.lineTo(hx+r*0.22,hy+r*0.16); g.closePath(); g.fill();
+    } else {                                         // ふつう
+      g.beginPath();
+      g.moveTo(hx+r*0.28,hy-r*0.08); g.lineTo(hx+r*0.72,hy+r*0.06);
+      g.lineTo(hx+r*0.28,hy+r*0.2); g.closePath(); g.fill();
+    }
+    if (o.knob){                                     // ハクチョウ：くちばしの つけねの 黒い こぶ
+      g.fillStyle = o.knob;
+      g.beginPath(); g.ellipse(hx+r*0.26, hy-r*0.06, r*0.13, r*0.15, 0,0,GTAU); g.fill();
+    }
+    if (o.mark === 'belly'){
+      g.fillStyle = o.markC || 'rgba(255,255,255,.7)';
+      g.beginPath(); g.ellipse(x+r*0.12,y+r*0.4,r*0.44,r*0.26,0,0,GTAU); g.fill();
+    }
+  },
+
+  /* ================= そら（むし）=================
+     はねの形・もよう・つのや しょっかく で 見わける */
+
+  bug: (g,S,x,y,r,c,m,c2,rc) => {
+    const o=(rc&&rc.opt)||{}, ac=c2||c;
+    if (o.wing === 'clear'){                         // トンボ・ハチの すきとおる はね
+      g.globalAlpha = 0.55;
+      g.fillStyle = o.wingC || '#dff0ff';
+      for (const s2 of [-1,1]) for (const dy of [-0.24, 0.16]){
+        g.save(); g.translate(x+s2*r*0.3, y+r*dy); g.rotate(s2*(dy<0?0.5:0.9));
+        g.beginPath(); g.ellipse(s2*r*0.72,0,r*0.78,r*0.2,0,0,GTAU); g.fill();
+        g.restore();
+      }
+      g.globalAlpha = 1;
+    } else if (o.wing === 'shell'){                  // テントウ・カブトの かたい はね
+      g.fillStyle = c;
+      g.beginPath(); g.ellipse(x, y+r*0.16, r*0.86, r*0.8, 0, 0, GTAU); g.fill();
+      g.strokeStyle = o.lineC || 'rgba(60,50,70,.55)'; g.lineWidth = r*0.06;
+      g.beginPath(); g.moveTo(x,y-r*0.6); g.lineTo(x,y+r*0.94); g.stroke();
+      if (o.mark === 'dots'){
+        g.fillStyle = o.markC || '#2f2f3a';
+        for (const [dx,dy] of [[-0.4,-0.06],[0.4,-0.06],[-0.3,0.42],[0.3,0.42],[-0.46,0.5],[0.46,0.5]]){
+          g.beginPath(); g.arc(x+r*dx, y+r*dy, r*0.13, 0, GTAU); g.fill();
+        }
+      }
+    }
+    g.fillStyle = o.bodyC || ac;                     // どうたい（ふしが 3つ）
+    g.beginPath(); g.ellipse(x, y+r*(o.wing==='shell'?0.16:0.1), r*(o.wing==='shell'?0.3:0.34), r*0.68, 0,0,GTAU); g.fill();
+    if (o.stripe){                                   // ハチの しましま
+      g.fillStyle = o.stripeC || '#2f2f3a';
+      g.save();
+      g.beginPath(); g.ellipse(x, y+r*0.1, r*0.34, r*0.68, 0,0,GTAU); g.clip();
+      for (let i=0;i<3;i++){
+        g.beginPath(); g.ellipse(x, y+r*(0.1+i*0.3), r*0.4, r*0.1, 0,0,GTAU); g.fill();
+      }
+      g.restore();
+    }
+    g.beginPath(); g.arc(x, y-r*0.62, r*0.34, 0, GTAU); g.fill();   // あたま
+    if (o.horn === 'beetle'){                        // カブトムシの つの
+      g.fillStyle = o.hornC || '#5b4430';
+      g.beginPath();
+      g.moveTo(x-r*0.1,y-r*0.86);
+      g.quadraticCurveTo(x-r*0.06,y-r*1.6, x+r*0.24,y-r*1.7);
+      g.quadraticCurveTo(x+r*0.04,y-r*1.44, x+r*0.14,y-r*0.84);
+      g.closePath(); g.fill();
+    } else {                                         // しょっかく
+      g.strokeStyle = o.antC || '#5b4a3e'; g.lineWidth = r*0.05; g.lineCap='round';
+      for (const s2 of [-1,1]){
+        g.beginPath();
+        g.moveTo(x+s2*r*0.12,y-r*0.84);
+        g.quadraticCurveTo(x+s2*r*0.42,y-r*1.3, x+s2*r*0.56,y-r*1.18); g.stroke();
+      }
+    }
+    g.strokeStyle = o.legC || '#5b4a3e'; g.lineWidth = r*0.05; g.lineCap='round';
+    for (const s2 of [-1,1]) for (let i=0;i<3;i++){  // あし6本
+      g.beginPath();
+      g.moveTo(x+s2*r*0.24, y+r*(0.1+i*0.24));
+      g.lineTo(x+s2*r*(0.7+i*0.05), y+r*(0.36+i*0.3)); g.stroke();
+    }
+  },
+
+  /* ================= ゆめの生きもの =================
+     人がたは 土台を ひとつにして、わっか・つの・はね・おめん・ひげ・
+     さかなの尾 などで 見わける */
+
+  hero: (g,S,x,y,r,c,m,c2,rc) => {
+    const o=(rc&&rc.opt)||{}, skin=o.skin||'#ffe4d0', ac=c2||c;
+    // --- せなかの はね
+    if (o.wing === 'angel'){
+      g.fillStyle='rgba(255,255,255,.95)';
+      for (const s2 of [-1,1]){
+        g.beginPath();
+        g.moveTo(x+s2*r*0.3,y-r*0.2);
+        g.bezierCurveTo(x+s2*r*1.4,y-r*1.1, x+s2*r*1.32,y+r*0.16, x+s2*r*0.9,y+r*0.42);
+        g.bezierCurveTo(x+s2*r*0.9,y+r*0.06, x+s2*r*0.6,y-r*0.06, x+s2*r*0.32,y-r*0.14);
+        g.closePath(); g.fill();
+      }
+    } else if (o.wing === 'bat'){
+      g.fillStyle=o.wingC||'#6b3a5a';
+      for (const s2 of [-1,1]){
+        g.beginPath();
+        g.moveTo(x+s2*r*0.3,y-r*0.24);
+        g.lineTo(x+s2*r*1.3,y-r*0.8); g.lineTo(x+s2*r*1.1,y-r*0.16);
+        g.lineTo(x+s2*r*1.28,y+r*0.26); g.lineTo(x+s2*r*0.9,y+r*0.06);
+        g.lineTo(x+s2*r*1.0,y+r*0.5); g.lineTo(x+s2*r*0.34,y+r*0.16);
+        g.closePath(); g.fill();
+      }
+    }
+    // --- あし または さかなの尾
+    if (o.tail === 'fish'){
+      g.fillStyle = ac;
+      g.beginPath();
+      g.moveTo(x-r*0.3,y+r*0.2);
+      g.bezierCurveTo(x-r*0.6,y+r*0.9, x-r*0.1,y+r*1.1, x+r*0.16,y+r*1.06);
+      g.bezierCurveTo(x+r*0.4,y+r*0.7, x+r*0.34,y+r*0.4, x+r*0.3,y+r*0.2);
+      g.closePath(); g.fill();
+      g.beginPath();
+      g.moveTo(x+r*0.02,y+r*1.0);
+      g.quadraticCurveTo(x-r*0.6,y+r*1.2, x-r*0.72,y+r*1.5);
+      g.quadraticCurveTo(x+r*0.02,y+r*1.3, x+r*0.7,y+r*1.5);
+      g.quadraticCurveTo(x+r*0.5,y+r*1.16, x+r*0.02,y+r*1.0);
+      g.closePath(); g.fill();
+    } else {
+      g.fillStyle = o.legC || c;
+      for (const s2 of [-1,1]){
+        gRR(g, x+s2*r*0.22-r*0.11, y+r*0.7, r*0.22, r*0.56, r*0.08); g.fill();
+      }
+      g.fillStyle = o.shoeC || '#5b4a5e';
+      for (const s2 of [-1,1]){
+        g.beginPath(); g.ellipse(x+s2*r*0.24, y+r*1.28, r*0.19, r*0.1, 0,0,GTAU); g.fill();
+      }
+    }
+    // --- からだ（ローブ か 服）
+    g.fillStyle = c;
+    if (o.robe){
+      g.beginPath();
+      g.moveTo(x-r*0.28,y-r*0.2); g.lineTo(x+r*0.28,y-r*0.2);
+      g.lineTo(x+r*0.66,y+r*1.06); g.lineTo(x-r*0.66,y+r*1.06);
+      g.closePath(); g.fill();
+    } else {
+      gRR(g, x-r*0.36, y-r*0.22, r*0.72, r*1.0, r*0.14); g.fill();
+    }
+    if (o.sash){ g.fillStyle=o.sash; gRR(g, x-r*0.4, y+r*0.3, r*0.8, r*0.14, r*0.06); g.fill(); }
+    // --- うで
+    g.strokeStyle = o.sleeve || skin; g.lineWidth = r*0.14; g.lineCap='round';
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.moveTo(x+s2*r*0.34,y-r*0.06); g.lineTo(x+s2*r*0.52,y+r*0.34); g.stroke();
+    }
+    // --- つえ
+    if (o.staff){
+      g.strokeStyle=o.staffC||'#b98a5a'; g.lineWidth=r*0.08;
+      g.beginPath(); g.moveTo(x+r*0.56,y+r*0.5); g.lineTo(x+r*0.66,y-r*0.9); g.stroke();
+      g.fillStyle=o.gemC||'#8fe3c4';
+      g.beginPath(); g.arc(x+r*0.67,y-r*1.0,r*0.18,0,GTAU); g.fill();
+    }
+    // --- あたま
+    g.fillStyle = skin;
+    g.beginPath(); g.arc(x, y-r*0.54, r*0.38, 0, GTAU); g.fill();
+    if (o.mask){                                      // にんじゃの おめん
+      g.fillStyle = o.maskC || c;
+      g.beginPath(); g.arc(x, y-r*0.54, r*0.4, 0, GTAU); g.fill();
+      g.fillStyle = skin;
+      g.beginPath(); g.ellipse(x, y-r*0.56, r*0.32, r*0.16, 0,0,GTAU); g.fill();
+    } else if (o.hair){                               // かみ
+      g.fillStyle = o.hair;
+      g.beginPath(); g.arc(x, y-r*0.6, r*0.44, Math.PI*1.02, Math.PI*1.98); g.fill();
+      if (o.longHair) for (const s2 of [-1,1]){
+        g.beginPath();
+        g.moveTo(x+s2*r*0.4,y-r*0.66);
+        g.bezierCurveTo(x+s2*r*0.66,y-r*0.1, x+s2*r*0.52,y+r*0.34, x+s2*r*0.3,y+r*0.28);
+        g.bezierCurveTo(x+s2*r*0.4,y-r*0.1, x+s2*r*0.3,y-r*0.4, x+s2*r*0.22,y-r*0.62);
+        g.closePath(); g.fill();
+      }
+    }
+    if (o.beard){                                     // ながい ひげ
+      g.fillStyle = o.beard;
+      g.beginPath();
+      g.moveTo(x-r*0.26,y-r*0.36);
+      g.quadraticCurveTo(x, y+r*0.7, x+r*0.26,y-r*0.36);
+      g.quadraticCurveTo(x, y-r*0.16, x-r*0.26,y-r*0.36);
+      g.closePath(); g.fill();
+    }
+    if (o.horns){                                     // あくまの つの
+      g.fillStyle = o.hornC || '#c9506a';
+      for (const s2 of [-1,1]){
+        g.beginPath();
+        g.moveTo(x+s2*r*0.2,y-r*0.84); g.lineTo(x+s2*r*0.42,y-r*1.3);
+        g.lineTo(x+s2*r*0.4,y-r*0.78); g.closePath(); g.fill();
+      }
+    }
+    if (o.halo){                                      // てんしの わっか
+      g.strokeStyle = o.haloC || '#ffe27a'; g.lineWidth = r*0.09;
+      g.beginPath(); g.ellipse(x, y-r*1.12, r*0.32, r*0.1, 0, 0, GTAU); g.stroke();
+    }
+    if (o.hat === 'wizard'){                          // まほうつかいの ぼうし
+      g.fillStyle = o.hatC || c;
+      g.beginPath(); g.ellipse(x, y-r*0.88, r*0.7, r*0.16, 0,0,GTAU); g.fill();
+      g.beginPath();
+      g.moveTo(x-r*0.4,y-r*0.9);
+      g.bezierCurveTo(x-r*0.16,y-r*1.7, x+r*0.16,y-r*1.9, x+r*0.42,y-r*1.86);
+      g.lineTo(x+r*0.4,y-r*0.9); g.closePath(); g.fill();
+    } else if (o.hat === 'ice'){                      // ゆきのじょおうの かんむり
+      g.fillStyle = o.hatC || '#cfeaff';
+      for (let i=-2;i<=2;i++){
+        g.beginPath();
+        g.moveTo(x+r*i*0.2-r*0.07, y-r*0.84);
+        g.lineTo(x+r*i*0.2, y-r*(1.16+0.16*(1-Math.abs(i)*0.4)));
+        g.lineTo(x+r*i*0.2+r*0.07, y-r*0.84); g.closePath(); g.fill();
+      }
+    }
+  },
+
+  kanga: (g,S,x,y,r,c,m,c2,rc) => {               // カンガルー（たてに 立つので 4本あしの型を つかわない）
+    const o = (rc && rc.opt) || {};
+    const ac = c2 || c, bel = o.bellyC || 'rgba(255,240,224,.6)';
+    y = y + r*0.55;                                // たてに 長いぶん 下げないと みみが 切れる
+    g.fillStyle = ac;
+    g.beginPath();                                // ふとい しっぽ（体を ささえる）
+    g.moveTo(x-r*0.3,y+r*0.36);
+    g.bezierCurveTo(x-r*1.06,y+r*0.5, x-r*1.42,y+r*0.92, x-r*1.3,y+r*1.04);
+    g.bezierCurveTo(x-r*1.1,y+r*0.8, x-r*0.66,y+r*0.8, x-r*0.2,y+r*0.8);
+    g.closePath(); g.fill();
+    g.fillStyle = c;
+    g.beginPath();                                // うしろあし（L字に おれた 大きい あし）
+    g.moveTo(x-r*0.24,y+r*0.18);
+    g.bezierCurveTo(x-r*0.6,y+r*0.5, x-r*0.5,y+r*0.94, x-r*0.16,y+r*0.96);
+    g.lineTo(x+r*0.62,y+r*0.96);
+    g.bezierCurveTo(x+r*0.74,y+r*0.96, x+r*0.74,y+r*0.72, x+r*0.6,y+r*0.72);
+    g.lineTo(x+r*0.16,y+r*0.72);
+    g.bezierCurveTo(x+r*0.2,y+r*0.4, x+r*0.14,y+r*0.16, x-r*0.24,y+r*0.18);
+    g.closePath(); g.fill();
+    g.beginPath();                                // どうたい（上に いくほど ほそい なす形）
+    g.moveTo(x-r*0.46,y+r*0.34);
+    g.bezierCurveTo(x-r*0.6,y-r*0.3, x-r*0.26,y-r*0.72, x+r*0.04,y-r*0.74);
+    g.bezierCurveTo(x+r*0.36,y-r*0.72, x+r*0.5,y-r*0.24, x+r*0.42,y+r*0.3);
+    g.bezierCurveTo(x+r*0.34,y+r*0.6, x-r*0.36,y+r*0.6, x-r*0.46,y+r*0.34);
+    g.closePath(); g.fill();
+    g.fillStyle = bel;                            // おなかの ふくろ
+    g.beginPath();
+    g.ellipse(x+r*0.14, y+r*0.24, r*0.28, r*0.3, -0.1, 0, GTAU); g.fill();
+    g.strokeStyle = 'rgba(120,90,60,.3)'; g.lineWidth = r*0.045;
+    g.beginPath(); g.arc(x+r*0.14, y+r*0.24, r*0.29, -1.2, 1.6); g.stroke();
+    g.fillStyle = c;
+    g.beginPath();                                // みじかい 前あし（むねの 前で そろえる）
+    g.ellipse(x+r*0.34,y-r*0.16,r*0.1,r*0.22,-0.5,0,GTAU); g.fill();
+    g.ellipse(x+r*0.18,y-r*0.08,r*0.1,r*0.2,-0.4,0,GTAU); g.fill();
+    g.beginPath();                                // くび と あたま（うえ向きに のびる）
+    g.moveTo(x-r*0.1,y-r*0.62); g.lineTo(x+r*0.28,y-r*0.62);
+    g.lineTo(x+r*0.36,y-r*1.0); g.lineTo(x-r*0.02,y-r*1.0);
+    g.closePath(); g.fill();
+    const hx = x+r*0.22, hy = y-r*1.16;
+    g.beginPath(); g.ellipse(hx, hy, r*0.44, r*0.36, 0.1, 0, GTAU); g.fill();
+    g.beginPath();                                // はな先が ながい（シカに にた かお）
+    g.ellipse(hx+r*0.4, hy+r*0.14, r*0.24, r*0.17, 0.16, 0, GTAU); g.fill();
+    g.fillStyle = '#4a4450';
+    g.beginPath(); g.ellipse(hx+r*0.58, hy+r*0.08, r*0.08, r*0.07, 0,0,GTAU); g.fill();
+    g.fillStyle = c;
+    for (const s2 of [-1,1]){                     // ながい みみ
+      g.save(); g.translate(hx-r*0.06+s2*r*0.16, hy-r*0.48); g.rotate(s2*0.26);
+      g.beginPath(); g.ellipse(0,0,r*0.14,r*0.36,0,0,GTAU); g.fill();
+      g.fillStyle = o.earIn || '#ffc2d4';
+      g.beginPath(); g.ellipse(0,r*0.03,r*0.07,r*0.26,0,0,GTAU); g.fill();
+      g.fillStyle = c; g.restore();
+    }
+  },
+
+  ghost: (g,S,x,y,r,c,m,c2) => {                      // おばけ
+    g.fillStyle = c;
+    g.beginPath();
+    g.moveTo(x-r*0.86,y+r*0.9);
+    g.lineTo(x-r*0.86,y-r*0.2);
+    g.bezierCurveTo(x-r*0.86,y-r*1.16, x+r*0.86,y-r*1.16, x+r*0.86,y-r*0.2);
+    g.lineTo(x+r*0.86,y+r*0.9);
+    for (let i=3;i>=-3;i--) g.quadraticCurveTo(x+r*(i*0.28+0.14), y+r*1.22, x+r*i*0.28, y+r*0.9);
+    g.closePath(); g.fill();
+    g.fillStyle = c2 || 'rgba(255,255,255,.5)';
+    g.beginPath(); g.ellipse(x-r*0.3,y-r*0.5,r*0.24,r*0.14,-0.4,0,GTAU); g.fill();
+  },
+
+  slime: (g,S,x,y,r,c,m,c2) => {                      // スライム
+    g.fillStyle = c;
+    g.beginPath();
+    g.moveTo(x-r*1.0,y+r*0.76);
+    g.bezierCurveTo(x-r*1.0,y-r*0.5, x-r*0.3,y-r*1.0, x,y-r*1.0);
+    g.bezierCurveTo(x+r*0.3,y-r*1.0, x+r*1.0,y-r*0.5, x+r*1.0,y+r*0.76);
+    g.quadraticCurveTo(x, y+r*1.06, x-r*1.0,y+r*0.76);
+    g.closePath(); g.fill();
+    g.fillStyle = c2 || 'rgba(255,255,255,.55)';
+    g.beginPath(); g.ellipse(x-r*0.34,y-r*0.42,r*0.26,r*0.16,-0.4,0,GTAU); g.fill();
+  },
+
+  golem: (g,S,x,y,r,c,m,c2) => {                      // ゴーレム（岩のかたまり）
+    g.fillStyle = c;
+    for (const [dx,dy,w,h] of [[-0.5,0.86,0.3,0.3],[0.5,0.86,0.3,0.3],
+                               [-0.94,0.06,0.26,0.4],[0.94,0.06,0.26,0.4]]){
+      gRR(g, x+r*dx-r*w, y+r*dy-r*h, r*w*2, r*h*2, r*0.1); g.fill();
+    }
+    gRR(g, x-r*0.72, y-r*0.72, r*1.44, r*1.5, r*0.16); g.fill();
+    g.fillStyle = c2 || 'rgba(255,255,255,.3)';
+    for (const [dx,dy,w,h] of [[-0.4,-0.4,0.24,0.2],[0.34,-0.1,0.2,0.24],[-0.1,0.4,0.28,0.18]]){
+      gRR(g, x+r*dx-r*w, y+r*dy-r*h, r*w*2, r*h*2, r*0.06); g.fill();
+    }
+  },
+
+  robot: (g,S,x,y,r,c,m,c2) => {                      // ロボット
+    g.strokeStyle = c2 || '#8a92a4'; g.lineWidth = r*0.13; g.lineCap='round';
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.moveTo(x+s2*r*0.5,y+r*0.1); g.lineTo(x+s2*r*0.86,y+r*0.5); g.stroke();
+      g.beginPath(); g.moveTo(x+s2*r*0.24,y+r*0.8); g.lineTo(x+s2*r*0.26,y+r*1.2); g.stroke();
+    }
+    g.fillStyle = c;
+    gRR(g, x-r*0.56, y-r*0.16, r*1.12, r*1.0, r*0.14); g.fill();
+    gRR(g, x-r*0.5, y-r*1.06, r*1.0, r*0.94, r*0.18); g.fill();
+    g.strokeStyle = c2 || '#8a92a4'; g.lineWidth = r*0.07;
+    g.beginPath(); g.moveTo(x,y-r*1.06); g.lineTo(x,y-r*1.4); g.stroke();
+    g.fillStyle = m || '#ffd76e';
+    g.beginPath(); g.arc(x,y-r*1.48,r*0.14,0,GTAU); g.fill();
+    g.fillStyle = c2 || '#8fe3c4';
+    for (let i=-1;i<=1;i++){ g.beginPath(); g.arc(x+r*i*0.24,y+r*0.4,r*0.09,0,GTAU); g.fill(); }
+  },
+
+  /* ================= お菓子（追加） ================= */
+
+  cupcake: (g,S,x,y,r,c,m,c2) => {                // カップケーキ
+    g.fillStyle = c2 || '#e8a0b8';
+    g.beginPath();
+    g.moveTo(x-r*0.72,y+r*0.1); g.lineTo(x+r*0.72,y+r*0.1);
+    g.lineTo(x+r*0.5,y+r*1.0); g.lineTo(x-r*0.5,y+r*1.0); g.closePath(); g.fill();
+    g.strokeStyle='rgba(255,255,255,.5)'; g.lineWidth=r*0.06;
+    for (let i=-2;i<=2;i++){ g.beginPath();
+      g.moveTo(x+r*i*0.26,y+r*0.12); g.lineTo(x+r*i*0.18,y+r*0.98); g.stroke(); }
+    g.fillStyle = c;                               // しぼった クリーム
+    for (let i=0;i<3;i++){
+      g.beginPath(); g.ellipse(x, y-r*(0.06+i*0.34), r*(0.72-i*0.18), r*0.3, 0,0,GTAU); g.fill();
+    }
+    g.fillStyle='#ff5f8a';
+    g.beginPath(); g.arc(x,y-r*0.98,r*0.14,0,GTAU); g.fill();
+  },
+
+  tart: (g,S,x,y,r,c,m,c2) => {                   // タルト
+    g.fillStyle = c2 || '#e0b878';
+    g.beginPath();
+    g.moveTo(x-r*1.0,y-r*0.2); g.lineTo(x+r*1.0,y-r*0.2);
+    g.lineTo(x+r*0.78,y+r*0.6); g.lineTo(x-r*0.78,y+r*0.6); g.closePath(); g.fill();
+    g.strokeStyle='rgba(255,255,255,.45)'; g.lineWidth=r*0.06;
+    for (let i=-3;i<=3;i++){ g.beginPath();
+      g.moveTo(x+r*i*0.28,y-r*0.18); g.lineTo(x+r*i*0.22,y+r*0.58); g.stroke(); }
+    g.fillStyle = 'rgba(255,250,240,.9)';
+    g.beginPath(); g.ellipse(x,y-r*0.24,r*1.0,r*0.2,0,0,GTAU); g.fill();
+    g.fillStyle = c;                               // フルーツ
+    for (const [dx,dy,rr] of [[-0.5,-0.32,0.2],[0,-0.42,0.22],[0.5,-0.32,0.2],[-0.24,-0.2,0.16],[0.26,-0.2,0.16]]){
+      g.beginPath(); g.arc(x+r*dx,y+r*dy,r*rr,0,GTAU); g.fill();
+    }
+  },
+
+  eclair: (g,S,x,y,r,c,m,c2) => {                 // エクレア（シュー生地・クリーム・チョコがけ）
+    const top = (dy) => {                          // うわ面の カーブ。チョコがけと 生地で 共用
+      g.moveTo(x-r*1.06,y+r*0.12+dy);
+      g.bezierCurveTo(x-r*1.14,y-r*0.42+dy, x-r*0.6,y-r*0.5+dy, x, y-r*0.48+dy);
+      g.bezierCurveTo(x+r*0.6,y-r*0.5+dy, x+r*1.14,y-r*0.42+dy, x+r*1.06,y+r*0.12+dy);
+    };
+    g.fillStyle = c2 || '#f2d29c';                 // シュー生地（あかるい きつね色）
+    g.beginPath(); top(0);
+    g.bezierCurveTo(x+r*1.14,y+r*0.62, x+r*0.6,y+r*0.7, x, y+r*0.68);
+    g.bezierCurveTo(x-r*0.6,y+r*0.7, x-r*1.14,y+r*0.62, x-r*1.06,y+r*0.12);
+    g.closePath(); g.fill();
+    g.strokeStyle = 'rgba(150,100,55,.3)'; g.lineWidth = r*0.05;   // わりめ（クリームは のぞくだけ）
+    g.beginPath();
+    g.moveTo(x-r*0.98,y+r*0.36);
+    for (let i=-3;i<=3;i++) g.quadraticCurveTo(x+r*(i*0.3+0.15), y+r*(i%2?0.44:0.3), x+r*i*0.3, y+r*0.38);
+    g.lineTo(x+r*0.98,y+r*0.36); g.stroke();
+    // チョコがけ。うわ面の 4わり だけに して、下は 生地を のこす
+    g.fillStyle = c;
+    g.beginPath(); top(0);
+    g.lineTo(x+r*1.0,y+r*0.04);
+    for (let i=3;i>=-3;i--)
+      g.quadraticCurveTo(x+r*(i*0.3+0.15), y+r*(i%2?0.1:-0.06), x+r*i*0.3, y-r*0.02);
+    g.lineTo(x-r*1.0,y+r*0.04);
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.4)';          // チョコの てり
+    g.beginPath(); g.ellipse(x-r*0.3,y-r*0.32,r*0.4,r*0.1,0.04,0,GTAU); g.fill();
+  },
+
+  cream: (g,S,x,y,r,c,m,c2) => {                  // シュークリーム
+    g.fillStyle = c;
+    g.beginPath();
+    for (let i=0;i<=14;i++){
+      const a=i/14*GTAU, rr=r*(0.94+0.08*Math.sin(i*3));
+      const px=x+Math.cos(a)*rr, py=y+Math.sin(a)*rr*0.88;
+      i? g.lineTo(px,py) : g.moveTo(px,py);
+    }
+    g.closePath(); g.fill();
+    g.fillStyle = c2 || 'rgba(255,250,235,.9)';    // わったところの クリーム
+    g.beginPath();
+    g.moveTo(x-r*0.92,y+r*0.1);
+    for (let i=-3;i<=3;i++) g.quadraticCurveTo(x+r*(i*0.3+0.15), y+r*(i%2?0.34:0.02), x+r*i*0.3, y+r*0.18);
+    g.lineTo(x+r*0.92,y+r*0.1); g.lineTo(x+r*0.9,y+r*0.32); g.lineTo(x-r*0.9,y+r*0.32);
+    g.closePath(); g.fill();
+  },
+
+  roll: (g,S,x,y,r,c,m,c2) => {                   // ロールケーキ（よこに ねた 円柱。だんめんの うずが 主役）
+    const ec = c2 || '#f2d29c';
+    g.fillStyle = ec;
+    // よこに ながい 円柱に する。まるいと ただの ボールに 見える
+    g.beginPath();
+    g.moveTo(x-r*0.62,y-r*0.86); g.lineTo(x+r*0.72,y-r*0.86);
+    g.bezierCurveTo(x+r*1.14,y-r*0.86, x+r*1.14,y+r*0.86, x+r*0.72,y+r*0.86);
+    g.lineTo(x-r*0.62,y+r*0.86); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(150,105,60,.22)';          // おくがわの かげ
+    g.beginPath();
+    g.moveTo(x+r*0.5,y-r*0.86); g.lineTo(x+r*0.72,y-r*0.86);
+    g.bezierCurveTo(x+r*1.14,y-r*0.86, x+r*1.14,y+r*0.86, x+r*0.72,y+r*0.86);
+    g.lineTo(x+r*0.5,y+r*0.86); g.closePath(); g.fill();
+    const cx2 = x - r*0.6;
+    g.fillStyle = ec;                              // 手まえの だんめん
+    g.beginPath(); g.ellipse(cx2, y, r*0.5, r*0.88, 0,0,GTAU); g.fill();
+    g.save();                                      // うずは だんめんから はみ出させない
+    g.beginPath(); g.ellipse(cx2, y, r*0.5, r*0.88, 0,0,GTAU); g.clip();
+    for (const [w,col] of [[0.26,'rgba(255,250,238,.98)'],[0.15,c]]){
+      g.strokeStyle = col; g.lineWidth = r*w; g.lineCap='round';
+      g.beginPath();
+      for (let i=0;i<=72;i++){
+        const t=i/72, a2=t*GTAU*1.8 - 1.4, rr=0.66*(1-t*0.86);
+        const px=cx2+Math.cos(a2)*r*rr*0.62, py=y+Math.sin(a2)*r*rr*1.1;
+        i? g.lineTo(px,py) : g.moveTo(px,py);
+      }
+      g.stroke();
+    }
+    g.restore();
+    g.fillStyle='#ff5f8a';                         // まん中の いちご
+    g.beginPath(); g.ellipse(cx2, y, r*0.11, r*0.15, 0,0,GTAU); g.fill();
+    g.strokeStyle='rgba(160,110,60,.35)'; g.lineWidth=r*0.05;
+    g.beginPath(); g.ellipse(cx2, y, r*0.5, r*0.88, 0,0,GTAU); g.stroke();
+    g.fillStyle='rgba(255,250,238,.98)';           // 上の 生クリーム
+    g.beginPath(); g.ellipse(x+r*0.36, y-r*0.92, r*0.24, r*0.16, 0, Math.PI, 0); g.fill();
+    g.fillStyle='#ff3f6b';
+    g.beginPath(); g.ellipse(x+r*0.36, y-r*1.12, r*0.15, r*0.18, 0,0,GTAU); g.fill();
+    g.fillStyle='#5fb35f';
+    g.beginPath(); g.ellipse(x+r*0.36, y-r*1.26, r*0.12, r*0.05, 0,0,GTAU); g.fill();
+  },
+
+  baum: (g,S,x,y,r,c,m,c2) => {                   // バウムクーヘン
+    g.fillStyle = c;
+    g.beginPath(); g.ellipse(x,y,r*1.0,r*0.92,0,0,GTAU); g.fill();
+    g.strokeStyle = c2 || 'rgba(255,240,215,.8)'; g.lineWidth = r*0.07;
+    for (let i=1;i<=3;i++){
+      g.beginPath(); g.ellipse(x,y,r*(1.0-i*0.24),r*(0.92-i*0.22),0,0,GTAU); g.stroke();
+    }
+    g.globalCompositeOperation='destination-out';
+    g.beginPath(); g.ellipse(x,y,r*0.22,r*0.2,0,0,GTAU); g.fill();
+    g.globalCompositeOperation='source-over';
+  },
+
+  mont: (g,S,x,y,r,c,m,c2) => {                   // モンブラン（そうめん状の マロンクリーム）
+    g.fillStyle = '#e0b878';                       // タルトの 土台
+    gRR(g, x-r*0.96, y+r*0.42, r*1.92, r*0.5, r*0.1); g.fill();
+    g.fillStyle = 'rgba(150,100,50,.28)';          // 土台の ぎざぎざ
+    for (let i=0;i<9;i++){
+      g.beginPath(); g.moveTo(x-r*0.96+i*r*0.215, y+r*0.42);
+      g.lineTo(x-r*0.96+i*r*0.215+r*0.06, y+r*0.92);
+      g.lineTo(x-r*0.96+i*r*0.215+r*0.12, y+r*0.42); g.closePath(); g.fill();
+    }
+    const dome = () => {
+      g.beginPath();
+      g.moveTo(x-r*0.9,y+r*0.46);
+      g.bezierCurveTo(x-r*0.84,y-r*0.44, x-r*0.36,y-r*0.9, x, y-r*0.92);
+      g.bezierCurveTo(x+r*0.36,y-r*0.9, x+r*0.84,y-r*0.44, x+r*0.9,y+r*0.46);
+      g.closePath();
+    };
+    g.fillStyle = c; dome(); g.fill();
+    g.save(); dome(); g.clip();
+    // すじを むきも 長さも ばらして かさねる。そろえると かごの あみ目に なる
+    g.lineCap = 'round'; g.lineWidth = r*0.1;
+    const TONE = [c2 || 'rgba(150,100,50,.4)', 'rgba(255,255,255,.4)',
+                  'rgba(150,100,50,.22)', 'rgba(255,255,255,.22)'];
+    for (let i=0;i<70;i++){
+      const u = Math.sin(i*12.9898)*43758.5453, v = u - Math.floor(u);      // ばらつきの たね
+      const w = Math.sin(i*78.233)*12345.6789, q = w - Math.floor(w);
+      const px = x + (v*2-1)*r*0.88, py = y + (q*1.5-0.62)*r*0.92;
+      const ang = (v+q)*3.6 - 1.8;                 // すじの むき
+      const len = r*(0.4 + q*0.5);
+      g.strokeStyle = TONE[i%4];
+      g.beginPath();
+      g.moveTo(px - Math.cos(ang)*len, py - Math.sin(ang)*len*0.5);
+      g.quadraticCurveTo(px, py + r*0.1, px + Math.cos(ang)*len, py + Math.sin(ang)*len*0.5);
+      g.stroke();
+    }
+    g.fillStyle = 'rgba(255,255,255,.14)';         // 左上からの ひかり
+    g.beginPath(); g.ellipse(x-r*0.32, y-r*0.4, r*0.4, r*0.5, -0.4, 0, GTAU); g.fill();
+    g.restore();
+    g.fillStyle = 'rgba(255,250,238,.98)';         // てっぺんの 生クリーム
+    g.beginPath(); g.arc(x, y-r*0.9, r*0.25, 0, GTAU); g.fill();
+    g.fillStyle = '#8a5a30';                       // マロン
+    g.beginPath(); g.ellipse(x, y-r*1.14, r*0.2, r*0.17, 0,0,GTAU); g.fill();
+    g.fillStyle = '#c98a54';
+    g.beginPath(); g.ellipse(x, y-r*1.2, r*0.18, r*0.08, 0,0,GTAU); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.8)';          // こなざとう
+    for (let i=0;i<10;i++){
+      const a2=i*2.399;
+      g.beginPath();
+      g.arc(x+Math.cos(a2)*r*0.62, y-r*0.14+Math.sin(a2)*r*0.44, r*0.04, 0, GTAU); g.fill();
+    }
+  },
+
+  mille: (g,S,x,y,r,c,m,c2) => {                  // ミルフィーユ（パイと クリームの そう）
+    for (let i=0;i<3;i++){
+      const ly = y - r*0.92 + i*r*0.7;
+      g.fillStyle = c2 || '#e8c090';               // パイ生地
+      gRR(g, x-r*0.94, ly, r*1.88, r*0.3, r*0.05); g.fill();
+      g.strokeStyle = 'rgba(160,110,60,.45)'; g.lineWidth = r*0.035;
+      for (let k=0;k<3;k++){
+        g.beginPath();
+        g.moveTo(x-r*0.9, ly+r*0.08+k*r*0.07); g.lineTo(x+r*0.9, ly+r*0.08+k*r*0.07); g.stroke();
+      }
+      if (i < 2){                                  // クリームと いちご
+        g.fillStyle = 'rgba(255,250,240,.97)';
+        gRR(g, x-r*0.9, ly+r*0.3, r*1.8, r*0.24, r*0.05); g.fill();
+        for (let k=-3;k<=3;k++){
+          g.beginPath(); g.arc(x+r*k*0.26, ly+r*0.54, r*0.15, Math.PI, 0); g.fill();
+        }
+        g.fillStyle = '#ff5f8a';
+        for (let k=-2;k<=2;k++){
+          g.beginPath(); g.ellipse(x+r*k*0.38, ly+r*0.46, r*0.11, r*0.14, 0,0,GTAU); g.fill();
+        }
+      }
+    }
+    g.fillStyle = 'rgba(255,255,255,.9)';          // こなざとう
+    for (let i=-4;i<=4;i++){
+      g.beginPath(); g.arc(x+r*i*0.2, y-r*0.98, r*0.04, 0, GTAU); g.fill();
+    }
+    g.fillStyle = '#ff3f6b';                       // てっぺんの いちご
+    g.beginPath();
+    g.moveTo(x+r*0.52, y-r*0.84);
+    g.bezierCurveTo(x+r*0.2,y-r*1.12, x+r*0.28,y-r*1.44, x+r*0.52,y-r*1.42);
+    g.bezierCurveTo(x+r*0.76,y-r*1.44, x+r*0.84,y-r*1.12, x+r*0.52,y-r*0.84);
+    g.closePath(); g.fill();
+    g.fillStyle = '#5fb35f';
+    g.beginPath(); g.ellipse(x+r*0.52,y-r*1.42,r*0.17,r*0.07,0,0,GTAU); g.fill();
+  },
+
+  waffle: (g,S,x,y,r,c,m,c2) => {                 // ワッフル
+    g.fillStyle = c;
+    gRR(g, x-r*0.94, y-r*0.8, r*1.88, r*1.6, r*0.16); g.fill();
+    g.fillStyle = c2 || 'rgba(150,105,60,.4)';
+    for (let a=0;a<3;a++) for (let b=0;b<3;b++){
+      gRR(g, x-r*0.78+a*r*0.56, y-r*0.64+b*r*0.5, r*0.4, r*0.34, r*0.05); g.fill();
+    }
+  },
+
+  pancake: (g,S,x,y,r,c,m,c2) => {                // パンケーキ（3まい・バター・シロップ）
+    g.fillStyle = 'rgba(255,255,255,.92)';        // おさら
+    g.beginPath(); g.ellipse(x, y+r*1.04, r*1.26, r*0.24, 0,0,GTAU); g.fill();
+    for (let i=2;i>=0;i--){                        // 3まい かさねる
+      const cy2 = y + r*(0.7 - i*0.44);
+      g.fillStyle = c2 || '#d8a050';               // 側面（やけ色）
+      gRR(g, x-r*0.92, cy2-r*0.2, r*1.84, r*0.44, r*0.2); g.fill();
+      g.fillStyle = c;                             // 上の面
+      g.beginPath(); g.ellipse(x, cy2-r*0.2, r*0.92, r*0.21, 0,0,GTAU); g.fill();
+    }
+    g.fillStyle = 'rgba(185,105,35,.8)';           // シロップ
+    g.beginPath();
+    g.moveTo(x-r*0.8,y-r*0.42);
+    g.quadraticCurveTo(x, y-r*0.12, x+r*0.8,y-r*0.42);
+    g.quadraticCurveTo(x+r*0.9,y+r*0.24, x+r*0.66,y+r*0.42);
+    g.quadraticCurveTo(x+r*0.64,y-r*0.06, x+r*0.34,y-r*0.08);
+    g.quadraticCurveTo(x,y+r*0.1, x-r*0.34,y-r*0.08);
+    g.quadraticCurveTo(x-r*0.58,y+r*0.3, x-r*0.72,y+r*0.06);
+    g.quadraticCurveTo(x-r*0.9,y-r*0.16, x-r*0.8,y-r*0.42);
+    g.closePath(); g.fill();
+    g.fillStyle = '#ffe08a';                       // バター
+    gRR(g, x-r*0.26, y-r*0.72, r*0.52, r*0.32, r*0.05); g.fill();
+    g.fillStyle = '#ffcf52';
+    gRR(g, x-r*0.26, y-r*0.5, r*0.52, r*0.12, r*0.03); g.fill();
+  },
+
+  pretzel: (g,S,x,y,r,c,m,c2) => {                // プレッツェル
+    g.strokeStyle = c; g.lineWidth = r*0.24; g.lineCap='round'; g.lineJoin='round';
+    g.beginPath();
+    g.moveTo(x-r*0.3,y+r*0.78);
+    g.bezierCurveTo(x-r*1.3,y+r*0.2, x-r*1.0,y-r*0.96, x-r*0.16,y-r*0.5);
+    g.bezierCurveTo(x+r*0.3,y-r*0.28, x-r*0.3,y-r*0.28, x+r*0.16,y-r*0.5);
+    g.bezierCurveTo(x+r*1.0,y-r*0.96, x+r*1.3,y+r*0.2, x+r*0.3,y+r*0.78);
+    g.stroke();
+    g.fillStyle = c2 || 'rgba(255,255,255,.7)';
+    for (const [dx,dy] of [[-0.7,0.1],[0.7,0.1],[-0.2,-0.5],[0.2,0.6]]){
+      g.beginPath(); g.arc(x+r*dx,y+r*dy,r*0.06,0,GTAU); g.fill();
+    }
+  },
+
+  churro: (g,S,x,y,r,c,m,c2) => {                 // チュロス（紙コップに 3本。みぞと さとう）
+    // 1本を えがく。ほし形の だんめんを たてみぞ で あらわす
+    const stick = (bx, by, rot, len) => {
+      g.save(); g.translate(bx, by); g.rotate(rot);
+      g.fillStyle = c;
+      gRR(g, -r*0.24, -len, r*0.48, len, r*0.24); g.fill();
+      g.strokeStyle = c2 || 'rgba(150,95,45,.55)'; g.lineWidth = r*0.06;
+      for (const dx of [-0.13, 0.0, 0.13]){
+        g.beginPath(); g.moveTo(r*dx, -len+r*0.16); g.lineTo(r*dx, -r*0.1); g.stroke();
+      }
+      g.fillStyle = 'rgba(255,255,255,.3)';        // 左はしの てり
+      gRR(g, -r*0.22, -len+r*0.14, r*0.08, len-r*0.3, r*0.04); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.9)';        // シナモンシュガー
+      for (let i=0;i<9;i++){
+        g.beginPath();
+        g.arc(r*(-0.16+0.08*(i%4)), -len+r*0.24+i*(len-r*0.4)/9, r*0.042, 0, GTAU); g.fill();
+      }
+      g.restore();
+    };
+    stick(x-r*0.34, y+r*0.5, -0.34, r*1.7);
+    stick(x+r*0.34, y+r*0.5,  0.34, r*1.7);
+    stick(x,        y+r*0.56, 0.0,  r*1.86);
+    // 紙コップ（赤と白の しま）
+    g.fillStyle = '#fdfaff';
+    g.beginPath();
+    g.moveTo(x-r*0.6,y+r*0.34); g.lineTo(x+r*0.6,y+r*0.34);
+    g.lineTo(x+r*0.42,y+r*1.14); g.lineTo(x-r*0.42,y+r*1.14);
+    g.closePath();
+    g.save(); g.clip(); g.fill();
+    g.fillStyle = '#ff8fa8';
+    for (let i=-3;i<=3;i++){
+      g.save(); g.translate(x+r*i*0.3, y+r*0.7); g.rotate(0.1);
+      g.fillRect(-r*0.07, -r*0.6, r*0.14, r*1.2); g.restore();
+    }
+    g.restore();
+    g.fillStyle = 'rgba(255,255,255,.95)';         // コップの ふち
+    gRR(g, x-r*0.64, y+r*0.28, r*1.28, r*0.16, r*0.08); g.fill();
+  },
+
+  popcorn: (g,S,x,y,r,c,m,c2) => {                // ポップコーン
+    g.fillStyle = c2 || '#e8503f';
+    g.beginPath();
+    g.moveTo(x-r*0.76,y+r*0.02); g.lineTo(x+r*0.76,y+r*0.02);
+    g.lineTo(x+r*0.56,y+r*1.06); g.lineTo(x-r*0.56,y+r*1.06); g.closePath(); g.fill();
+    g.fillStyle='rgba(255,255,255,.75)';
+    for (let i=-1;i<=1;i++){ gRR(g, x+r*i*0.4-r*0.1, y+r*0.06, r*0.2, r*1.0, r*0.04); g.fill(); }
+    g.fillStyle = c;                               // はじけた つぶ
+    for (const [dx,dy] of [[-0.5,-0.16],[0,-0.36],[0.5,-0.16],[-0.24,-0.62],[0.28,-0.6],[0,-0.86]]){
+      for (let k=0;k<4;k++){
+        const a=k*GTAU/4+0.4;
+        g.beginPath(); g.arc(x+r*dx+Math.cos(a)*r*0.14, y+r*dy+Math.sin(a)*r*0.14, r*0.17,0,GTAU); g.fill();
+      }
+    }
+  },
+
+  marshmallow: (g,S,x,y,r,c,m,c2) => {            // マシュマロ
+    g.fillStyle = c;
+    gRR(g, x-r*0.86, y-r*0.6, r*1.72, r*1.2, r*0.4); g.fill();
+    g.fillStyle = c2 || 'rgba(255,255,255,.6)';
+    g.beginPath(); g.ellipse(x,y-r*0.44,r*0.72,r*0.2,0,0,GTAU); g.fill();
+  },
+
+  gummy: (g,S,x,y,r,c,m,c2) => {                  // グミ（くまの形）
+    g.globalAlpha = 0.88;
+    g.fillStyle = c;
+    g.beginPath(); g.arc(x,y-r*0.5,r*0.42,0,GTAU); g.fill();
+    for (const s2 of [-1,1]) { g.beginPath(); g.arc(x+s2*r*0.36,y-r*0.8,r*0.18,0,GTAU); g.fill(); }
+    g.beginPath(); g.ellipse(x,y+r*0.3,r*0.52,r*0.6,0,0,GTAU); g.fill();
+    for (const s2 of [-1,1]){
+      g.beginPath(); g.ellipse(x+s2*r*0.6,y+r*0.14,r*0.2,r*0.3,s2*0.4,0,GTAU); g.fill();
+      g.beginPath(); g.ellipse(x+s2*r*0.34,y+r*0.92,r*0.2,r*0.26,s2*0.2,0,GTAU); g.fill();
+    }
+    g.globalAlpha = 1;
+  },
+
+  jelly2: (g,S,x,y,r,c,m,c2) => {                 // ゼリー
+    g.globalAlpha = 0.85;
+    g.fillStyle = c;
+    g.beginPath();
+    g.moveTo(x-r*0.8,y-r*0.6); g.lineTo(x+r*0.8,y-r*0.6);
+    g.lineTo(x+r*0.6,y+r*0.86); g.lineTo(x-r*0.6,y+r*0.86); g.closePath(); g.fill();
+    g.globalAlpha = 1;
+    g.fillStyle = c2 || 'rgba(255,255,255,.55)';
+    g.beginPath(); g.ellipse(x,y-r*0.6,r*0.8,r*0.18,0,0,GTAU); g.fill();
+    g.beginPath(); g.ellipse(x-r*0.34,y-r*0.06,r*0.16,r*0.3,0.2,0,GTAU); g.fill();
+  },
+  /* --- 和菓子 --- */
+
+  monaka: (g,S,x,y,r,c,m,c2) => {                 // もなか
+    g.fillStyle = c;
+    gRR(g, x-r*0.92, y-r*0.56, r*1.84, r*1.12, r*0.22); g.fill();
+    g.fillStyle = c2 || '#5b3a4a';
+    gRR(g, x-r*0.86, y-r*0.12, r*1.72, r*0.26, r*0.08); g.fill();
+    g.strokeStyle='rgba(160,120,80,.45)'; g.lineWidth=r*0.05;
+    for (let i=-2;i<=2;i++){
+      g.beginPath(); g.moveTo(x+r*i*0.32,y-r*0.5); g.lineTo(x+r*i*0.32,y-r*0.16); g.stroke();
+      g.beginPath(); g.moveTo(x+r*i*0.32,y+r*0.16); g.lineTo(x+r*i*0.32,y+r*0.5); g.stroke();
+    }
+  },
+
+  kintsuba: (g,S,x,y,r,c,m,c2) => {               // きんつば
+    g.fillStyle = c;
+    gRR(g, x-r*0.86, y-r*0.66, r*1.72, r*1.32, r*0.1); g.fill();
+    g.fillStyle = c2 || 'rgba(255,250,240,.75)';
+    g.lineWidth=r*0.08; g.strokeStyle=c2||'rgba(255,250,240,.75)';
+    gRR(g, x-r*0.86, y-r*0.66, r*1.72, r*1.32, r*0.1); g.stroke();
+    g.fillStyle='rgba(60,40,55,.35)';
+    for (const [dx,dy] of [[-0.34,-0.2],[0.2,0.1],[-0.1,0.42],[0.4,-0.34]]){
+      g.beginPath(); g.arc(x+r*dx,y+r*dy,r*0.11,0,GTAU); g.fill();
+    }
+  },
+
+  ohagi: (g,S,x,y,r,c,m,c2) => {                  // おはぎ
+    g.fillStyle = c;
+    g.beginPath(); g.ellipse(x,y+r*0.06,r*0.92,r*0.8,0,0,GTAU); g.fill();
+    g.fillStyle = c2 || 'rgba(90,55,70,.45)';
+    for (let i=0;i<26;i++){
+      const a=i*2.399, rr=r*0.78*Math.sqrt(i/26);
+      g.beginPath(); g.arc(x+Math.cos(a)*rr, y+r*0.06+Math.sin(a)*rr*0.86, r*0.09,0,GTAU); g.fill();
+    }
+  },
+
+  warabi: (g,S,x,y,r,c,m,c2) => {                 // わらびもち
+    g.globalAlpha=0.9; g.fillStyle = c;
+    for (const [dx,dy] of [[-0.42,0.1],[0.42,0.1],[0,-0.3],[0,0.5]]){
+      gRR(g, x+r*dx-r*0.36, y+r*dy-r*0.32, r*0.72, r*0.64, r*0.16); g.fill();
+    }
+    g.globalAlpha=1;
+    g.fillStyle = c2 || '#8a6a4a';                 // きなこ
+    for (let i=0;i<24;i++){
+      const a=i*2.399, rr=r*0.9*Math.sqrt(i/24);
+      g.beginPath(); g.arc(x+Math.cos(a)*rr, y+Math.sin(a)*rr, r*0.05,0,GTAU); g.fill();
+    }
+  },
+
+  sakuramochi: (g,S,x,y,r,c,m,c2) => {            // さくらもち
+    g.fillStyle = c2 || '#6f9e5e';                 // さくらの は
+    g.beginPath();
+    g.moveTo(x-r*1.1,y+r*0.2);
+    g.quadraticCurveTo(x, y-r*0.9, x+r*1.1,y+r*0.2);
+    g.quadraticCurveTo(x, y+r*0.9, x-r*1.1,y+r*0.2);
+    g.closePath(); g.fill();
+    g.fillStyle = c;
+    g.beginPath(); g.ellipse(x,y+r*0.06,r*0.72,r*0.56,0,0,GTAU); g.fill();
+  },
+
+  manju: (g,S,x,y,r,c,m,c2) => {                  // まんじゅう
+    g.fillStyle = c;
+    g.beginPath(); g.ellipse(x,y+r*0.12,r*0.94,r*0.72,0,0,GTAU); g.fill();
+    g.fillStyle = c2 || '#e8503f';                 // やきいん
+    g.beginPath(); g.arc(x,y-r*0.06,r*0.26,0,GTAU); g.fill();
+    g.fillStyle='rgba(255,255,255,.6)';
+    g.beginPath(); g.arc(x,y-r*0.06,r*0.14,0,GTAU); g.fill();
+  },
+
+  senbei: (g,S,x,y,r,c,m,c2) => {                 // せんべい
+    g.fillStyle = c;
+    g.beginPath();
+    for (let i=0;i<=18;i++){
+      const a=i/18*GTAU, rr=r*(0.98+0.04*Math.sin(i*4));
+      const px=x+Math.cos(a)*rr, py=y+Math.sin(a)*rr;
+      i? g.lineTo(px,py) : g.moveTo(px,py);
+    }
+    g.closePath(); g.fill();
+    g.fillStyle = c2 || '#3a2c20';                 // のり
+    gRR(g, x-r*0.34, y-r*1.0, r*0.68, r*2.0, r*0.04); g.fill();
+  },
+
+  castella: (g,S,x,y,r,c,m,c2) => {               // カステラ（上下の こげと ざらめ）
+    const bx = x-r*0.98, by = y-r*0.72, bw = r*1.96, bh = r*1.5;
+    g.fillStyle = c;                               // きじ（あわい たまご色）
+    gRR(g, bx, by, bw, bh, r*0.1); g.fill();
+    const crust = c2 || '#a0602a';
+    g.save(); gRR(g, bx, by, bw, bh, r*0.1); g.clip();
+    g.fillStyle = crust;                           // 上の こげ
+    g.fillRect(bx, by, bw, r*0.26);
+    g.fillStyle = 'rgba(255,255,255,.25)';
+    g.fillRect(bx, by+r*0.2, bw, r*0.07);
+    g.fillStyle = crust;                           // 下の こげ（ざらめが つく ところ）
+    g.fillRect(bx, y+r*0.36, bw, r*0.42);
+    // きめ（あわの あな）。カステラは たてに ながい あなが ならぶ
+    g.fillStyle = 'rgba(190,140,70,.28)';
+    for (let i=0;i<22;i++){
+      const a2=i*2.399, rr=r*0.82*Math.sqrt(i/22);
+      g.beginPath();
+      g.ellipse(x+Math.cos(a2)*rr, y-r*0.06+Math.sin(a2)*rr*0.42, r*0.045, r*0.07, 0,0,GTAU); g.fill();
+    }
+    g.restore();
+    g.fillStyle = 'rgba(255,255,255,.85)';         // ざらめの つぶ
+    for (let i=0;i<11;i++){
+      g.beginPath();
+      g.arc(x-r*0.86+i*r*0.172, y+r*(0.6+0.06*Math.sin(i*2.1)), r*0.055, 0, GTAU); g.fill();
+    }
+    g.strokeStyle = 'rgba(160,110,50,.4)'; g.lineWidth = r*0.05;   // ふちを しめる
+    gRR(g, bx, by, bw, bh, r*0.1); g.stroke();
+  },
+
+  konpeito: (g,S,x,y,r,c,m,c2) => {               // こんぺいとう
+    g.fillStyle = c;
+    g.beginPath();
+    for (let i=0;i<18;i++){
+      const a=i*GTAU/18, rr=r*(i%2?0.6:1.0);
+      const px=x+Math.cos(a)*rr, py=y+Math.sin(a)*rr;
+      i? g.lineTo(px,py) : g.moveTo(px,py);
+    }
+    g.closePath(); g.fill();
+  },
+
+  anmitsu: (g,S,x,y,r,c,m,c2) => {                // あんみつ（うつわに かんてん・くだもの・あん）
+    g.fillStyle = 'rgba(226,242,252,.95)';         // ガラスの おわん
+    g.beginPath();
+    g.moveTo(x-r*1.06,y-r*0.34);
+    g.bezierCurveTo(x-r*1.0,y+r*0.72, x-r*0.6,y+r*0.94, x, y+r*0.94);
+    g.bezierCurveTo(x+r*0.6,y+r*0.94, x+r*1.0,y+r*0.72, x+r*1.06,y-r*0.34);
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.8)';          // ふちの あつみ
+    g.beginPath(); g.ellipse(x, y-r*0.34, r*1.06, r*0.2, 0,0,GTAU); g.fill();
+    g.fillStyle = 'rgba(190,220,240,.7)';          // 台（高台）
+    gRR(g, x-r*0.16, y+r*0.86, r*0.32, r*0.2, r*0.04); g.fill();
+    g.beginPath(); g.ellipse(x, y+r*1.06, r*0.44, r*0.13, 0,0,GTAU); g.fill();
+    // かんてんの さいころ。すきとおる ので ふちを 白く のこす
+    for (const [dx,dy,cc] of [[-0.56,0.06,'#a8e8d4'],[-0.2,0.3,'#ffe0b0'],
+                              [0.2,0.3,'#a8dcf4'],[0.56,0.06,'#d8f0ff'],
+                              [-0.4,0.56,'#c9f0d8'],[0.06,0.62,'#ffd0e0'],[0.44,0.56,'#e8ddff']]){
+      g.fillStyle = cc;
+      gRR(g, x+r*dx-r*0.19, y+r*dy-r*0.19, r*0.38, r*0.38, r*0.07); g.fill();
+      g.fillStyle = 'rgba(255,255,255,.55)';
+      gRR(g, x+r*dx-r*0.14, y+r*dy-r*0.15, r*0.2, r*0.1, r*0.03); g.fill();
+    }
+    g.fillStyle = c2 || '#4a2f3c';                 // あん（つやのある 山）
+    g.beginPath(); g.ellipse(x-r*0.02, y-r*0.14, r*0.42, r*0.34, 0,0,GTAU); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.22)';
+    g.beginPath(); g.ellipse(x-r*0.14, y-r*0.26, r*0.18, r*0.08, -0.3,0,GTAU); g.fill();
+    g.fillStyle = '#ffa54a';                       // みかん
+    g.beginPath(); g.ellipse(x-r*0.64, y-r*0.36, r*0.26, r*0.18, 0.25,0,GTAU); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.5)';
+    for (let i=0;i<4;i++){ g.beginPath(); g.moveTo(x-r*0.64,y-r*0.36);
+      g.arc(x-r*0.64, y-r*0.36, r*0.24, 2.9+i*0.34, 3.0+i*0.34); g.fill(); }
+    g.fillStyle = '#fdfaff';                       // しらたま
+    g.beginPath(); g.arc(x+r*0.5, y-r*0.4, r*0.2, 0, GTAU); g.fill();
+    g.fillStyle = '#ff3f6b';                       // さくらんぼ
+    g.beginPath(); g.arc(x+r*0.14, y-r*0.62, r*0.19, 0, GTAU); g.fill();
+    g.strokeStyle='#5fb35f'; g.lineWidth=r*0.05; g.lineCap='round';
+    g.beginPath(); g.moveTo(x+r*0.14,y-r*0.78);
+    g.quadraticCurveTo(x+r*0.3,y-r*1.04, x+r*0.5,y-r*1.0); g.stroke();
+  },
+
+  tower: (g,S,x,y,r,c,m,c2) => {                  // マカロンタワー（まるい マカロンを つみあげる）
+    const mac = (mx,my,mr,col) => {
+      g.fillStyle = col;
+      g.beginPath(); g.ellipse(mx,my-mr*0.36,mr,mr*0.44,0,0,GTAU); g.fill();
+      g.beginPath(); g.ellipse(mx,my+mr*0.36,mr,mr*0.44,0,0,GTAU); g.fill();
+      g.fillStyle = 'rgba(255,250,240,.95)';
+      gRR(g, mx-mr*0.94, my-mr*0.14, mr*1.88, mr*0.28, mr*0.13); g.fill();
+    };
+    const cols = [c, c2 || '#c9a7ff', '#8fe3c4', '#ffd9a8'];
+    for (let row=0; row<4; row++){
+      const n = 4 - row, mr = r*0.27, gap = r*0.6;
+      for (let i=0;i<n;i++)
+        mac(x + (i-(n-1)/2)*gap, y + r*(1.0 - row*0.5), mr, cols[(row+i)%4]);
+    }
+    g.fillStyle = m || '#ffd76e';                  // てっぺんの ほし
+    g.beginPath();
+    for (let i=0;i<10;i++){
+      const a2=-Math.PI/2+i*Math.PI/5, rr=i%2?r*0.09:r*0.22;
+      i? g.lineTo(x+Math.cos(a2)*rr, y-r*1.2+Math.sin(a2)*rr)
+       : g.moveTo(x+Math.cos(a2)*rr, y-r*1.2+Math.sin(a2)*rr);
+    }
+    g.closePath(); g.fill();
+  },
+
+  dango: (g,S,x,y,r,c,m,c2) => {                  // 三色だんご
+    g.strokeStyle = '#d8b98a'; g.lineWidth = r*0.14; g.lineCap='round';
+    g.beginPath(); g.moveTo(x, y+r*1.24); g.lineTo(x, y-r*1.0); g.stroke();
+    const cols = [c, c2 || '#c9e8a8', '#ffc2d4'];
+    for (let i=0;i<3;i++){
+      g.fillStyle = cols[i];
+      g.beginPath(); g.arc(x, y+r*0.7 - i*r*0.7, r*0.44, 0, GTAU); g.fill();
+    }
+  },
+
+  daifuku: (g,S,x,y,r,c,m,c2) => {                // だいふく（もちと 中の あん）
+    g.fillStyle = c;
+    g.beginPath(); g.ellipse(x, y+r*0.06, r*1.02, r*0.84, 0, 0, GTAU); g.fill();
+    g.fillStyle = c2 || 'rgba(200,160,180,.35)';  // 中の あんが すける
+    g.beginPath(); g.ellipse(x, y+r*0.16, r*0.5, r*0.36, 0, 0, GTAU); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.6)';         // もちとり粉
+    for (let i=0;i<10;i++){
+      const a2=i*2.399, rr=r*0.8*Math.sqrt(i/10);
+      g.beginPath(); g.arc(x+Math.cos(a2)*rr, y+Math.sin(a2)*rr*0.8, r*0.045,0,GTAU); g.fill();
+    }
+  },
+
+  youkan: (g,S,x,y,r,c,m,c2) => {                 // ようかん（つやのある 直方体）
+    g.fillStyle = c;
+    g.beginPath();                                 // 上の面（おくゆき）
+    g.moveTo(x-r*0.8,y-r*0.5); g.lineTo(x+r*0.62,y-r*0.72);
+    g.lineTo(x+r*0.94,y-r*0.44); g.lineTo(x-r*0.5,y-r*0.22); g.closePath(); g.fill();
+    g.fillStyle = c2 || '#3a2430';                 // 手まえの 面
+    g.beginPath();
+    g.moveTo(x-r*0.8,y-r*0.5); g.lineTo(x-r*0.5,y-r*0.22);
+    g.lineTo(x-r*0.5,y+r*0.72); g.lineTo(x-r*0.8,y+r*0.46); g.closePath(); g.fill();
+    g.fillStyle = c;
+    gRR(g, x-r*0.5, y-r*0.24, r*1.44, r*0.96, r*0.05); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.22)';         // つや
+    gRR(g, x-r*0.4, y-r*0.14, r*1.24, r*0.16, r*0.04); g.fill();
+  },
+
+  dorayaki: (g,S,x,y,r,c,m,c2) => {               // どらやき
+    g.fillStyle = c;
+    g.beginPath(); g.ellipse(x, y-r*0.36, r*1.0, r*0.46, 0, 0, GTAU); g.fill();
+    g.beginPath(); g.ellipse(x, y+r*0.36, r*1.0, r*0.46, 0, 0, GTAU); g.fill();
+    g.fillStyle = c2 || '#6b4530';                 // あんこ
+    gRR(g, x-r*0.92, y-r*0.16, r*1.84, r*0.32, r*0.14); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.22)';         // やけの てり
+    g.beginPath(); g.ellipse(x-r*0.3, y-r*0.5, r*0.34, r*0.1, 0, 0, GTAU); g.fill();
+  },
+
+  taiyaki: (g,S,x,y,r,c,m,c2) => {                // たいやき
+    g.fillStyle = c;
+    g.beginPath(); g.ellipse(x-r*0.12, y, r*1.0, r*0.72, 0, 0, GTAU); g.fill();
+    g.beginPath();                                 // おびれ
+    g.moveTo(x+r*0.66,y);
+    g.lineTo(x+r*1.34,y-r*0.54); g.lineTo(x+r*1.2,y);
+    g.lineTo(x+r*1.34,y+r*0.54); g.closePath(); g.fill();
+    g.strokeStyle = c2 || '#c98a44'; g.lineWidth = r*0.06;
+    g.beginPath(); g.ellipse(x-r*0.12, y, r*0.86, r*0.6, 0, 0, GTAU); g.stroke();
+    for (let i=0;i<3;i++){                         // うろこ
+      g.beginPath();
+      g.arc(x-r*(0.1+i*0.3), y+r*0.16, r*0.24, Math.PI*1.15, Math.PI*1.85); g.stroke();
+    }
+  },
+
+  cookie: (g,S,x,y,r,c,m,c2) => {                 // まるいクッキー
+    g.fillStyle = c;
+    g.beginPath();
+    for (let i=0;i<=20;i++){
+      const a2=i/20*GTAU, rr=r*(0.98+0.03*Math.sin(i*3));
+      const px=x+Math.cos(a2)*rr, py=y+Math.sin(a2)*rr;
+      i? g.lineTo(px,py) : g.moveTo(px,py);
+    }
+    g.closePath(); g.fill();
+    g.fillStyle = c2 || '#8a5a30';                 // チョコチップ
+    for (const [dx,dy,rr] of [[-0.4,-0.3,0.14],[0.35,-0.12,0.12],[-0.12,0.4,0.13],
+                              [0.44,0.4,0.11],[0.06,-0.5,0.1],[-0.52,0.2,0.1]]){
+      g.beginPath(); g.arc(x+r*dx, y+r*dy, r*rr, 0, GTAU); g.fill();
+    }
+  },
+
+  donut: (g,S,x,y,r,c,m,c2) => {                  // ドーナツ（グレーズと スプレー）
+    g.fillStyle = c;
+    g.beginPath(); g.arc(x,y,r,0,GTAU); g.arc(x,y,r*0.34,0,GTAU,true); g.fill();
+    g.fillStyle = c2 || '#ff9ec9';                 // うえの グレーズ（ふちが たれる）
+    g.beginPath();
+    for (let i=0;i<=24;i++){
+      const a2=i/24*GTAU, rr=r*(0.86+0.1*Math.sin(i*2.2));
+      const px=x+Math.cos(a2)*rr, py=y+Math.sin(a2)*rr;
+      i? g.lineTo(px,py) : g.moveTo(px,py);
+    }
+    g.arc(x,y,r*0.36,0,GTAU,true); g.fill();
+    const spr=['#ffffff','#ffd76e','#8fe3c4','#9ed8ff'];   // スプレー
+    for (let i=0;i<12;i++){
+      const a2=i*2.1, rr=r*(0.5+0.24*((i*7)%3)/2);
+      g.save(); g.translate(x+Math.cos(a2)*rr, y+Math.sin(a2)*rr); g.rotate(a2*1.7);
+      g.fillStyle = spr[i%4];
+      gRR(g, -r*0.09, -r*0.03, r*0.18, r*0.06, r*0.03); g.fill();
+      g.restore();
+    }
+  },
+
+  purin: (g,S,x,y,r,c,m,c2) => {                  // プリン（カラメルつき）
+    g.fillStyle = c;
+    g.beginPath();
+    g.moveTo(x-r*0.98,y+r*0.74);
+    g.lineTo(x-r*0.62,y-r*0.66); g.lineTo(x+r*0.62,y-r*0.66);
+    g.lineTo(x+r*0.98,y+r*0.74); g.closePath(); g.fill();
+    g.fillStyle = c2 || '#c98a4a';                 // 上の カラメル
+    g.beginPath(); g.ellipse(x, y-r*0.66, r*0.62, r*0.22, 0, 0, GTAU); g.fill();
+    g.beginPath();                                 // よこに たれる カラメル
+    g.moveTo(x-r*0.62,y-r*0.62);
+    g.quadraticCurveTo(x-r*0.5,y-r*0.1, x-r*0.66,y+r*0.1);
+    g.quadraticCurveTo(x-r*0.74,y-r*0.24, x-r*0.66,y-r*0.6);
+    g.closePath(); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.9)';          // てっぺんの クリーム
+    g.beginPath(); g.arc(x+r*0.3, y-r*0.78, r*0.18, Math.PI, 0); g.fill();
+  },
+
+  soft: (g,S,x,y,r,c,m,c2) => {                   // ソフトクリーム（うずまき）
+    g.fillStyle = '#e8b979';                       // コーン（あみ目）
+    g.beginPath(); g.moveTo(x-r*0.5,y+r*0.42);
+    g.lineTo(x+r*0.5,y+r*0.42); g.lineTo(x,y+r*1.5); g.closePath(); g.fill();
+    g.strokeStyle='rgba(150,105,55,.5)'; g.lineWidth=r*0.04;
+    for (let i=-2;i<=2;i++){
+      g.beginPath(); g.moveTo(x+r*i*0.2, y+r*0.44); g.lineTo(x+r*i*0.1-r*0.1, y+r*1.4); g.stroke();
+      g.beginPath(); g.moveTo(x-r*0.5+r*i*0.02, y+r*(0.62+i*0.18));
+      g.lineTo(x+r*0.5-r*i*0.02, y+r*(0.62+i*0.18)); g.stroke();
+    }
+    g.fillStyle = c;                               // うずまきに つみあげる
+    for (let i=0;i<4;i++){
+      const rr = r*(0.76 - i*0.15), cy2 = y+r*0.3 - i*r*0.36;
+      g.beginPath(); g.ellipse(x + (i%2?r*0.06:-r*0.06), cy2, rr, rr*0.6, 0, 0, GTAU); g.fill();
+    }
+    g.beginPath(); g.arc(x, y-r*1.02, r*0.16, 0, GTAU); g.fill();   // てっぺんの とがり
+    g.fillStyle = c2 || 'rgba(255,255,255,.4)';
+    g.beginPath(); g.ellipse(x-r*0.24, y-r*0.4, r*0.2, r*0.1, -0.3, 0, GTAU); g.fill();
+  },
+
+  kakigori: (g,S,x,y,r,c,m,c2) => {               // かきごおり（うつわと シロップ）
+    g.fillStyle = 'rgba(240,248,255,.9)';          // うつわ
+    g.beginPath();
+    g.moveTo(x-r*0.8,y+r*0.28); g.lineTo(x+r*0.8,y+r*0.28);
+    g.lineTo(x+r*0.5,y+r*1.16); g.lineTo(x-r*0.5,y+r*1.16); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(230,244,255,.95)';         // こおりの 山
+    g.beginPath();
+    g.moveTo(x-r*0.92,y+r*0.3);
+    g.quadraticCurveTo(x-r*0.6,y-r*0.98, x, y-r*0.94);
+    g.quadraticCurveTo(x+r*0.6,y-r*0.98, x+r*0.92, y+r*0.3);
+    g.closePath(); g.fill();
+    g.fillStyle = c;                               // シロップ（上から かかる）
+    g.beginPath();
+    g.moveTo(x-r*0.74,y-r*0.02);
+    g.quadraticCurveTo(x-r*0.5,y-r*0.86, x, y-r*0.9);
+    g.quadraticCurveTo(x+r*0.5,y-r*0.86, x+r*0.74, y-r*0.02);
+    g.quadraticCurveTo(x+r*0.4,y+r*0.12, x+r*0.3,y-r*0.16);
+    g.quadraticCurveTo(x+r*0.1,y+r*0.16, x-r*0.1,y-r*0.14);
+    g.quadraticCurveTo(x-r*0.34,y+r*0.14, x-r*0.5,y-r*0.16);
+    g.quadraticCurveTo(x-r*0.62,y+r*0.08, x-r*0.74,y-r*0.02);
+    g.closePath(); g.fill();
+    g.fillStyle = c2 || '#ffffff';                 // れんにゅう
+    g.beginPath(); g.arc(x+r*0.2, y-r*0.6, r*0.16, 0, GTAU); g.fill();
+  },
+
+  parfait: (g,S,x,y,r,c,m,c2) => {                // パフェ（グラスに 層）
+    // グラス
+    g.fillStyle = 'rgba(240,248,255,.85)';
+    g.beginPath();
+    g.moveTo(x-r*0.62,y-r*0.24); g.lineTo(x+r*0.62,y-r*0.24);
+    g.lineTo(x+r*0.36,y+r*0.94); g.lineTo(x-r*0.36,y+r*0.94); g.closePath(); g.fill();
+    g.fillStyle = 'rgba(240,248,255,.9)';
+    g.beginPath(); g.ellipse(x,y+r*1.16,r*0.5,r*0.14,0,0,GTAU); g.fill();
+    // 中の 層（コーンフレーク・アイス・ソース）
+    g.fillStyle = c2 || '#8fd8c4';
+    gRR(g, x-r*0.56, y+r*0.5, r*1.12, r*0.36, r*0.05); g.fill();
+    g.fillStyle = '#ffd9a8';
+    gRR(g, x-r*0.6, y+r*0.16, r*1.2, r*0.34, r*0.05); g.fill();
+    g.fillStyle = c;
+    gRR(g, x-r*0.62, y-r*0.2, r*1.24, r*0.38, r*0.05); g.fill();
+    // 上の クリームと フルーツ
+    g.fillStyle = 'rgba(255,250,240,.96)';
+    for (let i=0;i<3;i++){
+      g.beginPath(); g.ellipse(x, y-r*(0.4+i*0.24), r*(0.52-i*0.12), r*0.22, 0,0,GTAU); g.fill();
+    }
+    g.fillStyle = '#ff3f6b';
+    g.beginPath(); g.arc(x, y-r*1.1, r*0.18, 0, GTAU); g.fill();
+    g.fillStyle = '#5fb35f';
+    g.beginPath(); g.ellipse(x+r*0.32,y-r*0.86,r*0.18,r*0.08,-0.5,0,GTAU); g.fill();
+  },
+};
+
+/* ---------- あたまのかざり ---------- */
+const GHEAD = {
+  none: () => {},
+  horn: (g,S,x,y,r,c,m) => {                      // ユニコーンの つの
+    g.fillStyle = m || '#ffd76e';
+    g.beginPath(); g.moveTo(x-r*0.16,y-r*0.92);
+    g.lineTo(x+r*0.16,y-r*0.92); g.lineTo(x,y-r*1.72); g.closePath(); g.fill();
+  },
+  dhorns: (g,S,x,y,r,c,m) => {                    // ドラゴンの つの
+    g.fillStyle = m || '#e7d3a8';
+    for (const s of [-1,1]){
+      g.beginPath(); g.moveTo(x+s*r*0.44,y-r*0.82);
+      g.quadraticCurveTo(x+s*r*0.96,y-r*1.24, x+s*r*0.72,y-r*1.6);
+      g.quadraticCurveTo(x+s*r*0.7,y-r*1.1, x+s*r*0.28,y-r*0.76);
+      g.closePath(); g.fill();
+    }
+  },
+  hat: (g,S,x,y,r,c) => {                         // まじょの ぼうし
+    g.fillStyle = '#6b4f8a';
+    g.beginPath(); g.ellipse(x,y-r*0.86,r*1.24,r*0.26,0,0,GTAU); g.fill();
+    g.beginPath(); g.moveTo(x-r*0.6,y-r*0.86);
+    g.quadraticCurveTo(x-r*0.2,y-r*1.9, x+r*0.42,y-r*1.92);
+    g.lineTo(x+r*0.6,y-r*0.86); g.closePath(); g.fill();
+    g.fillStyle = '#ffd76e';
+    gRR(g, x-r*0.62, y-r*1.06, r*1.24, r*0.2, r*0.08); g.fill();
+  },
+  crown: (g,S,x,y,r,c,m) => {                     // かんむり
+    g.fillStyle = m || '#ffd76e';
+    g.beginPath();
+    g.moveTo(x-r*0.62, y-r*0.78); g.lineTo(x-r*0.62, y-r*1.24);
+    g.lineTo(x-r*0.24, y-r*0.94); g.lineTo(x, y-r*1.44);
+    g.lineTo(x+r*0.24, y-r*0.94); g.lineTo(x+r*0.62, y-r*1.24);
+    g.lineTo(x+r*0.62, y-r*0.78); g.closePath(); g.fill();
+  },
+  tiara: (g,S,x,y,r,c,m) => {                     // ティアラ
+    g.fillStyle = m || '#ffd76e';
+    g.beginPath();
+    g.moveTo(x-r*0.56,y-r*0.84);
+    g.quadraticCurveTo(x, y-r*1.42, x+r*0.56, y-r*0.84);
+    g.quadraticCurveTo(x, y-r*1.06, x-r*0.56, y-r*0.84);
+    g.closePath(); g.fill();
+    g.fillStyle = '#fff';
+    g.beginPath(); g.arc(x, y-r*1.16, r*0.13, 0, GTAU); g.fill();
+  },
+  cat: (g,S,x,y,r,c) => {                         // ねこみみ
+    g.fillStyle = c;
+    for (const s of [-1,1]){
+      g.beginPath(); g.moveTo(x+s*r*0.28,y-r*0.72);
+      g.lineTo(x+s*r*0.78,y-r*0.66); g.lineTo(x+s*r*0.5,y-r*1.24);
+      g.closePath(); g.fill();
+    }
+  },
+  bunny: (g,S,x,y,r,c) => {                       // うさみみ
+    g.fillStyle = c;
+    for (const s of [-1,1]){
+      g.save(); g.translate(x+s*r*0.36, y-r*0.9); g.rotate(s*0.24);
+      g.beginPath(); g.ellipse(0,0,r*0.2,r*0.62,0,0,GTAU); g.fill();
+      g.restore();
+    }
+  },
+  cherry: (g,S,x,y,r) => {                        // さくらんぼ
+    g.strokeStyle = '#7aa86a'; g.lineWidth = r*0.09; g.lineCap='round';
+    g.beginPath(); g.moveTo(x,y-r*0.8); g.quadraticCurveTo(x+r*0.2,y-r*1.3, x+r*0.4,y-r*1.1); g.stroke();
+    g.fillStyle = '#ff5f8a';
+    g.beginPath(); g.arc(x+r*0.44,y-r*1.0,r*0.22,0,GTAU); g.fill();
+  },
+  ribbon: (g,S,x,y,r,c) => {                      // あたまのリボン
+    g.fillStyle = c;
+    for (const s of [-1,1]){
+      g.beginPath(); g.ellipse(x+s*r*0.38,y-r*0.94,r*0.3,r*0.2,s*0.5,0,GTAU); g.fill();
+    }
+    g.beginPath(); g.arc(x,y-r*0.94,r*0.13,0,GTAU); g.fill();
+  },
+  flame: (g,S,x,y,r,c) => {                       // ふしちょうの ほのお
+    for (const [rr,cc] of [[1.0,'#ff9a3c'],[0.66,'#ffd76e']]){
+      g.fillStyle = cc;
+      g.beginPath(); g.moveTo(x,y-r*(0.8+rr*0.9));
+      g.quadraticCurveTo(x+r*0.46*rr, y-r*0.9, x, y-r*0.72);
+      g.quadraticCurveTo(x-r*0.46*rr, y-r*0.9, x, y-r*(0.8+rr*0.9));
+      g.closePath(); g.fill();
+    }
+  },
+};
+
+/* ---------- せなか ---------- */
+const GBACK = {
+  none: () => {},
+  wings: (g,S,x,y,r,c) => {                       // ようせいのはね
+    g.fillStyle = 'rgba(255,255,255,.8)';
+    for (const s of [-1,1]){
+      g.beginPath(); g.ellipse(x+s*r*0.98,y-r*0.26,r*0.5,r*0.28,s*0.5,0,GTAU); g.fill();
+      g.beginPath(); g.ellipse(x+s*r*0.86,y+r*0.14,r*0.36,r*0.2,s*0.85,0,GTAU); g.fill();
+    }
+  },
+  dwings: (g,S,x,y,r,c) => {                      // ドラゴンの つばさ
+    g.fillStyle = c;
+    for (const s of [-1,1]){
+      g.beginPath(); g.moveTo(x+s*r*0.62,y-r*0.34);
+      g.lineTo(x+s*r*1.3,y-r*0.84); g.lineTo(x+s*r*1.16,y-r*0.16);
+      g.lineTo(x+s*r*1.3,y+r*0.2); g.lineTo(x+s*r*0.7,y+r*0.16);
+      g.closePath(); g.fill();
+    }
+  },
+  awings: (g,S,x,y,r) => {                        // てんしのはね
+    g.fillStyle = 'rgba(255,255,255,.95)';
+    for (const s of [-1,1]){
+      g.beginPath(); g.moveTo(x+s*r*0.46,y-r*0.2);
+      g.quadraticCurveTo(x+s*r*1.28,y-r*1.02, x+s*r*1.26,y+r*0.04);
+      g.quadraticCurveTo(x+s*r*1.02,y+r*0.42, x+s*r*0.52,y+r*0.2);
+      g.closePath(); g.fill();
+    }
+  },
+  fwings: (g,S,x,y,r) => {                        // ほのおのつばさ
+    for (const [k,cc] of [[1,'#ff9a3c'],[0.66,'#ffd76e']]){
+      g.fillStyle = cc;
+      for (const s of [-1,1]){
+        g.beginPath(); g.moveTo(x+s*r*0.44,y-r*0.16);
+        g.quadraticCurveTo(x+s*r*1.26*k,y-r*0.94*k, x+s*r*1.12*k,y+r*0.18);
+        g.quadraticCurveTo(x+s*r*0.86*k,y+r*0.38, x+s*r*0.52,y+r*0.2);
+        g.closePath(); g.fill();
+      }
+    }
+  },
+  shell: (g,S,x,y,r,c) => {                       // かめの こうら
+    g.fillStyle = c;
+    g.beginPath(); g.ellipse(x,y-r*0.06,r*1.26,r*1.06,0,0,GTAU); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.35)';
+    for (const [dx,dy] of [[0,-.42],[-.5,.06],[.5,.06],[0,.5]]){
+      g.beginPath(); g.arc(x+r*dx, y+r*dy, r*0.24, 0, GTAU); g.fill();
+    }
+  },
+};
+
+/* ---------- もちもの ---------- */
+const GHOLD = {
+  none: () => {},
+  wand: (g,S,x,y,r,c,m) => {                      // まほうのステッキ
+    g.strokeStyle = '#fff'; g.lineWidth = r*0.11; g.lineCap='round';
+    g.beginPath(); g.moveTo(x+r*0.88,y+r*0.86); g.lineTo(x+r*1.16,y-r*0.1); g.stroke();
+    g.fillStyle = m || '#ffd76e';
+    g.beginPath(); g.arc(x+r*1.2,y-r*0.26,r*0.24,0,GTAU); g.fill();
+  },
+  heart: (g,S,x,y,r,c) => {
+    g.fillStyle = '#ff7fae';
+    const hx = x+r*1.0, hy = y+r*0.66, k = r*0.3;
+    g.beginPath(); g.moveTo(hx, hy+k*0.7);
+    g.bezierCurveTo(hx-k*1.4, hy-k*0.5, hx-k*0.3, hy-k*1.2, hx, hy-k*0.35);
+    g.bezierCurveTo(hx+k*0.3, hy-k*1.2, hx+k*1.4, hy-k*0.5, hx, hy+k*0.7);
+    g.fill();
+  },
+  bag: (g,S,x,y,r,c) => {                         // おかしのふくろ
+    g.fillStyle = c; gRR(g, x+r*0.74, y+r*0.24, r*0.62, r*0.62, r*0.12); g.fill();
+    g.strokeStyle = '#fff'; g.lineWidth = r*0.08;
+    g.beginPath(); g.arc(x+r*1.05, y+r*0.24, r*0.18, Math.PI, 0); g.stroke();
+  },
+};
+
+/* かお。図鑑のカードは小さいので 点の目とまるいほっぺ */
+function gface(g,S,x,y,r,mood){
+  g.fillStyle = 'rgba(255,120,165,.4)';
+  for (const s of [-1,1]){ g.beginPath(); g.arc(x+s*r*0.52, y+r*0.2, r*0.17, 0, GTAU); g.fill(); }
+  if (mood === 'angry' || mood === 'naughty'){
+    const k = mood === 'angry' ? 1 : 0.6;
+    g.strokeStyle = '#4a3348'; g.lineWidth = r*0.09; g.lineCap='round';
+    for (const s of [-1,1]){
+      g.beginPath();
+      g.moveTo(x+s*r*0.46, y-r*(0.36+0.06*k));
+      g.lineTo(x+s*r*0.16, y-r*(0.34-0.05*k));
+      g.stroke();
+    }
+  }
+  g.fillStyle = '#4a3348';
+  for (const s of [-1,1]){ g.beginPath(); g.arc(x+s*r*0.3, y-r*0.08, r*0.11, 0, GTAU); g.fill(); }
+  g.fillStyle = '#fff';
+  for (const s of [-1,1]){ g.beginPath(); g.arc(x+s*r*0.3-r*0.04, y-r*0.12, r*0.045, 0, GTAU); g.fill(); }
+  g.strokeStyle = '#4a3348'; g.lineWidth = r*0.075; g.lineCap='round';
+  g.beginPath();
+  if (mood === 'angry') { g.moveTo(x-r*0.14,y+r*0.28); g.lineTo(x+r*0.14,y+r*0.28); }
+  else g.arc(x, y+r*0.14, r*0.16, 0.25, Math.PI-0.25);
+  g.stroke();
+}
+
+/* 4方向にとがった キラキラ */
+function gspark(g,x,y,r,rot,col){
+  g.save(); g.translate(x,y); g.rotate(rot||0); g.fillStyle = col||'#fff';
+  g.beginPath();
+  for (let i=0;i<4;i++){
+    const a=i*Math.PI/2;
+    g.lineTo(Math.cos(a)*r, Math.sin(a)*r);
+    g.quadraticCurveTo(0,0, Math.cos(a+Math.PI/4)*r*0.22, Math.sin(a+Math.PI/4)*r*0.22);
+  }
+  g.closePath(); g.fill(); g.restore();
+}
+
+/* からだの形ごとの かおの高さ。せの高い形は 上のほうに顔を置く */
+const GFY = { wedding:-0.5, tower:-0.42, parfait:-0.34, dango:-0.34, soft:-0.28,
+              icecream:-0.24, kakigori:-0.2, cake:-0.24, purin:0.06, choco:0, youkan:0,
+              orca:-0.3, dolphin:-0.1, turtle:-0.16, bird:-0.12, dragon:-1.16,
+  fairy:-0.46, butterfly:-0.36, unicorn:-1.0,
+  witch:-0.5, princess:-0.54, prince:-0.54,
+  jelly:-0.2, starfish:0, clownfish:0, hermit:0.24, seahorse:-0.86, crab:0,
+  penguin:-0.46, octopus:-0.24, seal:-0.34, shark:-0.1, manta:-0.16, whale:-0.16,
+  quad:-0.42, fowl:-0.52, bug:-0.62, kanga:-0.61,
+  hero:-0.54, ghost:-0.5, slime:-0.28, golem:-0.1, robot:-0.6,
+  cupcake:-0.34, tart:0.16, eclair:0, cream:-0.16, roll:0, baum:0, mont:0.1,
+  mille:0, waffle:0, pancake:0.16, pretzel:0.1, churro:0, popcorn:0.5,
+  marshmallow:0, gummy:-0.5, jelly2:0.1, monaka:0, kintsuba:0, ohagi:0.06,
+  warabi:0.06, sakuramochi:0.06, manju:0.3, senbei:0, castella:0, konpeito:0, anmitsu:0.36 };
+/* いきものは あたまが よこにあるので、かおも そこへ ずらす。
+   まん中に置くと からだの上に かおが のっているように見えてしまう */
+const GFX = { orca:0.5, dolphin:0.62, turtle:1.06, bird:0.22, dragon:0.72,
+              fairy:0, butterfly:0, unicorn:0.9,
+              witch:0, princess:0, prince:0,
+              // うみの子。あたま（または かおのある ところ）へ ずらす
+              jelly:0, starfish:0, clownfish:0.42, hermit:0.78, seahorse:-0.08, crab:0,
+              penguin:0, octopus:0, seal:0.66, shark:0.62, manta:0, whale:0.52,
+              quad:0.72, fowl:0.24, bug:0, hero:0, robot:0, kanga:0.22 };
+/* ぼうし・かんむりも あたまの上に のせる。
+   胴のまん中に置くと、くびの長い子で 宙に うかんで見えてしまう。
+   ぼうしは かおより 上にくるので、Yは かおより さらに 上へ */
+const GHX = { orca:0.5, dolphin:0.5, turtle:1.02, bird:0.16, dragon:0.72,
+              fairy:0, butterfly:0, unicorn:0.86,
+              witch:0, princess:0, prince:0,
+              hermit:0.78, seal:0.62, shark:0.6, whale:0.5, clownfish:0.4, seahorse:-0.06,
+              quad:0.72, kanga:0.2 };
+const GHY = { orca:-0.42, dolphin:-0.34, turtle:-0.34, bird:-0.24, dragon:-1.3,
+              fairy:-0.9, butterfly:-0.8, unicorn:-1.4,
+              jelly:-0.9, penguin:-1.0, seal:-0.86, shark:-0.6, whale:-0.6,
+              hermit:-0.2, octopus:-1.0, manta:-0.9, crab:-0.6,
+              starfish:-0.7, clownfish:-0.6, seahorse:-1.4, quad:-0.94, fowl:-0.94, bug:-1.0, kanga:-1.15,
+              hero:-1.0, ghost:-1.0, slime:-0.9, golem:-0.8, robot:-1.5,
+              witch:-1.0, princess:-1.0, prince:-1.0 };
+/* あたまが 小さい子は かおも かざりも 小さくする */
+const GFR = { orca:0.42, dolphin:0.38, turtle:0.4, bird:0.56, dragon:0.38,
+              fairy:0.34, butterfly:0.3, unicorn:0.32,
+              witch:0.32, princess:0.32, prince:0.32,
+              jelly:0.5, starfish:0.5, clownfish:0.34, hermit:0.3, seahorse:0.24, crab:0.5,
+              penguin:0.4, octopus:0.56, seal:0.4, shark:0.34, manta:0.36, whale:0.4,
+              quad:0.36, fowl:0.3, bug:0.26, kanga:0.3,
+              hero:0.32, ghost:0.42, slime:0.48, golem:0.5, robot:0.36,
+              cupcake:0.34, tart:0.34, eclair:0.34, cream:0.4, roll:0.34, baum:0.3,
+              mont:0.34, mille:0.32, waffle:0.42, pancake:0.34, pretzel:0.3, churro:0.3,
+              popcorn:0.3, marshmallow:0.44, gummy:0.28, jelly2:0.36, monaka:0.36,
+              kintsuba:0.4, ohagi:0.42, warabi:0.34, sakuramochi:0.36, manju:0.34,
+              senbei:0.42, castella:0.4, konpeito:0.42, anmitsu:0.3 };
+
+/* ---------- ① 立体感をつける前に えがく（からだと かお） ---------- */
+function drawGen(g, S, rc){
+  const M = S/2, R = S*0.285, L = LV[rc.lv];   // からだで見わけるので 大きめに
+  // 色は その子じたいの色（シャチなら 黒と白）。レベルでは 変えない。
+  // 生きものが ほんとうの色をしていないと、ただの色ちがいに 見えてしまうから
+  const pal = rc.pal || L.c;
+  const c0 = pal[0], c1 = pal[1] || pal[0], c2 = pal[2] || c1;
+  const yy = M + S*0.02;
+  // 首の長い鳥は からだごと 下がるので、かおと かざりも 同じだけ 下げる
+  const nk = (rc.opt && rc.opt.neck) || 0;
+  const nkq = rc.body === 'quad' ? nk : 0;   // けものは 下げ幅が ちがう
+  // たてに長い子・よこに長い子は わくから はみ出す。
+  // からだの形を いじると 別の子まで くずれるので、1体ごとに ずらして 入れる
+  const dx = (rc.opt && rc.opt.dx) || 0, dy = (rc.opt && rc.opt.dy) || 0;
+  const sc = (rc.opt && rc.opt.sc) || 1;   // 小さすぎる子・大きすぎる子を わくに あわせる
+  g.save(); g.translate(S*dx, S*dy);
+  if (sc !== 1){ g.translate(M, M); g.scale(sc, sc); g.translate(-M, -M); }
+  (GBACK[rc.back] || GBACK.none)(g, S, M, yy, R, c1, L.metal, c2, rc);
+  (GBODY[rc.body] || GBODY.ball)(g, S, M, yy, R, c0, L.metal, c2, rc);
+  (GHEAD[rc.head] || GHEAD.none)(g, S,
+     M + R*(GHX[rc.body] || 0), yy + R*((GHY[rc.body] || 0) - nk*(nkq?0.5:0.38)),
+     R*(GFR[rc.body] ? GFR[rc.body]*1.25 : 1), c1, L.metal, c2);
+  // あたまの形を かえた子は、かおも その大きさに 合わせる。
+  // でないと 小さい頭から かおが はみ出す
+  const HF = { small:0.74, flat:0.94, wide:1.14, big:1.26, boxy:1.06, long:1.0, round:1 };
+  const hk = HF[(rc.opt && rc.opt.head) || 'round'] || 1;
+  const fx = M + R*(GFX[rc.body] || 0), fy = yy + R*((GFY[rc.body] || 0) - nk*(nkq?0.5:0.38));
+  const fr = R*(GFR[rc.body] || 0.74) * hk;
+  // からだが こい子は、かおまわりを 明るくしてから えがく。
+  // でないと こい目が こい体に しずんで、顔が 見えなくなる
+  if (rc.fbg){
+    // かおの まわりだけ 明るくする。ひろげすぎると 体の色まで 白くとんで、
+    // チョコが 灰色の板に 見えてしまう
+    const fg = g.createRadialGradient(fx, fy, 0, fx, fy, fr*1.05);
+    fg.addColorStop(0,   'rgba(255,255,255,.8)');
+    fg.addColorStop(0.5, 'rgba(255,255,255,.55)');
+    fg.addColorStop(1,   'rgba(255,255,255,0)');
+    g.fillStyle = fg;
+    g.beginPath(); g.ellipse(fx, fy, fr*1.05, fr*0.95, 0, 0, GTAU); g.fill();
+  }
+  gface(g, S, fx, fy, fr, rc.mood);
+  (GHOLD[rc.hold] || GHOLD.none)(g, S, M, yy, R, c1, L.metal, c2);
+  g.restore();
+}
+
+/* ---------- ② 立体感をつけた あとに かさねる（レベルの見せかた） ----------
+   かけ算のかげは 色もキラキラも 暗くしてしまうので、
+   レベルらしさは 立体感のあとに のせる。
+   これをしないと レベル7のにじいろが いちばん くすんで見える */
+function drawGenFx(g, S, rc){
+  const M = S/2, L = LV[rc.lv], RB = rc.rainbow || L.rainbow;
+
+  // レベル7：にじいろ。「色相だけ」をかえる合成をつかう。
+  // ふつうに色をかぶせると 明るさまで変わって、かおも つやも 消えてしまう。
+  // ただし この合成は すきとおった外がわまで ぬってしまうので、
+  // かける前の形を とっておいて あとで 切りぬく
+  if (RB){
+    const cv2 = g.canvas;
+    const mask = document.createElement('canvas');
+    mask.width = cv2.width; mask.height = cv2.height;
+    mask.getContext('2d').drawImage(cv2, 0, 0);
+
+    g.save();
+    g.globalCompositeOperation = 'color';
+    // にじが 1体のなかに ぜんぶ おさまるように、
+    // キャンバス全体ではなく キャラのいる範囲に かける。
+    // ひろげすぎると 1体につき 1〜2色しか通らず、ただの色ちがいに見える
+    const r = g.createLinearGradient(S*0.22, S*0.76, S*0.78, S*0.24);
+    // やわらかい にじにするのは 色の「まざりかた」で。
+    // ここで うすい色をつかうと 彩度まで うつってしまい、灰色に にごる
+    // （この合成は 色あいと 彩度を そのまま もっていくため）。
+    // シリーズのパステルを そのままつかうのが ちょうどよい
+    const st = ['#ff9ec9','#ffbe8f','#ffd76e','#8fe3c4','#9ed8ff','#c9a7ff','#ff9ec9'];
+    const off = (rc.c0 || 0) % st.length;
+    for (let k=0;k<st.length;k++) r.addColorStop(k/(st.length-1), st[(k+off)%st.length]);
+    g.globalAlpha = 1;
+    g.fillStyle = r; g.fillRect(0,0,S,S);
+    // ななめの帯だけだと しまに見えるので、まるい色も かさねて にじませる
+    const r2 = g.createRadialGradient(S*0.36, S*0.32, 0, S*0.5, S*0.5, S*0.46);
+    r2.addColorStop(0, st[(off+3)%st.length]);
+    r2.addColorStop(0.6, 'rgba(255,255,255,0)');
+    g.globalAlpha = 0.7;
+    g.fillStyle = r2; g.fillRect(0,0,S,S);
+    g.restore();
+
+    g.save();                                  // もとの形で 切りぬく
+    g.globalCompositeOperation = 'destination-in';
+    g.setTransform(1,0,0,1,0,0);
+    g.drawImage(mask, 0, 0);
+    g.restore();
+
+    g.save();                                  // にじの上に 白い照りを もどす
+    g.globalCompositeOperation = 'source-atop';
+    const w = g.createRadialGradient(M-S*0.19, M-S*0.23, 0, M-S*0.05, M-S*0.05, S*0.4);
+    w.addColorStop(0,'rgba(255,255,255,.5)'); w.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle = w; g.fillRect(0,0,S,S);
+    g.restore();
+  }
+
+  // レベル5から：下から金の照りかえしを かるく のせて とくべつ感を出す
+  if (L.metal){
+    g.save();
+    g.globalCompositeOperation = 'source-atop';
+    g.globalAlpha = 0.2;
+    const m = g.createLinearGradient(0, S*0.86, 0, S*0.42);
+    m.addColorStop(0, L.metal); m.addColorStop(1, 'rgba(255,255,255,0)');
+    g.fillStyle = m; g.fillRect(0,0,S,S);
+    g.restore();
+  }
+
+  // キラキラ。レベルが上がるほど 数も大きさも ふえる
+  const n = L.sp;
+  for (let i=0;i<n;i++){
+    const a = i*2.399 + (rc.c0||0)*0.7;
+    const rr = S*(0.33 + 0.09*Math.sin(i*1.7 + (rc.c1||0)));
+    const big = i % 3 === 0;
+    gspark(g, M + Math.cos(a)*rr, M + Math.sin(a)*rr*0.9,
+           S*(big ? 0.062 : 0.034), a*2,
+           RB ? (i%2 ? '#ffffff' : '#fff0a0') : (big && L.metal ? L.metal : '#ffffff'));
+  }
+}
+
+/* ==========================================================
+   キャラの名ぼ
+
+   1種につき 1体。おなじ生きものが「いたずら○○」「まじょ○○」と
+   なんども 出てこないようにする。
+
+   色は その生きもの じたいの色を 基調にする（シャチなら 黒と白）。
+   にじいろ版だけは 例外で、7色に かがやく とくべつな すがた。
+   ========================================================== */
+const CREATURES = [
+  // [部品, 名まえ, [おもな色, そえ色, かざり色], レベル, てき/なかま, こまかい指定]
+  // --- うみ（レベルの低い子から） ---
+  ['jelly',    'クラゲ',     ['#ffd6ec','#ffc2e0','#ffe8f4'], 1, 'ch'],
+  ['starfish', 'ヒトデ',     ['#ff9a6b','#ffd0b8','#e87a4a'], 1, 'ch'],
+  ['clownfish','カクレクマノミ',['#ff8c3a','#ffffff','#2f2f3a'], 2, 'ch'],
+  ['hermit',   'ヤドカリ',   ['#d8b98a','#ff8a6b','#b99a6a'], 2, 'ch'],
+  ['seahorse', 'タツノオトシゴ',['#ffc46b','#ffb43f','#e8a02a'], 3, 'ch'],
+  ['crab',     'カニ',       ['#e8603f','#ffb3a0','#c44a2e'], 3, 'en'],
+  ['penguin',  'ペンギン',   ['#2f3346','#ffffff','#ffb43f'], 4, 'ch'],
+  ['octopus',  'タコ',       ['#d4657f','#f0b0c0','#b34a64'], 4, 'en'],
+  ['dolphin',  'イルカ',     ['#8fa8c2','#eef4f8','#6d87a3'], 4, 'ch'],
+  ['orca',     'シャチ',     ['#2f3346','#ffffff','#5b6180'], 5, 'ch'],
+  ['seal',     'アザラシ',   ['#b8c4cf','#eef4f8','#94a2b0'], 5, 'ch'],
+  ['shark',    'サメ',       ['#7f97ad','#eef4f8','#5f7488'], 5, 'en'],
+  ['manta',    'マンタ',     ['#4a5f7a','#eef4f8','#33465e'], 6, 'ch'],
+  ['whale',    'クジラ',     ['#6b87a8','#cfe6ff','#4f6a88'], 6, 'ch'],
+  // --- りくの生きもの ---
+  ['turtle',   'カメ',       ['#7aa864','#cdbb8e','#5e8a4c'], 3, 'ch'],
+  ['bird',     'ことり',     ['#ffd95e','#fff3c4','#e8a02a'], 2, 'ch'],
+  // --- ゆめの生きもの ---
+  ['dragon',   'ドラゴン',   ['#6fbf95','#cdeddc','#a8e0c4'], 6,'en',{dx:0.015}],
+  ['unicorn',  'ユニコーン', ['#fdfaff','#c9a7ff','#ffd76e'], 6, 'ch',{dy:0.065}],
+  ['unicorn',  'ペガサス',   ['#fdfaff','#cfe6ff','#e8e4f0'], 6,'ch',{key:'pegasus', wing:true, dy:0.065}],
+  ['fowl','フェニックス',['#ff8f3a','#ffd76e','#e8503f'], 6,'ch',{key:'phoenix', crest:'spike', crestC:'#ffd76e', tail:'long', beak:'hook'}],
+  ['fowl','グリフォン', ['#c9a06a','#e8d4bc','#ffd76e'], 6,'en',{key:'griffin', beak:'hook', crest:'tuft', tail:'tuft'}],
+  ['fairy',    'ようせい',   ['#ffb3d4','#ffd9ea','#d8a860'], 5, 'ch'],
+  ['butterfly','ちょうちょ', ['#a88060','#c9a07a','#8a6448'], 3, 'ch'],
+  // --- 和菓子。あんこ色・もち色など、その和菓子の 実際の色で ---
+  ['dango',    'だんご',     ['#f0e4d0','#c9e8a8','#ffc2d4'], 1,'ch'],
+  ['daifuku',  'だいふく',   ['#fdfaff','#e8c2d4','#8a5a6a'], 1,'ch'],
+  ['youkan',   'ようかん',   ['#5b3a4a','#8a5a6a','#3a2430'], 2,'ch'],
+  ['dorayaki', 'どらやき',   ['#e0a860','#6b4530','#c98a44'], 2,'ch'],
+  ['taiyaki',  'たいやき',   ['#e0a860','#c98a44','#6b4530'], 3,'ch'],
+  // --- 洋菓子 ---
+  ['candy',    'キャンディ', ['#ff8fc4','#ffd0e2','#e05f9e'], 1,'ch'],
+  ['cookie',   'クッキー',   ['#e0b878','#8a5a30','#c99a52'], 1,'ch'],
+  ['donut',    'ドーナツ',   ['#e0a860','#ff9ec9','#c98a44'], 1,'ch'],
+  ['purin',    'プリン',     ['#ffe08a','#c98a4a','#ffd05e'], 2,'ch'],
+  ['macaron',  'マカロン',   ['#ffc2dd','#fff0f6','#e88ab0'], 2,'ch'],
+  ['watame',   'わたあめ',   ['#ffd6ec','#ffe8f4','#c9a7ff'], 2,'ch'],
+  ['star',     'ほしクッキー',['#ffd76e','#fff0c4','#e8a02a'], 2,'ch'],
+  ['icecream', 'アイス',     ['#8fd8f0','#e8b979','#5fb4d8'], 3,'ch'],
+  ['soft',     'ソフトクリーム',['#fff0d8','#e8b979','#ffd9a8'],3,'ch'],
+  ['kakigori', 'かきごおり', ['#7fd4f0','#eef8ff','#4fb0d8'], 3,'ch'],
+  ['choco',    'チョコ',     ['#8f5730','#c98a54','#6b3d20'], 3,'en'],
+  ['cake',     'ショートケーキ',['#fff4ee','#ff8fa8','#ffd0d8'],4,'ch'],
+  ['parfait',  'パフェ',     ['#ffb3c8','#fff0f4','#8fd8c4'], 4,'ch'],
+  ['tower',    'マカロンタワー',['#ffc2dd','#c9a7ff','#8fe3c4'],5,'ch'],
+  ['wedding',  'ウエディングケーキ',['#fdfaff','#ffd0e2','#ffd76e'],6,'ch'],
+
+  ['konpeito', 'こんぺいとう',['#ffd0e2','#fff0f6','#ff9ec9'], 1,'ch'],
+  ['marshmallow','マシュマロ',['#fff0f6','#ffffff','#ffd0e2'], 1,'ch'],
+  ['gummy',    'グミ',       ['#ff6fae','#ffb3d4','#e05f9e'], 1,'ch'],
+  ['senbei',   'せんべい',   ['#e0b878','#3a2c20','#c99a52'], 1,'ch'],
+  ['warabi',   'わらびもち', ['#e0e4e8','#8a6a4a','#c8ccd0'], 2,'ch'],
+  ['manju',    'まんじゅう', ['#f0e0c8','#e8503f','#d8c4a8'], 2,'ch'],
+  ['jelly2',   'ゼリー',     ['#8fd8f0','#e8f8ff','#5fb4d8'], 2,'ch'],
+  ['sakuramochi','さくらもち',['#ffc2dd','#6f9e5e','#e88ab0'], 2,'ch'],
+  ['monaka',   'もなか',     ['#f0e0c0','#5b3a4a','#d8c4a0'], 2,'ch'],
+  ['ohagi',    'おはぎ',     ['#7a4a5e','#5b3a4a','#5b3a4a'], 3,'ch'],
+  ['kintsuba', 'きんつば',   ['#6b4458','#fff8f0','#4a2c3c'], 3,'ch'],
+  ['castella', 'カステラ',   ['#ffdc94','#8a5a30','#9a5f2a'], 3,'ch'],
+  ['anmitsu',  'あんみつ',   ['#8fd8c4','#5b3a4a','#5fc4a0'], 3,'ch'],
+  ['popcorn',  'ポップコーン',['#fff6e0','#e8503f','#ffe8c0'], 3,'ch'],
+  ['pretzel',  'プレッツェル',['#c98a44','#fff0d8','#a06a30'], 3,'ch'],
+  ['churro',   'チュロス',   ['#e0a860','#a06a30','#c98a44'], 3,'ch'],
+  ['waffle',   'ワッフル',   ['#e8c090','#a8763f','#c99a52'], 4,'ch'],
+  ['pancake',  'パンケーキ', ['#f0c078','#ffd05e','#d8a050'], 4,'ch'],
+  ['cupcake',  'カップケーキ',['#fff0f6','#e8a0b8','#ff9ec9'], 4,'ch'],
+  ['cream',    'シュークリーム',['#e8c090','#fff8ec','#c99a52'],4,'ch'],
+  ['eclair',   'エクレア',   ['#6b3d22','#f2d29c','#f2d29c'], 4,'ch'],
+  ['roll',     'ロールケーキ',['#ffb3c8','#e8c090','#e88aa0'], 4,'ch'],
+  ['baum',     'バウムクーヘン',['#e0b878','#fff0d8','#c99a52'],5,'ch'],
+  ['mille',    'ミルフィーユ',['#fff0f4','#e8c090','#ff9ec9'], 5,'ch'],
+  ['tart',     'タルト',     ['#ff5f8a','#e0b878','#c93f6a'], 5,'ch'],
+  ['mont',     'モンブラン', ['#e8b060','#e0b878','#c98a44'], 5,'ch'],
+
+  // --- そら（鳥）。くちばし・とさか・尾・首の長さで 見わける ---
+  ['fowl','スズメ',    ['#b98a5a','#fff0d8','#5b4430'], 1,'ch',{key:'sparrow', mark:'belly'}],
+  ['fowl','ハト',      ['#a8b0c0','#eef0f6','#e8a0b0'], 1,'ch',{key:'dove',   tail:'fan', mark:'belly'}],
+  ['fowl','ヒヨコ',    ['#ffd95e','#fff3c4','#e8a02a'], 1,'ch',{key:'chick',  slim:false}],
+  ['fowl','インコ',    ['#5fd48f','#ffd76e','#ff8f4a'], 2,'ch',{key:'parrot', crest:'spike', crestC:'#ffd76e', tail:'long'}],
+  ['fowl','ツバメ',    ['#3f4a6b','#ffffff','#e8503f'], 2,'ch',{key:'swallow',tail:'fork', slim:true, mark:'belly'}],
+  ['fowl','ニワトリ',  ['#fdfaff','#e8503f','#ffb43f'], 2,'en',{key:'chicken',crest:'comb', tail:'fan'}],
+  ['fowl','ハチドリ',  ['#3fc9b0','#ff8fc4','#5f8fd8'], 3,'ch',{key:'hummingbird',beak:'long', tail:'long', slim:true}],
+  ['fowl','フラミンゴ',['#ff9ec9','#ffd0e2','#2f2f3a'], 3,'ch',{key:'flamingo',dy:-0.115, neck:0.8, longLeg:true, slim:true, legC:'#e8809f'}],
+  ['fowl','カモメ',    ['#fdfaff','#c8d4e0','#ffb43f'], 3,'ch',{key:'gull',   mark:'belly', markC:'rgba(200,212,224,.6)'}],
+  ['fowl','ハクチョウ',['#fdfaff','#f4f7fb','#e6ecf4'], 4,'ch',{key:'swan',   neck:0.9, sneck:true, beakC:'#ff8f4a', knob:'#4a3f4a', wing:true, tail:'fan'}],
+  ['fowl','フクロウ',  ['#a8845e','#e8d4bc','#ffd76e'], 4,'en',{key:'owl',    crest:'tuft', beak:'hook', mark:'belly', markC:'rgba(240,225,200,.75)'}],
+  ['fowl','ペリカン',  ['#fdfaff','#e0e6ee','#ffb43f'], 4,'ch',{key:'pelican',beak:'long', neck:0.5}],
+  ['fowl','クジャク',  ['#3f8fd8','#3fc9a8','#ffd76e'], 5,'ch',{key:'peacock',crest:'spike', crestC:'#3fc9a8', tail:'fan', neck:0.6}],
+  ['fowl','ワシ',      ['#5b4030','#fdfaff','#4a3426'], 5,'en',{key:'eagle',  beak:'hook', beakC:'#ffc23f', headC:'#fdfaff', neck:0.1, legC:'#ffc23f', tail:'fan', slim:true}],
+  // --- そら（むし） ---
+  ['bug','テントウムシ',['#e8503f','#2f2f3a','#2f2f3a'], 1,'ch',{key:'ladybug',wing:'shell', mark:'dots', bodyC:'#2f2f3a'}],
+  ['bug','ミツバチ',   ['#ffd05e','#2f2f3a','#ffd05e'], 2,'ch',{key:'bee',    wing:'clear', stripe:true, bodyC:'#ffd05e'}],
+  ['bug','トンボ',     ['#7fc4e8','#5f9ed8','#5f9ed8'], 2,'ch',{key:'dragonfly',wing:'clear', bodyC:'#5f9ed8'}],
+  ['bug','カブトムシ', ['#5b4430','#3a2c20','#3a2c20'], 4,'en',{key:'beetle', wing:'shell', horn:'beetle', bodyC:'#3a2c20'}],
+
+  // --- もり／りく（4本あしの けもの）。みみ・しっぽ・はなさき・もようで 見わける ---
+  ['quad','ウサギ',   ['#fdfaff','#ffe4ee','#ffc2d4'], 1,'ch',{key:'rabbit', ear:'long', tail:'puff', stout:0.92, mark:'belly'}],
+  ['quad','ネズミ',   ['#b8bcc8','#eef0f4','#ffc2d4'], 1,'en',{key:'mouse',  ear:'round', tail:'long', stout:0.85, mark:'belly'}],
+  ['quad','ネコ',     ['#9aa4b8','#eef2f8','#ffc2d4'], 2,'ch',{key:'cat',    ear:'point', tail:'long', mark:'belly'}],
+  ['quad','イヌ',     ['#d8a86a','#fff0d8','#8a6a4a'], 2,'ch',{key:'dog',    ear:'droop', tail:'short', snout:'long', mark:'belly'}],
+  ['quad','リス',     ['#e0975a','#ffe8c8','#8a5a30'], 2,'ch',{key:'squirrel',ear:'tuftear', tail:'bushy', stout:0.9, mark:'belly'}],
+  ['quad','ハリネズミ',['#d8b98a','#fff0d8','#8a6a58'],2,'ch',{key:'hedgehog',ear:'round', head:'small', snout:'long', stout:1.0, mark:'quill', markC:'#7a6350'}],
+  ['quad','キツネ',   ['#e88a4a','#fff0e0','#c05f2a'], 3,'en',{key:'fox',    ear:'point', tail:'bushy', snout:'long', mark:'belly', markC:'rgba(255,255,255,.85)'}],
+  ['quad','タヌキ',   ['#8f7a68','#f0e4d8','#4a3e34'], 3,'en',{key:'tanuki', ear:'round', tail:'bushy', mark:'belly'}],
+  ['quad','アライグマ',['#98a0ac','#eef0f4','#4a5060'],3,'en',{key:'raccoon',ear:'point', tail:'bushy', mark:'spot'}],
+  ['quad','コアラ',   ['#a8b0bc','#eef0f4','#7a8290'], 3,'ch',{key:'koala',  dx:-0.042, ear:'big', earIn:'rgba(255,255,255,.45)', head:'wide', nose:true, noseC:'#4a4450', tail:'short', stout:1.15, mark:'belly', markC:'rgba(245,248,252,.7)'}],
+  ['quad','ヒツジ',   ['#fdf6e8','#fff9f0','#e7d3a8'], 3,'ch',{key:'sheep',  ear:'droop', horn:'cow', tail:'puff', stout:1.2}],
+  ['quad','ブタ',     ['#ffb3c8','#ffd8e4','#e88aa0'], 3,'ch',{key:'pig',    ear:'pigflop', head:'wide', tail:'curl', snout:'pig', stout:1.1, flat:1.05, headOut:0.34, shortLeg:true, hoof:'#c9708f'}],
+  ['quad','サル',     ['#c98f66','#ffe0c8','#8a6440'], 3,'en',{key:'monkey', ear:'round', head:'round', tail:'long', faceRing:'#ffe0c8', stout:0.9}],
+  ['quad','シカ',     ['#c9955e','#fff0d8','#8a6440'], 4,'ch',{key:'deer',   ear:'horse', head:'long', horn:'antler', tail:'puff', mark:'spot'}],
+  ['quad','オオカミ', ['#8a92a4','#eef2f8','#4a5060'], 4,'en',{key:'wolf',   ear:'point', head:'long', ruff:true, ruffC:'#b0b8c8', tail:'bushy', snout:'long', stout:0.92, mark:'belly'}],
+  ['quad','パンダ',   ['#fdfaff','#2f3346','#2f3346'], 4,'ch',{key:'panda',  ear:'round', earC:'#2f3346', tail:'short', snout:'pale', stout:1.2, mark:'panda'}],
+  ['kanga','カンガルー',['#c98a5e','#ffe0c8','#b07548'],4,'ch',{key:'kangaroo',dy:0.015, bellyC:'rgba(255,238,220,.75)'}],
+  ['quad','ウシ',     ['#fdfaff','#2f3346','#e7d3a8'], 4,'ch',{key:'cow',    hoof:'#4a4450', ear:'droop', head:'boxy', horn:'cow', hornC:'#c9b18a', tail:'tuft', tuftC:'#2f3346', snout:'pig', snoutC:'#ffc2c8', mark:'spot', markC:'#3a3f52', stout:1.3}],
+  ['quad','カバ',     ['#b09ab8','#e4d8ea','#8a7a94'], 5,'en',{key:'hippo',  ear:'round', earK:0.6, earC:'#c9a2c9', head:'big', tail:'short', snout:'hippo', snoutC:'rgba(255,255,255,.34)', stout:1.15, flat:0.95, headOut:0.52, shortLeg:true}],
+  ['quad','ウマ',     ['#a8764a','#ffe0c8','#5b3e28'], 5,'ch',{key:'horse',  ear:'horse', head:'long', tail:'tuft', snout:'long', mane:'horse', maneC:'#5b3e28', tuftC:'#5b3e28'}],
+  ['quad','クマ',     ['#8a6a4a','#e8d4bc','#5b4430'], 5,'en',{key:'bear',   ear:'round', head:'big', tail:'short', snout:'pale', snoutC:'#e8d4bc', stout:1.3, mark:'belly', markC:'rgba(232,212,188,.5)'}],
+  ['quad','トラ',     ['#f0993f','#fff0d8','#2f2f3a'], 5,'en',{key:'tiger',  ear:'round', tail:'long', mark:'stripe', dark:'rgba(50,40,50,.6)'}],
+  ['quad','ライオン', ['#e8b06a','#ffe0b0','#b9773a'], 6,'en',{key:'lion',   ear:'round', tail:'tuft', mane:'lion', maneC:'#c98a44', tuftC:'#c98a44'}],
+  ['quad','ゾウ',     ['#9aa4b0','#e4e8ee','#7a8290'], 6,'ch',{key:'elephant',dx:-0.042, ear:'big', trunk:true, tail:'short', stout:1.35}],
+
+  ['quad','イタチ',   ['#c9a06a','#fff0d8','#8a6440'], 2,'en',{key:'weasel', ear:'round', tail:'long', snout:'long', stout:0.8, mark:'belly'}],
+  ['quad','レッサーパンダ',['#d8703f','#fdfaff','#5b3420'],3,'ch',{key:'redpanda',ear:'round', tail:'bushy', snout:'pale', mark:'belly'}],
+  ['quad','カワウソ', ['#a07a5e','#f0e0cc','#6b4f3a'], 3,'ch',{key:'otter',  ear:'round', head:'small', whisker:true, whiskerC:'rgba(255,255,255,.9)', tail:'long', snout:'long', stout:0.78, mark:'belly'}],
+  ['quad','ナマケモノ',['#b0a48e','#e8e0d0','#7a705e'],3,'ch',{key:'sloth',  ear:'round', head:'flat', faceRing:'#e8e0d0', claw:true, clawC:'#6b5a48', tail:'short', stout:1.0}],
+  ['quad','ヤギ',     ['#f0e8dc','#fff8f0','#c9b18a'], 3,'ch',{key:'goat',   ear:'droop', horn:'goat', tail:'puff', beardC:'#e0d4c0'}],
+  ['quad','シマウマ', ['#fdfaff','#2f3346','#2f3346'], 4,'ch',{key:'zebra',  ear:'horse', head:'long', tail:'tuft', snout:'long', mane:'horse', maneC:'#2f3346', tuftC:'#2f3346', mark:'stripe', dark:'rgba(40,35,50,.75)'}],
+  ['quad','サイ',     ['#9a94a4','#e0dce6','#c9b18a'], 5,'en',{key:'rhino',  ear:'round', earC:'#c4bcd0', head:'big', horn:'rhino', hornC:'#f2e8d4', tail:'short', snout:'long', stout:1.15, flat:0.95, headOut:0.42, earK:0.65, shortLeg:true}],
+  ['quad','キリン',   ['#f0c060','#fff0c8','#8a6440'], 5,'ch',{key:'giraffe',ear:'horse', head:'long', horn:'ossicone', tail:'tuft', neck:0.8, stout:0.9, mark:'spot', markC:'rgba(150,100,40,.55)', tuftC:'#8a6440'}],
+  // --- そら（追加） ---
+  ['fowl','アヒル',    ['#fdfaff','#f0f4f8','#ffb43f'], 1,'ch',{key:'duck',   beak:'long', mark:'belly'}],
+  ['fowl','カラス',    ['#2f3346','#4a5060','#5b6180'], 2,'en',{key:'crow',   beak:'hook', tail:'fan'}],
+  ['fowl','カワセミ',  ['#3f9ed8','#ff9a4a','#2f2f3a'], 3,'ch',{key:'kingfisher',beak:'long', slim:true, mark:'belly', markC:'rgba(255,154,74,.85)'}],
+  ['fowl','キツツキ',  ['#2f3346','#fdfaff','#e8503f'], 3,'ch',{key:'woodpecker',beak:'long', crest:'comb', crestC:'#e8503f', mark:'belly'}],
+  ['fowl','ダチョウ',  ['#5b4a3e','#f0e4d8','#ffb43f'], 4,'en',{key:'ostrich',dy:-0.14, neck:0.95, longLeg:true, tail:'fan'}],
+  ['fowl','オウム',    ['#fdfaff','#ffd76e','#3f4a6b'], 4,'ch',{key:'cockatoo',crest:'spike', crestC:'#ffd76e', beak:'hook', tail:'long'}],
+
+  // --- 人のキャラ。ぼうし・マント・ドレスまで つくって その役らしくする ---
+  ['slime',    'スライム',   ['#8fe3c4','#d8fff0','#5fc4a0'], 1,'en'],
+  ['ghost',    'おばけ',     ['#e8e4f0','#fdfaff','#b0a8c0'], 2,'en'],
+  ['hero','にんじゃ',  ['#3f4458','#6b7288','#2f3346'], 3,'en',{key:'ninja',  mask:true, maskC:'#3f4458', legC:'#3f4458', sash:'#c85a5a', shoeC:'#2f3346'}],
+  ['hero','てんし',    ['#fdfaff','#ffe27a','#f0c46a'], 4,'ch',{key:'angel',  robe:true, wing:'angel', halo:true, hair:'#f0c46a', longHair:true, legC:'#fdfaff', shoeC:'#e8d4a8'}],
+  ['hero','あくま',    ['#8a3a5e','#c9506a','#6b3a5a'], 4,'en',{key:'devil',  wing:'bat', horns:true, hair:'#3a2430', legC:'#8a3a5e', shoeC:'#4a1f34'}],
+  ['hero','にんぎょ',  ['#ff9ec9','#8fd8f0','#f0c46a'], 4,'ch',{key:'mermaid',tail:'fish', hair:'#f0c46a', longHair:true}],
+  ['robot',    'ロボット',   ['#a8b0c0','#8fe3c4','#ffd76e'], 5,'en'],
+  ['golem',    'ゴーレム',   ['#8a8296','#c0b8cc','#6b6478'], 6,'en'],
+  ['hero','まほうつかい',['#3f5a8a','#5f7ab0','#e8e4f0'],6,'ch',{key:'wizard', dy:0.018, robe:true, hat:'wizard', hatC:'#3f5a8a', beard:'#e8e4f0', staff:true, staffC:'#8a6440', gemC:'#8fe3c4', legC:'#3f5a8a'}],
+  ['hero','ゆきのじょおう',['#cfeaff','#fdfaff','#8fd8f0'],6,'en',{key:'snowqueen',robe:true, hat:'ice', hair:'#dff0ff', longHair:true, legC:'#cfeaff', shoeC:'#a8d4ea'}],
+  ['witch',    'まじょ',     ['#5b4278','#6b4f8a','#6b4a3a'], 5,'en',{dy:0.018}],
+  ['princess', 'おひめさま', ['#ffb3d4','#ffffff','#f0c46a'], 4, 'ch'],
+  ['prince',   'おうじさま', ['#7b9ed8','#c85a7a','#8a6a4a'], 4, 'ch'],
+];
+
+/* にじいろ版。上の子のうち、とくべつな すがたを もつ子に つける。
+   ここだけ 実際の色の きまりから 外れて、7色に かがやく */
+/* にじいろ版を もつ子。ここだけ 実際の色の きまりから 外れて、
+   7色に かがやく とくべつな すがたになる。
+   あわせて ちょうど200体に なるように えらんである */
+const RAINBOW_OF = [
+  // ゆめの子（にじいろが いちばん似あう）
+  'unicorn','pegasus','fairy','butterfly','dragon','phoenix','griffin',
+  'witch','princess','prince','angel','devil','mermaid','wizard','snowqueen',
+  'ninja','ghost','slime','golem','robot',
+  // うみ
+  'orca','dolphin','whale','manta','jelly','starfish','seahorse','clownfish',
+  'penguin','octopus','seal','shark','crab','turtle',
+  // りく・そら
+  'lion','elephant','tiger','panda','giraffe','zebra','rabbit','cat',
+  'peacock','swan','flamingo','owl','hummingbird','bird',
+  'ladybug','bee',
+  // お菓子
+  'watame','wedding','tower','macaron','cake','parfait','star','kakigori',
+  'cupcake','tart','mont','mille',
+];
+
+/* わくへの おさまりを 直す表。
+   からだの形を いじると おなじ型を つかう別の子まで くずれるので、
+   ここでは 1体ずつ ずらし（dx/dy）と 大きさ（sc）だけを 上書きする。
+   数字は check.mjs --fit の 自動あわせで 出したもの。手で いじらなくてよい */
+const FIT = {
+  'おはぎ':{sc:1.223},
+  'きんつば':{sc:1.255},
+  'まじょ':{dy:0.02},
+  'まほうつかい':{dy:0.028},
+  'まんじゅう':{sc:1.193},
+  'もなか':{sc:1.223},
+  'ようかん':{sc:1.289},
+  'わたあめ':{dy:-0.008},
+  'わらびもち':{sc:1.28},
+  'イルカ':{dx:0.005},
+  'オウム':{dx:0.095},
+  'カラス':{dx:0.11},
+  'カンガルー':{dy:0.013},
+  'クジャク':{dx:0.085},
+  'クジラ':{dx:0.01},
+  'クラゲ':{dy:-0.105},
+  'コアラ':{dx:-0.042},
+  'シャチ':{dx:0.005},
+  'ゼリー':{sc:1.371},
+  'ゾウ':{dx:-0.042},
+  'タツノオトシゴ':{sc:1.185},
+  'ダチョウ':{dx:0.085, dy:-0.138},
+  'ドラゴン':{dx:0.017},
+  'ニワトリ':{dx:0.085},
+  'ハクチョウ':{dx:0.085},
+  'ハト':{dx:0.085},
+  'フェニックス':{dx:0.095},
+  'フラミンゴ':{dy:-0.115},
+  'ペガサス':{dy:0.065},
+  'マシュマロ':{sc:1.306},
+  'ユニコーン':{dy:0.065},
+  'ワシ':{dx:0.11},
+  'ワッフル':{sc:1.193},
+};
+
+function buildRoster(){
+  const out = [];
+  for (const [body, name, pal, lv, side, opt] of CREATURES){
+    const fopt = FIT[name] ? Object.assign({}, opt, FIT[name]) : opt;
+    out.push({ id:'c_'+(opt && opt.key ? opt.key : body), name, body, pal, lv, side, opt:fopt,
+               head:'none', back:'none', hold:'none',
+               // からだが こい子は かおまわりを 明るくする
+               // からだが こい子は かおまわりを 明るくする（でないと 目が しずむ）
+               fbg: ['orca','dragon','butterfly','penguin','manta','clownfish',
+                     'ohagi','kintsuba','youkan','ghost','golem'].includes(body)
+                    || (opt && ['ladybug','beetle','swallow','peacock','tiger','panda','wolf',
+                                'raccoon','bear','tanuki','owl','eagle','chicken',
+                                'crow','zebra','ostrich','woodpecker','weasel',
+                                'ninja','devil','wizard','griffin'].includes(opt.key))
+                    || ['golem','robot'].includes(body),
+               mood: side === 'en' ? 'naughty' : 'smile',
+               cells: lv >= 7 ? 4 : lv >= 5 ? 2 : 1 });
+  }
+  for (const key of RAINBOW_OF){
+    const b = out.find(o => (o.opt && o.opt.key ? o.opt.key : o.body) === key);
+    if (!b) continue;
+    out.push({ ...b, id:'c_'+key+'_rb', name:'にじいろ'+b.name,
+               rainbow:true, lv:7, cells:4 });
+  }
+  return out;
+}
+
+
 /* ==========================================================
    ずかん（あつめた記録はブラウザに残る）
    dex[id] = { w:入手ウェーブ, d:入手日, lv:とうたつレベル(おかしのみ) }
@@ -1887,17 +5305,129 @@ function dexList(){
       fx:'ワザ「にじのおくりもの」＋ドロップUP', hint:'ログインボーナス7にちめで なかまに' },
     ...LEGENDS.map(l => ({ id:'lg_'+l.id, pid:l.id, name:l.name, title:l.title, cat:'lg', fx:l.fx,
                            hint:l.tease, legend:true })),
+    ...GEN_LIST.map(o => ({
+      id:o.id, name:o.name, cat:'g'+o.lv, gen:o,
+      title:(o.side === 'en' ? 'てき' : 'なかま') + '・★' + o.lv + (o.cells > 1 ? '・' + o.cells + 'マス' : ''),
+      hint:o.side === 'en' ? 'たたかって たおすと とうろく' : 'なかまに すると とうろく',
+    })),
   ];
+}
+/* 200体は つくるのに 少し時間がかかるので、1回だけ 作って ためておく */
+const GEN_LIST = buildRoster();
+const GEN_BY_ID = Object.fromEntries(GEN_LIST.map(o => [o.id, o]));
+
+/* ばんめんに 出す用の 絵。まいフレーム drawGen を よぶと 重いので、
+   1回えがいて とっておき、あとは はりつけるだけにする（じめんの 焼きこみと 同じ考え） */
+const genSpriteCache = new Map();
+function genSprite(o, px){
+  px = Math.max(24, Math.round(px / 8) * 8);        // 8ピクセルきざみに まるめて 数をへらす
+  const k = o.id + '@' + px;
+  const hit = genSpriteCache.get(k);
+  if (hit) return hit;
+  const c = document.createElement('canvas');
+  const d = Math.min(window.devicePixelRatio || 1, 2);
+  c.width = px*d; c.height = px*d;
+  const g = c.getContext('2d');
+  g.setTransform(d,0,0,d,0,0); drawGen(g, px, o);
+  g.setTransform(d,0,0,d,0,0); portraitShade(g, px);
+  g.setTransform(d,0,0,d,0,0); drawGenFx(g, px, o);
+  genSpriteCache.set(k, c);
+  return c;
+}
+
+/* なかま（コレクションの味方）を おかしと おなじ「タワー」に する。
+   152体ぶんの つよさを 手で 書くと 調整できなくなるので、
+   ★の高さから 計算し、attack の くせだけ 4つの型から えらぶ。
+   こうすると 置く・つよくする・売る・たまを とばす しくみは そのまま つかえる */
+const ALLY_ARCH = ['candy','ice','choco','star'];
+/* おなじ ねだんでも 型で こうげきの 数字が だいぶ ちがう（アイスは 弱いかわりに おそくする）。
+   数字だけ ならべると 損に 見えるので、なにが とくいな子かも 出す */
+const ALLY_ROLE = { candy:'はやうち', ice:'おそくする', choco:'まとめて', star:'とおくまで' };
+const ALLY_COST = { 1:60, 2:100, 3:150, 4:230, 5:340, 6:500, 7:720 };
+function allyArchOf(id){                              // id から いつも おなじ型を えらぶ
+  let h = 0;
+  for (let i=0;i<id.length;i++) h = (h*31 + id.charCodeAt(i)) & 0x7fffffff;
+  return ALLY_ARCH[h % ALLY_ARCH.length];
+}
+for (const o of GEN_LIST){
+  if (o.side !== 'ch') continue;
+  const A = TOWERS[allyArchOf(o.id)];
+  const k = 1 + (o.lv - 1) * 0.62;                    // ★が上がるほど こうげきが つよい
+  TOWERS[o.id] = {
+    ...A, name:o.name, gen:o, ally:true, cells:o.cells, role:ALLY_ROLE[allyArchOf(o.id)],
+    cost: ALLY_COST[o.lv],
+    dmg:   Math.round(A.dmg * k * (o.cells >= 4 ? 1.5 : o.cells >= 2 ? 1.2 : 1)),
+    rate:  +(A.rate / (1 + (o.lv - 1) * 0.05)).toFixed(3),
+    range: +(A.range * (1 + (o.lv - 1) * 0.04)).toFixed(2),
+    desc: '★' + o.lv + 'の なかま。' + A.desc + (o.cells >= 4 ? '（4マスつかう）' : ''),
+  };
+}
+/* 4マスの子は 2×2 を つかう。ふさがっている ますを かぞえるのに つかう */
+const spanOf = k => (TOWERS[k] && TOWERS[k].cells >= 4) ? 2 : 1;
+const tSpan  = t => spanOf(t.k);
+/* 2×2 の子の まん中は ますの かど。たまの 出どころも 射程の 中心も ここ */
+const tcx = t => cx(t.c) + (tSpan(t) - 1) * CELL / 2;
+const tcy = t => cy(t.r) + (tSpan(t) - 1) * CELL / 2;
+/* (c,r) を ふさいでいる タワーを さがす（2×2 も 見る） */
+function towerAt(c, r){
+  return towers.find(t => { const s2 = tSpan(t); return c >= t.c && c < t.c + s2 && r >= t.r && r < t.r + s2; });
+}
+
+/* てきの 見た目を コレクションの子から えらぶ。
+   つよさ（HP・そくど）は これまでどおり ENEMIES のまま。
+   見た目と 名前だけ さしかえるので、ゲームの つりあいは 変わらない */
+const EN_BY_LV = {};
+for (const o of GEN_LIST) if (o.side === 'en') (EN_BY_LV[o.lv] = EN_BY_LV[o.lv] || []).push(o);
+/* かたい子・ボスは 見た目も 強そうに する */
+const EN_BUMP = { slime:0, fast:0, tank:1, crystal:1, bat:0, golem:2, boss:2 };
+function enemyLook(k, n, i){
+  const lv = Math.min(7, Math.max(1, 1 + Math.floor(n / 12) + (EN_BUMP[k] || 0)));
+  let pool = null;
+  for (let d = 0; d < 7 && !pool; d++)                 // その ★に 子がいなければ 近い★から
+    pool = EN_BY_LV[lv - d] || EN_BY_LV[lv + d] || null;
+  if (!pool || !pool.length) return null;
+  // おなじウェーブなら いつも おなじ顔ぶれに する（あつめる目あてが 立つように）
+  return pool[(n * 7 + i * 3) % pool.length];
+}
+/* 見た目を えがく。えがく じゅんばんは drawGen → かげ → にじいろ の 順 */
+function genThumb(o, size){
+  const c = document.createElement('canvas');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  c.width = size*dpr; c.height = size*dpr;
+  c.style.width = size + 'px'; c.style.height = size + 'px';
+  const g = c.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0); drawGen(g, size, o);
+  g.setTransform(dpr,0,0,dpr,0,0); portraitShade(g, size);
+  g.setTransform(dpr,0,0,dpr,0,0); drawGenFx(g, size, o);
+  return c;
+}
+/* 200体ぶんを いちどに えがくと 開くたびに かたまるので、
+   スクロールで 見えたものから えがく */
+let colIo = null;
+function lazyThumb(o, size){
+  const box = document.createElement('div');
+  box.style.cssText = 'width:' + size + 'px;height:' + size + 'px;margin:0 auto';
+  box.__draw = () => box.replaceWith(o.gen ? genThumb(o.gen, size) : charThumb(o, size));
+  colIo.observe(box);
+  return box;
 }
 function buildColGrid(){
   const all = dexList();
+  if (colIo) colIo.disconnect();
+  colIo = new IntersectionObserver(es => {
+    for (const e of es){
+      if (!e.isIntersecting || !e.target.__draw) continue;
+      const f = e.target.__draw; e.target.__draw = null;
+      colIo.unobserve(e.target); f();
+    }
+  }, { root: colOv, rootMargin: '240px' });
   const list = colTab === 'all' ? all : all.filter(o => o.cat === colTab);
   colCount.textContent = list.filter(o => dex[o.id]).length + ' / ' + list.length;
   colStats.innerHTML =
     '<div class="cst best"><div class="ck">🏆 じぶんベスト</div><div class="cn">ウェーブ' + rec.bw + '</div></div>' +
     '<div class="cst"><div class="ck">たおしたかず</div><div class="cn">' + rec.kills + '</div></div>' +
     '<div class="cst"><div class="ck">ランキング(めやす)</div><div class="cn">' + (rec.bw > 0 ? 'じょうい' + rankPct() + '%' : '—') + '</div></div>';
-  colHint.style.display = (colTab === 'ch' || colTab === 'all') ? '' : 'none';
+  colHint.style.display = (colTab === 'ch') ? '' : 'none';
   colHint.innerHTML = '📌 なかまをタップでバーに はる／はがす（' + pins.length + '/' + PIN_MAX + '）<br>いっぱいのときは いちばん左と こうたい';
   colDone.style.display = CHARS.every(c => dex['ch_'+c.id]) ? '' : 'none';
   colGrid.innerHTML = '';
@@ -1906,7 +5436,7 @@ function buildColGrid(){
     const d = document.createElement('div');
     d.className = 'cCard' + (rec ? '' : ' no');
     if (rec){
-      d.append(charThumb(o, 64));
+      d.append(lazyThumb(o, 64));
       let html = '<div class="cNm">' + o.name + '</div>';
       if (o.cat === 'tw' && rec.lv) html += '<div class="cLv">' + '★'.repeat(rec.lv) + '</div>';
       const isSk = o.cat === 'ch' && SKILLS.some(s => s.ch === o.pid);
@@ -3127,7 +6657,9 @@ function buildKingdom(){
 let pendingComplete = false;
 function checkComplete(){
   try{ if (localStorage.getItem('sweetTD.done')) return; }catch(e){ return; }
-  if (!dexList().every(o => dex[o.id])) return;
+  // 「おかしの国 かんせい」は もとからの カードを ぜんぶ そろえたとき。
+  // 200体の コレクションまで 入れると 一生 出なくなるので、そちらは 別あつかいにする
+  if (!dexList().every(o => o.gen || dex[o.id])) return;
   try{ localStorage.setItem('sweetTD.done', dateStr()); }catch(e){}
   pendingComplete = true;   // 実際の表示は、ウェーブや他の画面が落ちついてから
 }
@@ -4281,10 +7813,11 @@ function drawBow(x, y, r, color){
 
 function drawTower(t){
   const T = TOWERS[t.k];
-  const x = cx(t.c), y = cy(t.r);
+  const sp = tSpan(t);
+  const x = tcx(t), y = tcy(t);
   const bob = Math.sin(time*2.4 + t.ph) * CELL*0.035;
   const pop = 1 + t.pulse*0.16;
-  const R = CELL*(0.31 + (t.lv-1)*0.022);
+  const R = CELL*(0.31 + (t.lv-1)*0.022) * sp;
 
   // 選択中は射程を表示
   if (selTower === t){
@@ -4298,27 +7831,28 @@ function drawTower(t){
 
   ctx.save(); ctx.translate(x, y + bob); ctx.scale(pop, pop);
 
-  // ようせいのはね（ぱたぱた・レベルで大きく）
-  const flap = Math.sin(time*7 + t.ph);
-  const wk = 1 + (t.lv-1)*0.18;
-  for (const s of [-1,1]){
-    ctx.save();
-    ctx.translate(s*R*0.6, -R*0.1);
-    ctx.rotate(s*(0.35 + flap*0.22));
-    ctx.fillStyle = 'rgba(255,255,255,.82)';
-    ctx.beginPath(); ctx.ellipse(s*R*0.42*wk, -R*0.18*wk, R*0.46*wk, R*0.24*wk, s*0.5, 0, 6.3); ctx.fill();
-    ctx.fillStyle = 'rgba(255,255,255,.65)';
-    ctx.beginPath(); ctx.ellipse(s*R*0.34*wk, R*0.16*wk, R*0.3*wk, R*0.17*wk, s*0.85, 0, 6.3); ctx.fill();
-    ctx.restore();
+  // ようせいのはねと マカロンの台座。
+  // なかまは じぶんの すがたが あって 絵が こみあうので つけない
+  if (!T.gen){
+    const flap = Math.sin(time*7 + t.ph);
+    const wk = 1 + (t.lv-1)*0.18;
+    for (const s of [-1,1]){
+      ctx.save();
+      ctx.translate(s*R*0.6, -R*0.1);
+      ctx.rotate(s*(0.35 + flap*0.22));
+      ctx.fillStyle = 'rgba(255,255,255,.82)';
+      ctx.beginPath(); ctx.ellipse(s*R*0.42*wk, -R*0.18*wk, R*0.46*wk, R*0.24*wk, s*0.5, 0, 6.3); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.65)';
+      ctx.beginPath(); ctx.ellipse(s*R*0.34*wk, R*0.16*wk, R*0.3*wk, R*0.17*wk, s*0.85, 0, 6.3); ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle = '#fff';
+    roundRect(-R*0.95, R*0.4, R*1.9, R*0.55, R*0.28); ctx.fill();
+    ctx.fillStyle = 'rgba(224,95,158,.12)';
+    roundRect(-R*0.95, R*0.63, R*1.9, R*0.32, R*0.16); ctx.fill();
+    ctx.strokeStyle = 'rgba(160,120,160,.3)'; ctx.lineWidth = 1.5;
+    roundRect(-R*0.95, R*0.4, R*1.9, R*0.55, R*0.28); ctx.stroke();
   }
-
-  // マカロンの台座
-  ctx.fillStyle = '#fff';
-  roundRect(-R*0.95, R*0.4, R*1.9, R*0.55, R*0.28); ctx.fill();
-  ctx.fillStyle = 'rgba(224,95,158,.12)';
-  roundRect(-R*0.95, R*0.63, R*1.9, R*0.32, R*0.16); ctx.fill();
-  ctx.strokeStyle = 'rgba(160,120,160,.3)'; ctx.lineWidth = 1.5;
-  roundRect(-R*0.95, R*0.4, R*1.9, R*0.55, R*0.28); ctx.stroke();
 
   // 強化オーラ（Lv2でしろく、Lv4からきんいろに）
   if (t.lv >= 2){
@@ -4333,14 +7867,20 @@ function drawTower(t){
   }
 
   // 体と顔
-  sweetBody(ctx, t.k, R, T.color, T.dark, false);
-  drawFace(R*SWEET_FACE[t.k], t.ph, 'smile');
+  if (T.gen){
+    // なかまは コレクションの絵を そのまま つかう
+    const px = R*2.7;
+    ctx.drawImage(genSprite(T.gen, px), -px/2, -px/2, px, px);
+  } else {
+    sweetBody(ctx, t.k, R, T.color, T.dark, false);
+    drawFace(R*SWEET_FACE[t.k], t.ph, 'smile');
+  }
 
   // 体そのものが おかしの形なので、頭のかざりは置かない
   ctx.restore();
 
-  // むねのリボン（Lv4からきんいろ）
-  drawBow(-R*0.6, -R*0.74, R*(0.3 + (t.lv-1)*0.05), t.lv >= 4 ? '#e8b12e' : T.dark);
+  // むねのリボン（Lv4からきんいろ）。コレクションの子は もう かざりが 多いので つけない
+  if (!T.gen) drawBow(-R*0.6, -R*0.74, R*(0.3 + (t.lv-1)*0.05), t.lv >= 4 ? '#e8b12e' : T.dark);
 
   // Lv3からまわりを星がくるくるまわる（レベルで数がふえる）
   if (t.lv >= 3){
@@ -4382,16 +7922,19 @@ function drawEnemy(e){
 
   ctx.scale(1+sq, 1-sq);
 
-  enemyBody(ctx, e.k, R, E.color, E.dark, false, e.wob);
-
-  // つや
-  ballGloss(R);
-
-  // 顔
-  const ef = ENEMY_FACE[e.k];
-  ctx.save(); ctx.translate(0, R*ef[1]);
-  drawFace(R*ef[0], e.ph, (e.k === 'boss' || e.k === 'golem') ? 'angry' : 'naughty');
-  ctx.restore();
+  if (e.gi){
+    // コレクションの子を そのまま 出す。大きい子（2マス・4マス）は 見た目も 大きく
+    const k2 = e.gi.cells >= 4 ? 1.5 : e.gi.cells >= 2 ? 1.26 : 1.0;
+    const px = R*2.9*k2;
+    ctx.drawImage(genSprite(e.gi, px), -px/2, -px/2, px, px);
+  } else {
+    enemyBody(ctx, e.k, R, E.color, E.dark, false, e.wob);
+    ballGloss(R);
+    const ef = ENEMY_FACE[e.k];
+    ctx.save(); ctx.translate(0, R*ef[1]);
+    drawFace(R*ef[0], e.ph, (e.k === 'boss' || e.k === 'golem') ? 'angry' : 'naughty');
+    ctx.restore();
+  }
 
   // こおり状態
   if (e.slow > 0){
@@ -4731,6 +8274,24 @@ tryResume();      // とちゅうのセーブがあれば、そのウェーブ�
 checkLogin();     // きょうはじめての起動ならプレゼントを渡す
 checkLife();      // 💗の回復まちの途中なら、その画面にもどす
 requestAnimationFrame(loop);
+
+/* 検査ツール（tools/check-chars.mjs）から えがく関数を よべるようにする。
+   ゲーム本体は 外から さわられたくないので、検査に いる2つだけ 出す */
+window.__chk = { buildRoster, drawGen };
+/* 見た目の たしかめ用。?dbg=1 のときだけ 出す。
+   ふつうに あそぶときに ウェーブを とばせてしまうと じぶんベストの いみが なくなる */
+if (location.search.includes('dbg=1')) window.__dbg = {
+  setWave: w => { wave = w; syncHUD(); },
+  setStars: n => { stars = n; syncHUD(); syncShop(); },
+  setTool: k => { selTool = k; },
+  towers: () => towers.map(t => ({ k:t.k, c:t.c, r:t.r, sp:tSpan(t), lv:t.lv })),
+  run: () => { running = true; },
+  fill: () => {
+    enemies = []; spawnSeq = 0;
+    const q = waveList(wave);
+    for (let i = 0; i < 9; i++) spawnEnemy(q[i % q.length], (i + 0.6) / 10 * pathLen);
+  },
+};
 
 })();
 </script>

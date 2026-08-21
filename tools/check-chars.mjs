@@ -38,19 +38,21 @@ await pg.goto('file://' + target);
 await pg.waitForTimeout(600);
 
 const rep = await pg.evaluate(({ MIN_BIG, MAX_OFF }) => {
-  if (typeof buildRoster !== 'function' || typeof drawGen !== 'function')
-    return { err: 'buildRoster() か drawGen() が 見つからない' };
+  // ゲーム本体は IIFE の中なので、window.__chk から とりだす
+  const api = window.__chk || (typeof buildRoster === 'function' ? { buildRoster, drawGen } : null);
+  if (!api) return { err: 'window.__chk（buildRoster / drawGen）が 見つからない' };
+  const { buildRoster: roster, drawGen: draw } = api;
   const S = 300;                      // 大きめに えがいて 1ピクセル単位で しらべる
   const over = [], small = [], off = [], dupName = [], dupId = [];
   const names = new Set(), ids = new Set();
-  const R = buildRoster();
+  const R = roster();
   for (const o of R) {
     if (names.has(o.name)) dupName.push(o.name); names.add(o.name);
     if (ids.has(o.id))     dupId.push(o.id);     ids.add(o.id);
 
     const t = document.createElement('canvas'); t.width = S; t.height = S;
     const g = t.getContext('2d');
-    drawGen(g, S, o);                 // キラキラは わくの外に 出てよいので えがかない
+    draw(g, S, o);                 // キラキラは わくの外に 出てよいので えがかない
     const d = g.getImageData(0, 0, S, S).data;
     const on = (x, y) => d[(y * S + x) * 4 + 3] > 24;
 
