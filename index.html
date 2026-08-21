@@ -123,6 +123,36 @@
   #ovT{font-size:26px;color:var(--pink-d)}
   #ovB{font-size:13.5px;line-height:1.7;opacity:.8}
 
+  /* ---------- アバターづくり ---------- */
+  #avOv{position:absolute;inset:0;display:none;flex-direction:column;gap:7px;border-radius:20px;
+    background:rgba(255,244,251,.97);backdrop-filter:blur(6px);padding:12px;overflow-y:auto;z-index:4}
+  #avOv.on{display:flex;animation:pop .3s cubic-bezier(.2,1.4,.5,1)}
+  #avHead{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--pink-d)}
+  #avHead>div{flex:1}
+  #avStage{display:flex;justify-content:center;flex:0 0 auto}
+  #avCv{border-radius:20px}
+  #avName{width:100%;box-sizing:border-box;border:2px solid #ffd9ec;border-radius:12px;
+    padding:9px 12px;font:inherit;font-size:15px;text-align:center;background:#fff;color:var(--ink)}
+  .avRow{display:flex;align-items:center;gap:5px}
+  .avRow>b{flex:0 0 62px;font-size:10.5px;color:#b98ae0;font-weight:700}
+  .avOpts{flex:1;display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;padding:1px}
+  .avOpts::-webkit-scrollbar{display:none}
+  .avOpt{flex:0 0 auto;border:2px solid transparent;border-radius:11px;padding:5px 9px;
+    font:inherit;font-size:10.5px;background:rgba(255,255,255,.75);cursor:pointer;
+    white-space:nowrap;color:var(--ink)}
+  .avOpt.sel{border-color:var(--pink);background:#fff;box-shadow:0 0 0 2px rgba(255,143,196,.3)}
+  .avSw{width:22px;height:22px;border-radius:50%;padding:0;border:2px solid rgba(255,255,255,.9);
+    box-shadow:0 1px 3px rgba(120,90,120,.3)}
+  .avSw.sel{border-color:var(--pink-d);box-shadow:0 0 0 3px rgba(255,143,196,.4)}
+  #avBtns{display:flex;gap:6px}
+  #avBtns>button{flex:1}
+  #avMsg{text-align:center;font-size:11px;color:#b98ae0;min-height:15px;line-height:1.5}
+  #avFriends{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .avFr{background:rgba(255,255,255,.85);border:2px solid #ffd9ec;border-radius:12px;
+    padding:4px 2px;text-align:center;font-size:9.5px;position:relative}
+  .avFr canvas{display:block;margin:0 auto}
+  .avFrX{position:absolute;top:-6px;right:-4px;font-size:13px;cursor:pointer;opacity:.6}
+
   /* ---------- なかまえらび ---------- */
   #pickOv{position:absolute;inset:0;display:none;flex-direction:column;gap:8px;border-radius:20px;
     background:rgba(255,244,251,.96);backdrop-filter:blur(6px);padding:12px;overflow-y:auto;z-index:3}
@@ -260,6 +290,7 @@
       <div id="colHead">
         <div>👑 これくしょん <span id="colCount" style="white-space:nowrap"></span></div>
         <button class="mini" id="colKing">🏰</button>
+        <button class="mini" id="colAv">🎀</button>
         <button class="mini" id="colShare">📤</button>
         <button class="mini gray" id="colClose">とじる</button>
       </div>
@@ -283,6 +314,22 @@
       <div id="colGrid"></div>
       <div id="colTotal"></div>
     </div>
+  </div>
+
+  <div id="avOv">
+    <div id="avHead">
+      <div>🎀 アバターを つくる</div>
+      <button class="mini gray" id="avClose">とじる</button>
+    </div>
+    <div id="avStage"><canvas id="avCv"></canvas></div>
+    <input id="avName" maxlength="8" placeholder="なまえ（8もじまで）">
+    <div id="avRows"></div>
+    <div id="avBtns">
+      <button class="mini" id="avSave">これで けってい ✨</button>
+      <button class="mini" id="avShare">📤 LINEで おくる</button>
+    </div>
+    <div id="avMsg"></div>
+    <div id="avFriends"></div>
   </div>
 
   <div id="pickOv">
@@ -1159,6 +1206,204 @@ function buildShop(){
   syncShop();
 }
 
+/* ==========================================================
+   アバターづくり（じぶんと ともだち）
+   ------------------------------------------------------------
+   このゲームは サーバーの ない 1まいの HTML なので、
+   リアルタイムの 通信たいせんは できない。
+   そのかわり アバターを みじかい「あいことば」に して LINEで おくり、
+   うけとった人の ゲームに その人が とうじょうする かたちにする。
+   （既にある あいことばの しくみと おなじ考えかた）
+   ========================================================== */
+let avMe = null, avFriends = [];
+try{
+  const raw = JSON.parse(localStorage.getItem('sweetTD.av') || 'null');
+  if (raw){ avMe = raw.me || null; avFriends = raw.fr || []; }
+}catch(e){}
+function avSave(){
+  try{ localStorage.setItem('sweetTD.av', JSON.stringify({ me: avMe, fr: avFriends })); }catch(e){}
+}
+
+/* あいことばの 形： av.<8もじ>.<なまえ>
+   1もじ1こうもく（36しんほう）。みじかいほど LINEで おくりやすい */
+const AV_KEYS = ['s','h','hc','e','m','w','wc','a'];
+function avEncode(a){
+  const body = AV_KEYS.map(k => (a[k] || 0).toString(36)).join('');
+  return 'av.' + body + '.' + encodeURIComponent(a.n || 'ともだち');
+}
+function avDecode(code){
+  const m = String(code || '').trim().match(/^av\.([0-9a-z]{8})\.(.+)$/i);
+  if (!m) return null;
+  const a = avDefault();
+  AV_KEYS.forEach((k, i) => { a[k] = parseInt(m[1][i], 36) || 0; });
+  try{ a.n = decodeURIComponent(m[2]).slice(0, 8); }catch(e){ a.n = m[2].slice(0, 8); }
+  return a;
+}
+/* ともだちを むかえる。おなじ人は 上書きする（きせかえを おくりなおせるように）*/
+function avAddFriend(a){
+  if (!a || !a.n) return false;
+  const i = avFriends.findIndex(f => f.n === a.n);
+  if (i >= 0) avFriends[i] = a; else avFriends.push(a);
+  if (avFriends.length > 12) avFriends.shift();   // ためすぎない
+  avSave();
+  return true;
+}
+
+/* じぶんの アバターは ★7あつかいの つよい なかま。
+   じぶんが いちばん つよいほうが うれしいし、2×2の 見せ場にもなる */
+const AV_TOWER_KEY = '__me';
+const AV_TOWER = { name:'じぶん', ic:'🎀', cost:700, dmg:52, rate:0.62, range:3.2,
+                   color:'#ff8fc4', dark:'#e05f9e', splash:0.9, cells:4, avatar:true,
+                   role:'まとめて', desc:'じぶんの アバター。まわりの敵も まとめて（4マスつかう）' };
+TOWERS[AV_TOWER_KEY] = AV_TOWER;
+/* 見た目は まいフレーム えがくと 重いので、200体と おなじく 焼いておく */
+const avSpriteCache = new Map();
+function avKey(a){ return AV_KEYS.map(k => a[k] || 0).join('') + '|' + (a.n || ''); }
+function avSprite(a, px){
+  px = Math.max(24, Math.round(px / 8) * 8);
+  const k = avKey(a) + '@' + px;
+  const hit = avSpriteCache.get(k);
+  if (hit) return hit;
+  const c = document.createElement('canvas');
+  const d = Math.min(window.devicePixelRatio || 1, 2);
+  c.width = px*d; c.height = px*d;
+  const g = c.getContext('2d');
+  g.setTransform(d,0,0,d,0,0); drawAvatar(g, px, a);
+  g.setTransform(d,0,0,d,0,0); portraitShade(g, px);
+  avSpriteCache.set(k, c);
+  return c;
+}
+function avThumb(a, size){
+  const c = document.createElement('canvas');
+  const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  c.width = size*dpr; c.height = size*dpr;
+  c.style.width = size+'px'; c.style.height = size+'px';
+  const g = c.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0); drawAvatar(g, size, a);
+  g.setTransform(dpr,0,0,dpr,0,0); portraitShade(g, size);
+  return c;
+}
+
+/* ---------- つくる画面 ---------- */
+const avOv = $('avOv'), avCv = $('avCv'), avRows = $('avRows'),
+      avNameEl = $('avName'), avMsg = $('avMsg'), avFrEl = $('avFriends');
+let avEdit = null;
+$('avClose').onclick = () => avOv.classList.remove('on');
+
+function avPreview(){
+  const S = 150, dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+  avCv.width = S*dpr; avCv.height = S*dpr;
+  avCv.style.width = S + 'px'; avCv.style.height = S + 'px';
+  const g = avCv.getContext('2d');
+  g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,S,S);
+  drawAvatar(g, S, avEdit);
+  g.setTransform(dpr,0,0,dpr,0,0); portraitShade(g, S);
+}
+/* えらぶ ボタンの ならび。色は まるい 見本、それ以外は ことばで */
+function avBuildRows(){
+  const rows = [
+    ['はだ',   's',  AV_SKIN,  'sw'],
+    ['かみがた','h',  AV_HAIR,  'tx'],
+    ['かみ色', 'hc', AV_HAIRC, 'sw'],
+    ['め',     'e',  AV_EYE,   'tx'],
+    ['くち',   'm',  AV_MOUTH, 'tx'],
+    ['ふく',   'w',  AV_WEAR,  'tx'],
+    ['ふく色', 'wc', AV_WEARC, 'sw'],
+    ['かざり', 'a',  AV_ACC,   'tx'],
+  ];
+  avRows.innerHTML = '';
+  for (const [label, key, list, kind] of rows){
+    const r = document.createElement('div'); r.className = 'avRow';
+    r.innerHTML = '<b>' + label + '</b>';
+    const box = document.createElement('div'); box.className = 'avOpts';
+    list.forEach((v, i) => {
+      const b = document.createElement('button');
+      b.className = 'avOpt' + (kind === 'sw' ? ' avSw' : '') + (avEdit[key] === i ? ' sel' : '');
+      if (kind === 'sw') b.style.background = v; else b.textContent = v;
+      b.onclick = () => {
+        avEdit[key] = i;
+        for (const x of box.children) x.classList.remove('sel');
+        b.classList.add('sel');
+        avPreview(); beep(680,.05,'triangle',.03);
+      };
+      box.append(b);
+    });
+    r.append(box); avRows.append(r);
+  }
+}
+function avBuildFriends(){
+  avFrEl.innerHTML = '';
+  if (!avFriends.length) return;
+  const t = document.createElement('div');
+  t.style.cssText = 'grid-column:1/-1;font-size:11px;color:#b98ae0;text-align:center';
+  t.textContent = '👭 むかえた ともだち（' + avFriends.length + '人）';
+  avFrEl.append(t);
+  avFriends.forEach((f, i) => {
+    const d = document.createElement('div'); d.className = 'avFr';
+    const c = document.createElement('canvas');
+    const S = 52, dpr = Math.min(window.devicePixelRatio || 1, 2);
+    c.width = S*dpr; c.height = S*dpr; c.style.width = S+'px'; c.style.height = S+'px';
+    const g = c.getContext('2d');
+    g.setTransform(dpr,0,0,dpr,0,0); drawAvatar(g, S, f);
+    g.setTransform(dpr,0,0,dpr,0,0); portraitShade(g, S);
+    d.append(c);
+    d.insertAdjacentHTML('beforeend', '<div>' + f.n + '</div>' +
+      '<div class="avFrX" title="はずす">✖</div>');
+    d.querySelector('.avFrX').onclick = () => {
+      avFriends.splice(i, 1); avSave(); avBuildFriends(); beep(400,.06,'triangle',.03);
+    };
+    avFrEl.append(d);
+  });
+}
+function openAvatar(){
+  avEdit = avMe ? { ...avMe } : avDefault();
+  avNameEl.value = avEdit.n || '';
+  avMsg.textContent = '';
+  avBuildRows(); avBuildFriends(); avPreview();
+  avOv.classList.add('on');
+  beep(700,.08,'triangle',.04);
+}
+avNameEl.oninput = () => { avEdit.n = avNameEl.value.slice(0, 8); };
+$('avSave').onclick = () => {
+  if (!avNameEl.value.trim()){ avMsg.textContent = 'なまえを いれてね'; beep(160,.09,'square',.03,.7); return; }
+  avEdit.n = avNameEl.value.trim().slice(0, 8);
+  avMe = { ...avEdit };
+  avSave(); buildShop(); syncShop();
+  avMsg.innerHTML = '「' + avMe.n + '」で けってい！<br>「なかまを えらぶ」の いちばん上から おけるよ✨';
+  beep(760,.12,'triangle',.05);
+};
+/* LINEへ。line.me の 共有リンクは アプリを 入れていれば そのまま ひらく */
+$('avShare').onclick = () => {
+  if (!avNameEl.value.trim()){ avMsg.textContent = 'なまえを いれてね'; beep(160,.09,'square',.03,.7); return; }
+  avEdit.n = avNameEl.value.trim().slice(0, 8);
+  const code = avEncode(avEdit);
+  const url = location.origin + location.pathname + '?f=' + encodeURIComponent(code);
+  const text = avEdit.n + ' が おかしの国に あそびにきたよ！🎀\n' +
+               'このリンクを ひらくと ' + avEdit.n + ' と たたかえるよ\n' + url +
+               '\n\n（あいことば：' + code + '）';
+  const share = 'https://line.me/R/msg/text/?' + encodeURIComponent(text);
+  window.open(share, '_blank', 'noopener');
+  avMsg.innerHTML = 'LINEを ひらいたよ📤<br>とどかないときは あいことばを コピーして おくってね';
+  beep(700,.1,'triangle',.04);
+};
+/* リンク（?f=...）で ひらいたら むかえる。
+   よぶのは 起動の さいご（ここで 走らせると まだ できていない ものを さわる） */
+function avFromLink(){
+  const m = location.search.match(/[?&]f=([^&]+)/);
+  if (!m) return;
+  const a = avDecode(decodeURIComponent(m[1]));
+  if (!a) return;
+  if (avAddFriend(a)){
+    // ばんめんが できてから 知らせる（起動ちょくごは まだ 何も 見えていない）
+    setTimeout(() => floatTx(cx(4), cy(5), a.n + 'が あそびにきた！', '#b98ae0'), 900);
+  }
+  // dbg など ほかの しるしは のこす（f= だけ 消す）
+  try{
+    const q = location.search.replace(/([?&])f=[^&]*&?/, '$1').replace(/[?&]$/, '');
+    history.replaceState(null, '', location.pathname + q);
+  }catch(e){}
+}
+
 /* ---------- なかまえらび ----------
    なかまは 152体いるので 買いものバーには のらない。★べつの 別画面から えらぶ。
    えらぶと ふつうの おかしと おなじように ばんめんに おける */
@@ -1184,6 +1429,40 @@ function buildPick(){
     }
   }, { root: pickOv, rootMargin: '240px' });
   pickGrid.innerHTML = '';
+  // じぶんの アバターは ★に かかわらず いちばん上（すぐ おけるように）
+  {
+    const d = document.createElement('div');
+    d.className = 'pk' + (avMe && stars < AV_TOWER.cost ? ' poor' : '');
+    d.style.gridColumn = '1/-1';
+    d.style.display = 'flex'; d.style.alignItems = 'center'; d.style.gap = '10px';
+    d.style.textAlign = 'left'; d.style.padding = '7px 10px';
+    if (avMe){
+      const c = document.createElement('div');
+      c.style.cssText = 'width:56px;height:56px;flex:0 0 56px';
+      c.append(avThumb(avMe, 56));
+      d.append(c);
+      d.insertAdjacentHTML('beforeend',
+        '<div style="flex:1"><div class="pkN">🎀 ' + avMe.n + '（じぶん）</div>' +
+        '<div class="pkC">⭐' + AV_TOWER.cost + '</div>' +
+        '<div class="pkS">' + AV_TOWER.role + '・こうげき' + AV_TOWER.dmg +
+        '・はんい' + AV_TOWER.range.toFixed(1) + '・2×2</div></div>' +
+        '<div style="font-size:11px;color:#b98ae0">つくりなおす ▶</div>');
+      d.onclick = ev => {
+        if (ev.target.textContent === 'つくりなおす ▶'){ pickOv.classList.remove('on'); openAvatar(); return; }
+        selTool = AV_TOWER_KEY; selTower = null;
+        pickOv.classList.remove('on'); syncShop(); beep(700,.08,'triangle',.04);
+        floatTx(cx(4), cy(6), avMe.n + 'を おく ばしょを タップ（2×2）', '#b98ae0');
+      };
+    } else {
+      d.insertAdjacentHTML('beforeend',
+        '<div style="font-size:30px;flex:0 0 56px;text-align:center">🎀</div>' +
+        '<div style="flex:1"><div class="pkN">アバターを つくる</div>' +
+        '<div class="pkS">かお・かみがた・ふくを えらんで<br>じぶんを ばんめんに 出そう</div></div>' +
+        '<div style="font-size:11px;color:#b98ae0">つくる ▶</div>');
+      d.onclick = () => { pickOv.classList.remove('on'); openAvatar(); };
+    }
+    pickGrid.append(d);
+  }
   for (const o of list){
     const T = TOWERS[o.id];
     const d = document.createElement('div');
@@ -1211,15 +1490,16 @@ function syncShop(){
   for (const el of shopEl.children){
     if (el.dataset.k === '__pick'){
       // なかまを えらんでいる あいだは この ボタンを 光らせる
-      const on = !!(selTool && TOWERS[selTool] && TOWERS[selTool].ally);
+      const on = !!(selTool && TOWERS[selTool] && (TOWERS[selTool].ally || (TOWERS[selTool].avatar && avMe)));
       el.classList.toggle('sel', on);
       el.classList.remove('poor');
       el.querySelector('.twC').textContent = '';
-      el.querySelector('.nm').textContent = on ? TOWERS[selTool].name : 'なかま';
+      el.querySelector('.nm').textContent =
+        on ? (TOWERS[selTool].avatar ? (avMe ? avMe.n : 'じぶん') : TOWERS[selTool].name) : 'なかま';
       const ic = el.querySelector('.ic');
       if (on){
         ic.textContent = ''; ic.style.fontSize = '';
-        ic.append(genThumb(TOWERS[selTool].gen, 42));
+        ic.append(TOWERS[selTool].avatar ? avThumb(avMe, 42) : genThumb(TOWERS[selTool].gen, 42));
       } else if (!ic.dataset.plain){
         ic.textContent = '🧸'; ic.style.cssText = 'font-size:32px;line-height:46px';
       }
@@ -1241,7 +1521,9 @@ function openInfo(t){
   infoEl.classList.add('on'); shopEl.style.display = 'none';
   // なかまは 絵文字ではなく じぶんの すがたを 出す（おかしの絵文字だと 別人に見える）
   infoIc.textContent = '';
-  if (T.gen) infoIc.append(genThumb(T.gen, 46)); else infoIc.textContent = T.ic;
+  if (T.avatar && avMe) infoIc.append(avThumb(avMe, 46));
+  else if (T.gen) infoIc.append(genThumb(T.gen, 46));
+  else infoIc.textContent = T.ic;
   const cap = maxLv();
   const up = t.lv < cap ? Math.round(T.cost * UP_MUL[t.lv]) : null;
   infoTx.innerHTML =
@@ -1386,6 +1668,14 @@ function startWave(early){
   bgmStart();          // 最初のウェーブからBGM開始（タップ後なので再生できる）
   spawnQ = waveList(wave).slice();
   spawnSeq = 0;      // ウェーブごとに 0にもどす（おなじウェーブは いつも おなじ顔ぶれ）
+  // ともだちが いると、ステージの まん中の ウェーブが「ともだちバトル」になる
+  friendWave = isFriendWave(wave);
+  if (friendWave){
+    spawnQ = [];
+    for (const f of avFriends){ spawnQ.push('golem'); spawnQ.push('fast'); spawnQ.push('slime'); }
+    spawnQ.push('boss');
+    floatTx(COLS*CELL/2, CELL*2.2, '👭 ともだちバトル！', '#ff5f8a');
+  }
   spawnT = 0; running = true;
   btnWave.disabled = true;
   btnWave.innerHTML = 'ウェーブ' + wave + '<br>しんこう中';
@@ -1832,11 +2122,18 @@ function hitTarget(s, p){
 
 /* 敵をひとり道においてスタートさせる（通常出現とボスのしょうかんで共用） */
 let spawnSeq = 0;                                     // ウェーブ内での 何ばんめか
+let friendWave = false;                               // いまが ともだちバトルか
+/* ともだちが いれば、ステージの まん中で「ともだちバトル」を ひらく。
+   ステージクリアの ウェーブと ぶつからないように 10の ところに おく */
+const isFriendWave = n => avFriends.length > 0 && n >= 10 && n % STAGE_WAVES === 10;
 function spawnEnemy(k, d0){
   const E = ENEMIES[k];
   const hp = E.hp * hpScale(wave);
-  enemies.push({ k, d: d0 || 0, hp, max: hp, slow:0, slowAmt:0,
-                 gi: enemyLook(k, wave, spawnSeq++),   // 見た目に する コレクションの子
+  const i = spawnSeq++;
+  // ともだちバトルでは 'golem'（おもい役）が ともだち本人になる
+  const av = (friendWave && k === 'golem') ? avFriends[(i/3|0) % avFriends.length] : null;
+  enemies.push({ k, d: d0 || 0, hp: hp*(av?1.4:1), max: hp*(av?1.4:1), slow:0, slowAmt:0,
+                 av, gi: av ? null : enemyLook(k, wave, i),
                  wob: Math.random()*6.3, ph: Math.random()*6.3 });
 }
 
@@ -1849,6 +2146,11 @@ function killEnemy(e, px, py){
     floatTx(px, py - CELL*0.7, 'ずかんに とうろく！', '#b98ae0');
   if (e.gi && unlock(e.gi.id))
     floatTx(px, py - CELL*1.2, e.gi.name + 'を とうろく！', '#b98ae0');
+  if (e.av){
+    stars += 60;
+    floatTx(px, py - CELL*1.2, e.av.n + 'に かった！ +⭐60', '#ff5f8a');
+    celebrate({ conf: 30, rings: true, x: px, y: py, fanfare: 1 });
+  }
   const g = goldOf(e.k);
   stars += g;
   rec.kills++;                                            // じぶんきろく（保存はウェーブ終了時）
@@ -5177,6 +5479,271 @@ function buildRoster(){
 
 
 /* ==========================================================
+   アバター（じぶん・ともだち）
+   ------------------------------------------------------------
+   かお・かみがた・ふく・なまえ を えらんで つくる。
+   えらんだものは 1もじずつの キーで もつ。
+   あいことばに して LINEで おくるので、みじかいほど よい。
+   ========================================================== */
+const AV_SKIN  = ['#ffe0cc','#ffd2b0','#f0bd92','#d99b6e','#a9714b'];
+const AV_HAIRC = ['#4a3a3a','#7a5230','#c98a44','#f0d090','#ff8fc4','#c9a7ff','#8fd8ff','#fdfaff'];
+const AV_WEARC = ['#ff8fc4','#c9a7ff','#8fe3c4','#9ed8ff','#ffd76e','#fff6e9','#ffa8c8','#b0e0d0'];
+const AV_HAIR  = ['ショート','ロング','ツインテール','おだんご','ポニーテール','くるくる','みつあみ','うしろがみ'];
+const AV_EYE   = ['まる','にこ','きらきら','おすまし','うるうる'];
+const AV_MOUTH = ['にこ','ちいさい','わらい','おすまし'];
+const AV_WEAR  = ['ワンピース','パーカー','セーラー','ドレス','まほうのローブ','パジャマ'];
+const AV_ACC   = ['なし','リボン','ぼうし','めがね','かんむり','ねこみみ','ヘッドホン'];
+
+const avDefault = () => ({ n:'', s:0, h:0, hc:0, e:0, m:0, w:0, wc:0, a:0 });
+
+/* かみの けを ふさっと えがく。まるを かさねると 手がきの やわらかさが 出る */
+function avHairBlob(g, x, y, rx, ry, rot){
+  g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, GTAU); g.fill();
+}
+
+function drawAvatar(g, S, av){
+  const M = S/2;
+  const R = S*0.2;                        // あたまの 半けい（2頭身の かわいい ばらんす）
+  const hy = M - S*0.17;                  // あたまの まん中
+  const by = M + S*0.193;                 // からだの まん中（くつが 下で 切れない ぎりぎり）
+  const skin = AV_SKIN[av.s % AV_SKIN.length];
+  const hair = AV_HAIRC[av.hc % AV_HAIRC.length];
+  const wear = AV_WEARC[av.wc % AV_WEARC.length];
+  const H = av.h % AV_HAIR.length, W = av.w % AV_WEAR.length, A = av.a % AV_ACC.length;
+
+  /* ---- うしろがみ（からだより おく）---- */
+  g.fillStyle = hair;
+  if (H === 1 || H === 7){                // ロング・うしろがみ
+    g.beginPath();
+    // ぜんぶ おおうと マトリョーシカに 見えるので、はばを つめて こしで とめる
+    g.moveTo(M - R*1.0, hy);
+    g.bezierCurveTo(M - R*1.18, hy + R*1.1, M - R*1.02, hy + R*1.7, M - R*0.8, hy + R*1.88);
+    g.quadraticCurveTo(M, hy + R*2.12, M + R*0.8, hy + R*1.88);
+    g.bezierCurveTo(M + R*1.02, hy + R*1.7, M + R*1.18, hy + R*1.1, M + R*1.0, hy);
+    g.closePath(); g.fill();
+  } else if (H === 2){                    // ツインテール
+    for (const s of [-1,1]){
+      avHairBlob(g, M + s*R*1.24, hy + R*0.44, R*0.4, R*0.82, s*0.3);
+      avHairBlob(g, M + s*R*1.38, hy + R*1.34, R*0.32, R*0.62, s*0.2);
+    }
+  } else if (H === 4){                    // ポニーテール
+    g.beginPath();
+    g.moveTo(M + R*0.8, hy - R*0.3);
+    g.bezierCurveTo(M + R*1.76, hy - R*0.2, M + R*1.66, hy + R*1.5, M + R*1.02, hy + R*1.82);
+    g.bezierCurveTo(M + R*1.3, hy + R*0.96, M + R*1.14, hy + R*0.3, M + R*0.7, hy + R*0.2);
+    g.closePath(); g.fill();
+  } else if (H === 6){                    // みつあみ
+    for (const s of [-1,1]) for (let i=0;i<3;i++)
+      avHairBlob(g, M + s*R*1.1, hy + R*(0.46 + i*0.56), R*0.27, R*0.32, 0);
+  }
+
+  /* ---- からだ（ふく）---- */
+  g.fillStyle = wear;
+  if (W === 3 || W === 4){                // ドレス・ローブ：すそが ひろがる
+    g.beginPath();
+    g.moveTo(M - R*0.52, by - R*0.8);
+    g.bezierCurveTo(M - R*0.68, by + R*0.1, M - R*1.0, by + R*0.5, M - R*1.1, by + R*0.82);
+    g.quadraticCurveTo(M, by + R*1.06, M + R*1.1, by + R*0.82);
+    g.bezierCurveTo(M + R*1.0, by + R*0.5, M + R*0.68, by + R*0.1, M + R*0.52, by - R*0.8);
+    g.closePath(); g.fill();
+  } else {
+    gRR(g, M - R*0.7, by - R*0.84, R*1.4, R*1.5, R*0.4); g.fill();
+    g.fillStyle = wear;                   // スカート／ズボンの すそ
+    gRR(g, M - R*0.84, by + R*0.16, R*1.68, R*0.5, R*0.2); g.fill();
+  }
+  /* ふくの もよう */
+  if (W === 1){                           // パーカー：フードと ひも
+    g.fillStyle = 'rgba(255,255,255,.5)';
+    g.beginPath(); g.ellipse(M, by - R*0.6, R*0.6, R*0.3, 0, 0, Math.PI); g.fill();
+    g.strokeStyle = 'rgba(255,255,255,.9)'; g.lineWidth = R*0.07; g.lineCap='round';
+    for (const s of [-1,1]){
+      g.beginPath(); g.moveTo(M + s*R*0.14, by - R*0.42); g.lineTo(M + s*R*0.18, by + R*0.06); g.stroke();
+    }
+  } else if (W === 2){                    // セーラー：えりと スカーフ
+    g.fillStyle = 'rgba(255,255,255,.92)';
+    g.beginPath();
+    g.moveTo(M - R*0.6, by - R*0.62); g.lineTo(M + R*0.6, by - R*0.62);
+    g.lineTo(M + R*0.4, by - R*0.14); g.lineTo(M, by + R*0.04); g.lineTo(M - R*0.4, by - R*0.14);
+    g.closePath(); g.fill();
+    g.fillStyle = '#ff5f8a';
+    g.beginPath();
+    g.moveTo(M, by - R*0.34); g.lineTo(M + R*0.15, by - R*0.14);
+    g.lineTo(M, by + R*0.24); g.lineTo(M - R*0.15, by - R*0.14);
+    g.closePath(); g.fill();
+  } else if (W === 4){                    // ローブ：ほしの もよう
+    g.fillStyle = 'rgba(255,255,255,.7)';
+    for (const [dx,dy] of [[-0.46,0.34],[0.42,0.5],[0.0,0.66],[-0.2,-0.16]])
+      gspark(g, M + R*dx, by + R*dy, R*0.13, 0.4, 'rgba(255,255,255,.85)');
+  } else if (W === 5){                    // パジャマ：しましま
+    g.fillStyle = 'rgba(255,255,255,.45)';
+    g.save(); gRR(g, M - R*0.7, by - R*0.84, R*1.4, R*1.5, R*0.4); g.clip();
+    for (let i=-1;i<=4;i++){ gRR(g, M - R*0.7, by - R*0.6 + i*R*0.3, R*1.4, R*0.13, R*0.065); g.fill(); }
+    g.restore();
+  }
+  /* うで */
+  g.fillStyle = wear;
+  g.strokeStyle = 'rgba(120,90,120,.22)'; g.lineWidth = R*0.05;   // おなじ色だと 胴に とけるので ふちを引く
+  for (const s of [-1,1]){
+    g.beginPath();
+    g.ellipse(M + s*R*0.84, by - R*0.28, R*0.18, R*0.46, s*0.3, 0, GTAU);
+    g.fill(); g.stroke();
+  }
+  g.fillStyle = skin;                     // て
+  for (const s of [-1,1]){
+    g.beginPath(); g.arc(M + s*R*1.0, by + R*0.16, R*0.17, 0, GTAU); g.fill();
+  }
+  /* あし（スカートの下に ちゃんと 見えるように）*/
+  g.fillStyle = skin;
+  for (const s of [-1,1]){
+    g.beginPath();
+    g.ellipse(M + s*R*0.3, by + R*1.06, R*0.16, R*0.3, 0, 0, GTAU); g.fill();
+  }
+  g.fillStyle = '#8a6d8d';                // くつ
+  for (const s of [-1,1]){
+    g.beginPath(); g.ellipse(M + s*R*0.3, by + R*1.32, R*0.22, R*0.14, 0, 0, GTAU); g.fill();
+  }
+
+  /* ---- くび と あたま ---- */
+  g.fillStyle = skin;
+  gRR(g, M - R*0.2, hy + R*0.68, R*0.4, R*0.44, R*0.12); g.fill();
+  g.beginPath(); g.ellipse(M, hy, R*1.02, R*0.98, 0, 0, GTAU); g.fill();
+  /* みみ */
+  for (const s of [-1,1]){
+    g.beginPath(); g.ellipse(M + s*R*1.0, hy + R*0.12, R*0.16, R*0.22, 0, 0, GTAU); g.fill();
+  }
+
+  /* ---- まえがみ ----
+     かみを かおの上に かぶせると 目が かくれてしまう。
+     「かみで あたまを おおう → かおを 出す → ひたいに まえがみを かける」の順にする */
+  g.fillStyle = hair;
+  if (H === 5){                           // くるくる：大きめの まるを ふんわり
+    for (const s2 of [[-0.92,-0.3,0.46],[-0.58,-0.72,0.42],[0,-0.86,0.44],
+                      [0.58,-0.72,0.42],[0.92,-0.3,0.46]])
+      avHairBlob(g, M + R*s2[0], hy + R*s2[1], R*s2[2], R*s2[2]*0.92, 0);
+    avHairBlob(g, M, hy - R*0.24, R*1.06, R*0.86, 0);
+  } else if (H === 3){                    // おだんご
+    avHairBlob(g, M, hy - R*0.16, R*1.06, R*0.88, 0);
+    avHairBlob(g, M, hy - R*1.16, R*0.44, R*0.42, 0);
+  } else {
+    avHairBlob(g, M, hy - R*0.14, R*1.06, R*0.9, 0);
+  }
+  /* かおを 出す（かみは まわりの ふちとして のこる）*/
+  g.fillStyle = skin;
+  g.beginPath(); g.ellipse(M, hy + R*0.22, R*0.84, R*0.78, 0, 0, GTAU); g.fill();
+  /* ひたいの まえがみ。かおの 上がわに ゆるく かける */
+  g.fillStyle = hair;
+  g.beginPath();
+  g.moveTo(M - R*0.86, hy - R*0.2);
+  g.quadraticCurveTo(M - R*0.5, hy + R*0.24, M - R*0.16, hy - R*0.06);
+  g.quadraticCurveTo(M + R*0.2, hy + R*0.3, M + R*0.56, hy - R*0.1);
+  g.quadraticCurveTo(M + R*0.78, hy + R*0.1, M + R*0.86, hy - R*0.2);
+  g.lineTo(M + R*0.86, hy - R*0.7); g.lineTo(M - R*0.86, hy - R*0.7);
+  g.closePath(); g.fill();
+  /* かみの つや（左上からの ひかり）*/
+  g.fillStyle = 'rgba(255,255,255,.28)';
+  g.beginPath(); g.ellipse(M - R*0.4, hy - R*0.6, R*0.34, R*0.13, -0.3, 0, GTAU); g.fill();
+
+  /* ---- かお ---- */
+  const fy = hy + R*0.16, ex = R*0.38, er = R*0.19;
+  g.fillStyle = '#4a3a4a';
+  const E = av.e % AV_EYE.length;
+  for (const s of [-1,1]){
+    const x = M + s*ex;
+    if (E === 1){                          // にこ（へのじ）
+      g.strokeStyle = '#4a3a4a'; g.lineWidth = R*0.09; g.lineCap='round';
+      g.beginPath(); g.arc(x, fy + er*0.4, er*0.9, Math.PI*1.15, Math.PI*1.85); g.stroke();
+      continue;
+    }
+    if (E === 3){                          // おすまし（ほそめ）
+      g.fillStyle = '#4a3a4a';
+      gRR(g, x - er*0.9, fy - er*0.22, er*1.8, er*0.44, er*0.22); g.fill();
+      continue;
+    }
+    g.fillStyle = '#4a3a4a';
+    g.beginPath(); g.ellipse(x, fy, er*(E===4?1.0:0.86), er*(E===4?1.2:1.05), 0, 0, GTAU); g.fill();
+    g.fillStyle = '#ffffff';               // ハイライト（かならず 入れる）
+    g.beginPath(); g.arc(x - er*0.3, fy - er*0.36, er*0.34, 0, GTAU); g.fill();
+    if (E === 2 || E === 4){
+      g.beginPath(); g.arc(x + er*0.3, fy + er*0.3, er*0.2, 0, GTAU); g.fill();
+    }
+    if (E === 2) gspark(g, x + er*1.1, fy - er*1.1, er*0.5, 0.5, '#fff0a0');
+  }
+  /* ほっぺ（ピンクの はんとうめい）*/
+  g.fillStyle = 'rgba(255,143,196,.42)';
+  for (const s of [-1,1]){
+    g.beginPath(); g.ellipse(M + s*R*0.66, fy + R*0.26, R*0.2, R*0.14, 0, 0, GTAU); g.fill();
+  }
+  /* くち */
+  const MO = av.m % AV_MOUTH.length, my = fy + R*0.44;
+  g.strokeStyle = '#c05f7a'; g.lineWidth = R*0.075; g.lineCap='round';
+  if (MO === 0){ g.beginPath(); g.arc(M, my - R*0.06, R*0.16, 0.25, Math.PI-0.25); g.stroke(); }
+  else if (MO === 1){ g.beginPath(); g.arc(M, my - R*0.02, R*0.08, 0.2, Math.PI-0.2); g.stroke(); }
+  else if (MO === 2){
+    g.fillStyle = '#c05f7a';
+    g.beginPath(); g.ellipse(M, my, R*0.19, R*0.15, 0, 0, GTAU); g.fill();
+    g.fillStyle = '#ffd0dc';
+    g.beginPath(); g.ellipse(M, my + R*0.05, R*0.11, R*0.07, 0, 0, GTAU); g.fill();
+  } else { g.beginPath(); g.moveTo(M - R*0.11, my); g.lineTo(M + R*0.11, my); g.stroke(); }
+
+  /* ---- かざり ---- */
+  if (A === 1){                            // リボン
+    g.fillStyle = '#ff5f8a';
+    for (const s of [-1,1]){
+      g.beginPath();
+      g.moveTo(M + R*0.5, hy - R*0.78);
+      g.quadraticCurveTo(M + R*0.5 + s*R*0.5, hy - R*1.16, M + R*0.5 + s*R*0.46, hy - R*0.66);
+      g.quadraticCurveTo(M + R*0.5 + s*R*0.2, hy - R*0.6, M + R*0.5, hy - R*0.78);
+      g.closePath(); g.fill();
+    }
+    g.beginPath(); g.arc(M + R*0.5, hy - R*0.78, R*0.12, 0, GTAU); g.fill();
+  } else if (A === 2){                     // ぼうし
+    g.fillStyle = wear;
+    g.beginPath(); g.ellipse(M, hy - R*0.62, R*1.34, R*0.24, 0, 0, GTAU); g.fill();
+    g.beginPath(); g.ellipse(M, hy - R*0.98, R*0.78, R*0.46, 0, 0, GTAU); g.fill();
+    g.fillStyle = 'rgba(255,255,255,.55)';
+    gRR(g, M - R*0.8, hy - R*0.74, R*1.6, R*0.16, R*0.08); g.fill();
+  } else if (A === 3){                     // めがね
+    g.strokeStyle = 'rgba(90,70,100,.8)'; g.lineWidth = R*0.07;
+    for (const s of [-1,1]){
+      g.beginPath(); g.arc(M + s*ex, fy, er*1.5, 0, GTAU); g.stroke();
+    }
+    g.beginPath(); g.moveTo(M - ex + er*1.5, fy); g.lineTo(M + ex - er*1.5, fy); g.stroke();
+  } else if (A === 4){                     // かんむり
+    g.fillStyle = '#ffd76e';
+    g.beginPath();
+    g.moveTo(M - R*0.6, hy - R*0.72); g.lineTo(M - R*0.6, hy - R*1.1);
+    g.lineTo(M - R*0.3, hy - R*0.88); g.lineTo(M, hy - R*1.26);
+    g.lineTo(M + R*0.3, hy - R*0.88); g.lineTo(M + R*0.6, hy - R*1.1);
+    g.lineTo(M + R*0.6, hy - R*0.72);
+    g.closePath(); g.fill();
+    g.fillStyle = '#ff5f8a';
+    g.beginPath(); g.arc(M, hy - R*0.86, R*0.1, 0, GTAU); g.fill();
+  } else if (A === 5){                     // ねこみみ
+    g.fillStyle = hair;
+    for (const s of [-1,1]){
+      g.beginPath();
+      g.moveTo(M + s*R*0.3, hy - R*0.72);
+      g.lineTo(M + s*R*0.78, hy - R*0.6); g.lineTo(M + s*R*0.52, hy - R*1.2);
+      g.closePath(); g.fill();
+    }
+    g.fillStyle = '#ffc2d4';
+    for (const s of [-1,1]){
+      g.beginPath();
+      g.moveTo(M + s*R*0.4, hy - R*0.72);
+      g.lineTo(M + s*R*0.68, hy - R*0.66); g.lineTo(M + s*R*0.52, hy - R*1.02);
+      g.closePath(); g.fill();
+    }
+  } else if (A === 6){                     // ヘッドホン
+    g.strokeStyle = '#c9a7ff'; g.lineWidth = R*0.13;
+    g.beginPath(); g.arc(M, hy - R*0.1, R*1.06, Math.PI*1.1, Math.PI*1.9); g.stroke();
+    g.fillStyle = '#c9a7ff';
+    for (const s of [-1,1]){
+      gRR(g, M + s*R*1.06 - R*0.19, hy - R*0.22, R*0.38, R*0.56, R*0.16); g.fill();
+    }
+  }
+}
+
+/* ==========================================================
    ずかん（あつめた記録はブラウザに残る）
    dex[id] = { w:入手ウェーブ, d:入手日, lv:とうたつレベル(おかしのみ) }
    ========================================================== */
@@ -5285,6 +5852,7 @@ function legendArrival(L, preview){
 let colTab = 'all';
 let buyWait = null;   // ×0のなかまを2回タップで買うときの1回目おぼえ
 btnCol.onclick = () => { buildColGrid(); colOv.classList.add('on'); beep(700,.08,'triangle',.04); };
+$('colAv').onclick = () => { colOv.classList.remove('on'); openAvatar(); };
 colClose.onclick = () => colOv.classList.remove('on');
 for (const b of colTabsEl.children){
   b.onclick = () => {
@@ -6207,6 +6775,15 @@ function buildPw(){
       return;
     }
     const id = c.theme || (c.studio ? 'studio' : '');
+    // ともだちの アバターコード（av....）なら むかえる
+    const fr = avDecode($('pwIn').value.trim());
+    if (fr){
+      avAddFriend(fr);
+      $('pwMsg').innerHTML = fr.n + 'が あそびにきた！👭<br>ステージの とちゅうで たたかえるよ';
+      $('pwIn').value = '';
+      beep(760,.12,'triangle',.05);
+      return;
+    }
     if (redeemed.includes(id)){
       $('pwMsg').textContent = 'その あいことばは もう つかったよ✨';
       return;
@@ -7297,7 +7874,7 @@ function drawBoardOverlay(){
   // いまのステージ名（右上のかわいいラベル。左上は敵の入り口なので避ける）
   {
     const stN = Math.max(1, Math.ceil(Math.max(wave,1)/STAGE_WAVES));
-    const label = '🍭 ステージ' + stN + '・' + TH.name;
+    const label = friendWave ? '👭 ともだちバトル！' : '🍭 ステージ' + stN + '・' + TH.name;
     ctx.font = "800 " + (CELL*0.27) + "px 'Hiragino Maru Gothic ProN','Noto Sans JP',system-ui,sans-serif";
     const lw = ctx.measureText(label).width;
     const bx = COLS*CELL - CELL*0.22 - lw - CELL*0.56;
@@ -7832,8 +8409,8 @@ function drawTower(t){
   ctx.save(); ctx.translate(x, y + bob); ctx.scale(pop, pop);
 
   // ようせいのはねと マカロンの台座。
-  // なかまは じぶんの すがたが あって 絵が こみあうので つけない
-  if (!T.gen){
+  // なかまと アバターは じぶんの すがたが あって 絵が こみあうので つけない
+  if (!T.gen && !T.avatar){
     const flap = Math.sin(time*7 + t.ph);
     const wk = 1 + (t.lv-1)*0.18;
     for (const s of [-1,1]){
@@ -7867,7 +8444,10 @@ function drawTower(t){
   }
 
   // 体と顔
-  if (T.gen){
+  if (T.avatar && avMe){
+    const px = R*2.7;
+    ctx.drawImage(avSprite(avMe, px), -px/2, -px/2, px, px);
+  } else if (T.gen){
     // なかまは コレクションの絵を そのまま つかう
     const px = R*2.7;
     ctx.drawImage(genSprite(T.gen, px), -px/2, -px/2, px, px);
@@ -7880,7 +8460,8 @@ function drawTower(t){
   ctx.restore();
 
   // むねのリボン（Lv4からきんいろ）。コレクションの子は もう かざりが 多いので つけない
-  if (!T.gen) drawBow(-R*0.6, -R*0.74, R*(0.3 + (t.lv-1)*0.05), t.lv >= 4 ? '#e8b12e' : T.dark);
+  if (!T.gen && !T.avatar)
+    drawBow(-R*0.6, -R*0.74, R*(0.3 + (t.lv-1)*0.05), t.lv >= 4 ? '#e8b12e' : T.dark);
 
   // Lv3からまわりを星がくるくるまわる（レベルで数がふえる）
   if (t.lv >= 3){
@@ -7922,7 +8503,10 @@ function drawEnemy(e){
 
   ctx.scale(1+sq, 1-sq);
 
-  if (e.gi){
+  if (e.av){
+    const px = R*3.2;                              // ともだち本人は 大きめに 出す
+    ctx.drawImage(avSprite(e.av, px), -px/2, -px/2, px, px);
+  } else if (e.gi){
     // コレクションの子を そのまま 出す。大きい子（2マス・4マス）は 見た目も 大きく
     const k2 = e.gi.cells >= 4 ? 1.5 : e.gi.cells >= 2 ? 1.26 : 1.0;
     const px = R*2.9*k2;
@@ -7957,6 +8541,18 @@ function drawEnemy(e){
       const a = time*4 + i*2.1;
       sparkle(p.x + Math.cos(a)*R*0.9, p.y - R*1.35 + Math.sin(a)*R*0.25, R*0.18, a, '#ffd76e');
     }
+  }
+
+  // ともだちは なまえを 出す。だれと たたかっているか わかるように
+  if (e.av){
+    ctx.save();
+    ctx.font = '700 ' + Math.round(CELL*0.28) + "px 'Hiragino Maru Gothic ProN',sans-serif";
+    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.lineWidth = CELL*0.11; ctx.strokeStyle = 'rgba(255,255,255,.9)';
+    ctx.strokeText(e.av.n, p.x, p.y - R*1.5);
+    ctx.fillStyle = '#e05f9e';
+    ctx.fillText(e.av.n, p.x, p.y - R*1.5);
+    ctx.restore();
   }
 
   // HPバー
@@ -8270,6 +8866,7 @@ function loop(ts){
    ========================================================== */
 reset();
 resize();
+avFromLink();     // ともだちの リンクで ひらいたなら、その人を むかえる
 tryResume();      // とちゅうのセーブがあれば、そのウェーブから再開
 checkLogin();     // きょうはじめての起動ならプレゼントを渡す
 checkLife();      // 💗の回復まちの途中なら、その画面にもどす
@@ -8277,7 +8874,22 @@ requestAnimationFrame(loop);
 
 /* 検査ツール（tools/check-chars.mjs）から えがく関数を よべるようにする。
    ゲーム本体は 外から さわられたくないので、検査に いる2つだけ 出す */
-window.__chk = { buildRoster, drawGen };
+window.__chk = {
+  buildRoster, drawGen,
+  // アバターも キャラなので おなじ検査に かける。
+  // ぜんぶの くみあわせは 何万とおりも あるので、各こうもくを もれなく 1回は とおす数だけ 作る
+  avatarSamples: () => {
+    const N = Math.max(AV_SKIN.length, AV_HAIR.length, AV_HAIRC.length, AV_EYE.length,
+                       AV_MOUTH.length, AV_WEAR.length, AV_WEARC.length, AV_ACC.length);
+    const out = [];
+    for (let i = 0; i < N * 3; i++)
+      out.push({ n:'見本' + i, s:i%AV_SKIN.length, h:i%AV_HAIR.length, hc:(i*3)%AV_HAIRC.length,
+                 e:i%AV_EYE.length, m:i%AV_MOUTH.length, w:i%AV_WEAR.length,
+                 wc:(i*5)%AV_WEARC.length, a:i%AV_ACC.length });
+    return out;
+  },
+  drawAvatar,
+};
 /* 見た目の たしかめ用。?dbg=1 のときだけ 出す。
    ふつうに あそぶときに ウェーブを とばせてしまうと じぶんベストの いみが なくなる */
 if (location.search.includes('dbg=1')) window.__dbg = {
@@ -8285,6 +8897,8 @@ if (location.search.includes('dbg=1')) window.__dbg = {
   setStars: n => { stars = n; syncHUD(); syncShop(); },
   setTool: k => { selTool = k; },
   towers: () => towers.map(t => ({ k:t.k, c:t.c, r:t.r, sp:tSpan(t), lv:t.lv })),
+  friendWave: () => friendWave,
+  enemies: () => enemies.map(e => ({ k:e.k, av:e.av ? e.av.n : null, gi:e.gi ? e.gi.name : null })),
   run: () => { running = true; },
   fill: () => {
     enemies = []; spawnSeq = 0;
