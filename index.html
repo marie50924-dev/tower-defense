@@ -217,6 +217,9 @@
   .cCard{background:rgba(255,255,255,.85);border:2px solid #ffd9ec;border-radius:14px;
     padding:7px 3px 6px;text-align:center}
   .cCard.no{opacity:.6;filter:grayscale(.7)}
+  /* まだ いない子は うすく。もっている子と ひとめで 見分けられる濃さにする */
+  .cCard.yet{opacity:.38;filter:grayscale(.5)}
+  .cCard.yet .cNm{font-weight:400}
   .cCard canvas{display:block;margin:0 auto}
   .cNm{font-size:11px;margin-top:2px}
   .cTt{font-size:9px;opacity:.6;line-height:1.3}
@@ -6438,7 +6441,7 @@ function dexList(){
     ...GEN_LIST.map(o => ({
       id:o.id, name:o.name, cat:'g'+o.lv, gen:o,
       title:(o.side === 'en' ? 'てき' : 'なかま') + '・★' + o.lv + (o.cells > 1 ? '・' + o.cells + 'マス' : ''),
-      hint:o.side === 'en' ? 'たたかって たおすと とうろく' : 'なかまに すると とうろく',
+      hint:o.side === 'en' ? 'たおすと なかまに' : '🥚たまごから',
     })),
   ];
 }
@@ -6679,6 +6682,15 @@ function buildColGrid(){
       d.append(silhouetteThumb(o.pid, 64));
       d.insertAdjacentHTML('beforeend',
         '<div class="cNm">？？？</div><div class="cTt" style="color:#b98ae0">✨' + o.hint + '</div>');
+    } else if (o.gen){
+      // まだ いない子も うすく 見せる。だれが のこっているか わかると、
+      // どの たまごを ひらくか えらべる
+      d.classList.add('yet');
+      d.append(lazyThumb(o, 64));
+      d.insertAdjacentHTML('beforeend',
+        '<div class="cNm">' + o.name + '</div>' +
+        '<div class="cTt">' + o.title + '</div>' +
+        '<div class="cTt" style="color:#b98ae0">' + o.hint + '</div>');
     } else {
       d.innerHTML = '<div style="font-size:32px;line-height:64px">？</div>' +
         '<div class="cNm">？？？</div><div class="cTt">' + o.hint + '</div>';
