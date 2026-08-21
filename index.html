@@ -6695,18 +6695,16 @@ function buildColGrid(){
       d.append(silhouetteThumb(o.pid, 64));
       d.insertAdjacentHTML('beforeend',
         '<div class="cNm">？？？</div><div class="cTt" style="color:#b98ae0">✨' + o.hint + '</div>');
-    } else if (o.gen){
+    } else {
       // まだ いない子も うすく 見せる。だれが のこっているか わかると、
-      // どの たまごを ひらくか えらべる
+      // どの たまごを ひらくか・何を すれば いいかが わかる。
+      // 「？」だけだと 何が あるのかも わからない
       d.classList.add('yet');
       d.append(lazyThumb(o, 64));
       d.insertAdjacentHTML('beforeend',
         '<div class="cNm">' + o.name + '</div>' +
         '<div class="cTt">' + o.title + '</div>' +
         '<div class="cTt" style="color:#b98ae0">' + o.hint + '</div>');
-    } else {
-      d.innerHTML = '<div style="font-size:32px;line-height:64px">？</div>' +
-        '<div class="cNm">？？？</div><div class="cTt">' + o.hint + '</div>';
     }
     colGrid.append(d);
   }
