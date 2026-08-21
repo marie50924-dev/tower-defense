@@ -2254,9 +2254,16 @@ function update(dt){
       const owned = LEGENDS.filter(l => dex['lg_' + l.id]);
       const next = LEGENDS.find(l => !dex['lg_' + l.id]);
       let pick = null, sil = false;
-      if (owned.length && Math.random() < 0.7) pick = owned[(Math.random()*owned.length)|0];
-      else if (next && rec.bw >= next.wave - 30){ pick = next; sil = true; }  // 条件が近いと影が見える
-      else if (owned.length) pick = owned[(Math.random()*owned.length)|0];
+      // 予告の影は「いまの プレイで ちかづいたとき」だけ 出す。
+      // じぶんベストで はんていすると、あたらしく はじめた ウェーブ1から
+      // クジラの影が とんでしまい、ウェーブ60の おどろきが なくなる
+      const near = next && wave >= next.wave - 15;
+      // あつめた でんせつは ごほうびとして そらを とぶが、
+      // はじまってすぐは 画面を しずかに しておく
+      const canOwned = owned.length && wave >= 5;
+      if (canOwned && Math.random() < 0.7) pick = owned[(Math.random()*owned.length)|0];
+      else if (near){ pick = next; sil = true; }
+      else if (canOwned) pick = owned[(Math.random()*owned.length)|0];
       if (pick){
         const dir = Math.random() < .5 ? 1 : -1;
         flyer = { pid: pick.id, sil, dir,
@@ -9559,6 +9566,15 @@ if (location.search.includes('dbg=1')) window.__dbg = {
   setTool: k => { selTool = k; },
   towers: () => towers.map(t => ({ k:t.k, c:t.c, r:t.r, sp:tSpan(t), lv:t.lv })),
   friendWave: () => friendWave,
+  flyerTest: () => {   // どの でんせつが とぶか（見た目の たしかめ用）
+    const owned = LEGENDS.filter(l => dex['lg_' + l.id]);
+    const next = LEGENDS.find(l => !dex['lg_' + l.id]);
+    const near = next && wave >= next.wave - 15;
+    const canOwned = owned.length && wave >= 5;
+    if (canOwned) return 'もってる子';
+    if (near) return next.name + 'のかげ';
+    return 'なし';
+  },
   stars: () => stars,
   shards: () => shards,
   bunch: () => {   // ともだちを ぎゅっと ならべて なまえの かさなりを 見る
