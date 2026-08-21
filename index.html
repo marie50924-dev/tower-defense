@@ -6324,6 +6324,12 @@ function saveDex(){ try{ localStorage.setItem('sweetTD.dex', JSON.stringify(dex)
     if (!dex[real]) dex[real] = dex[k];
     delete dex[k]; dirty = true;
   }
+  // でんせつの 出会った ウェーブを 条件の ウェーブに そろえる。
+  // 前は やりなおした直後の ウェーブが そのまま 入っていた
+  for (const L of LEGENDS){
+    const e = dex['lg_' + L.id];
+    if (e && e.w !== L.wave){ e.w = L.wave; dirty = true; }
+  }
   if (dirty) saveDex();
 })();
 function dateStr(){
@@ -6410,7 +6416,15 @@ function checkLegends(){
   if (L) legendArrival(L);
 }
 function legendArrival(L, preview){
-  if (!preview) unlock('lg_' + L.id);   // 撮影プレビューでは図鑑にとうろくしない
+  if (!preview){
+    unlock('lg_' + L.id);              // 撮影プレビューでは図鑑にとうろくしない
+    // でんせつは「ベストが とどいた」ごほうびなので、じっさいに 出会うのは
+    // つぎの ウェーブの おわり。そのまま unlock すると やりなおした直後の
+    // ウェーブ1が 記録されて、図鑑に「ウェーブ1」と 出てしまう。
+    // 出会う 条件の ウェーブ（クジラなら60）を 記録する
+    dex['lg_' + L.id].w = L.wave;
+    saveDex();
+  }
   ovT.textContent = '✨ でんせつとの であい ✨';
   ovB.innerHTML = '';
   const th = charThumb({ pid: L.id }, 110);
