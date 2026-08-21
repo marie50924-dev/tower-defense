@@ -202,7 +202,7 @@
   </div>
 
   <div id="wrap">
-    <div id="cv"></div>
+    <canvas id="cv"></canvas>
     <div id="ov">
       <div id="ovT"></div>
       <div id="ovB"></div>
@@ -285,7 +285,6 @@
 
 <div id="confetti"></div>
 
-<script src="vendor/phaser.min.js"></script>
 <script>
 (() => {
 "use strict";
@@ -536,11 +535,9 @@ function applyRegen(){
 /* ==========================================================
    DOM
    ========================================================== */
-/* 盤面は Phaser がつくる。えがくときの Canvas 2D は そのつど ctx に入る。
-   Phaser の描画APIには グラデーションも 合成モードもなく、いまの立体感が
-   出せないため、絵は これまでどおり Canvas 2D で描いている */
-const cvHost = document.getElementById('cv');
-let ctx = null, DPR = 1;
+/* えがく先。じめんを 焼くときだけ 別の ctx にさしかえるので const にしない */
+const cv = document.getElementById('cv');
+let ctx = cv.getContext('2d'), DPR = 1;
 const $ = id => document.getElementById(id);
 const vHp = $('vHp'), vSt = $('vSt'), vWv = $('vWv'), vBw = $('vBw'), hpBox = $('hpBox');
 const shopEl = $('shop'), infoEl = $('info'), infoIc = $('infoIc'), infoTx = $('infoTx');
@@ -1195,8 +1192,7 @@ function syncHUD(){
 /* ==========================================================
    入力
    ========================================================== */
-/* 盤面のタップ。Phaser の入力から よばれる。
-   px,py は 盤面の左上を原点とした CSSピクセル */
+/* 盤面のタップ。px,py は 盤面の左上を原点とした CSSピクセル */
 function boardTap(px, py){
   if (over) return;
   const c = Math.floor(px/CELL), r = Math.floor(py/CELL);
@@ -4471,10 +4467,12 @@ function drawShot(s){
 
 function render(){
   const W = COLS*CELL, H = ROWS*CELL;
-  // 消すのは Phaser がやる。じめんは その下に 画像として ならんでいる
+  ctx.clearRect(0, 0, W, H);
   ctx.save();
   roundRect(0,0,W,H,20); ctx.clip();
 
+  // 焼いておいた じめんを 貼る（角まるは 焼くときに入れてある）
+  if (groundCv) ctx.drawImage(groundCv, 0, 0, W, H);
   drawBoardOverlay();
   for (const t of towers) drawTower(t);
   for (const e of enemies) drawEnemy(e);
@@ -4653,46 +4651,27 @@ function render(){
 }
 
 /* ==========================================================
-   Phaser（ゲームの土台）
+   じめんの焼きこみ
 
-   絵は これまでどおり Canvas 2D で描く。Phaser の描画APIには
-   グラデーションも 合成モードもなく、いまの立体感や つやが出せないため。
-   Phaser には ループ・入力・シーン・画面サイズを まかせ、
-   うごかない じめんと道は テクスチャに 1回だけ焼いて 軽くする。
+   じめんと道は うごかないので、1枚の絵に 1回だけ描いておいて
+   毎フレーム 貼るだけにする。トッピングだけで110個あり、
+   毎フレーム 描きなおすのは むだだから。
+   ステージ・きせかえ・画面サイズが かわったときだけ 焼きなおす。
    ========================================================== */
-let game = null, gscene = null, boardImg = null, boardKey = '', painter = null;
+let groundCv = null, groundKeyNow = '';
 
-/* Phaser の中で、これまでの Canvas 2D の描画を そのまま動かすための入れもの。
-   カメラの変換は かからないので、じぶんで CSSピクセル系に そろえる */
-class Painter extends Phaser.GameObjects.GameObject {
-  constructor(sc, fn){
-    super(sc, 'Painter');
-    this.fn = fn;
-    this.setActive(true);
-    this.renderFlags = 0xF;      // これを立てないと Phaser が えがきに来ない
-  }
-  renderCanvas(renderer){
-    const c = renderer.currentContext || renderer.gameContext;
-    const prev = ctx;
-    c.save(); c.setTransform(DPR, 0, 0, DPR, 0, 0); ctx = c;
-    try{ this.fn(); } finally { ctx = prev; c.restore(); }
-  }
-}
-
-/* 絵をやくあいだだけ ctx を さしかえる。
-   これまでの描画コードを 1行も変えずに テクスチャへ描けるようにするため */
+/* 焼くあいだだけ ctx を さしかえる。
+   これまでの描画コードを 1行も変えずに 別の絵へ描けるようにするため */
 function withCtx(g, fn){ const p = ctx; ctx = g; try{ fn(); } finally { ctx = p; } }
 
 /* じめんの見た目が かわる条件。ここが変わったときだけ 焼きなおす */
 const groundKey = () => themeOf(wave).name + '/' + CELL + '/' + DPR;
 
-function bakeBoard(){
-  if (!gscene) return;
+function bakeGround(){
   const W = COLS*CELL, H = ROWS*CELL;
-  const k = 'ground';
-  if (gscene.textures.exists(k)) gscene.textures.remove(k);
-  const t = gscene.textures.createCanvas(k, Math.ceil(W*DPR), Math.ceil(H*DPR));
-  const g = t.getContext();
+  if (!groundCv) groundCv = document.createElement('canvas');
+  groundCv.width = Math.ceil(W*DPR); groundCv.height = Math.ceil(H*DPR);
+  const g = groundCv.getContext('2d');
   g.setTransform(DPR, 0, 0, DPR, 0, 0);
   withCtx(g, () => {
     g.save();
@@ -4700,31 +4679,8 @@ function bakeBoard(){
     drawGround();
     g.restore();
   });
-  t.refresh();
-  if (boardImg) boardImg.destroy();
-  boardImg = gscene.add.image(0, 0, k).setOrigin(0, 0).setDisplaySize(W*DPR, H*DPR);
-  gscene.children.sendToBack(boardImg);   // うごくものは いつも じめんの上
-  boardKey = groundKey();
+  groundKeyNow = groundKey();
 }
-
-const BoardScene = {
-  key: 'board',
-  create(){
-    gscene = this;
-    painter = new Painter(this, render);
-    this.add.existing(painter);
-    bakeBoard();
-    // Phaser が タッチとマウスを 同じように あつかってくれる。
-    // 座標は デバイスピクセルで来るので CSSピクセルに もどす
-    this.input.on('pointerdown', p => boardTap(p.x/DPR, p.y/DPR));
-  },
-  update(_t, dtMs){
-    const dt = Math.min(0.05, dtMs/1000);
-    if (!over) for (let i=0;i<speed;i++) update(dt);
-    if (!over) bonusUpdate(dt);   // ボーナスは実時間（速度倍率のえいきょうなし）
-    if (groundKey() !== boardKey) bakeBoard();   // ステージが かわった
-  },
-};
 
 /* ==========================================================
    サイズ
@@ -4735,36 +4691,46 @@ function resize(){
   CELL = Math.max(24, Math.floor(Math.min(w/COLS, h/ROWS)));
   const W = COLS*CELL, H = ROWS*CELL;
   DPR = Math.min(window.devicePixelRatio||1, 2.5);
+  cv.width = W*DPR; cv.height = H*DPR;
+  cv.style.width = W+'px'; cv.style.height = H+'px';
+  ctx.setTransform(DPR,0,0,DPR,0,0);
   measurePath();
   for (const s of sparks){ s.x = Math.min(s.x, W); s.y = Math.min(s.y, H); }
-  if (game){
-    // 中身は こまかく（DPR倍）、見た目は CSSピクセルで
-    game.scale.resize(W*DPR, H*DPR);
-    game.canvas.style.width = W + 'px';
-    game.canvas.style.height = H + 'px';
-    bakeBoard();
-  }
+  bakeGround();
 }
 window.addEventListener('resize', resize);
+
+/* 盤面のタップ。タッチもマウスも Pointer Events で 同じようにあつかえる */
+cv.addEventListener('pointerdown', e => {
+  e.preventDefault();
+  const b = cv.getBoundingClientRect();
+  boardTap((e.clientX-b.left) * (COLS*CELL/b.width),
+           (e.clientY-b.top)  * (ROWS*CELL/b.height));
+});
+
+/* ==========================================================
+   メインループ
+   ========================================================== */
+let last = 0;
+function loop(ts){
+  let dt = Math.min(0.05, (ts-last)/1000 || 0);
+  last = ts;
+  if (!over) for (let i=0;i<speed;i++) update(dt);
+  if (!over) bonusUpdate(dt);   // ボーナスは実時間（速度倍率のえいきょうなし）
+  if (groundKey() !== groundKeyNow) bakeGround();   // ステージが かわった
+  render();
+  requestAnimationFrame(loop);
+}
 
 /* ==========================================================
    ゲーム開始
    ========================================================== */
 reset();
 resize();
-game = new Phaser.Game({
-  type: Phaser.CANVAS,        // 絵は Canvas 2D で描くので WebGL にしない
-  parent: 'cv',
-  width: COLS*CELL*DPR, height: ROWS*CELL*DPR,
-  transparent: true,          // 角まるの外がわを すかすため
-  scene: BoardScene,
-  scale: { mode: Phaser.Scale.NONE, zoom: 1/DPR },
-  banner: false,
-  audio: { noAudio: true },   // 音は じぶんの WebAudio でならす
-});
 tryResume();      // とちゅうのセーブがあれば、そのウェーブから再開
 checkLogin();     // きょうはじめての起動ならプレゼントを渡す
 checkLife();      // 💗の回復まちの途中なら、その画面にもどす
+requestAnimationFrame(loop);
 
 })();
 </script>
